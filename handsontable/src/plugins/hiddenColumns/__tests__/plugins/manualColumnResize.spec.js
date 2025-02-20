@@ -73,7 +73,10 @@ describe('HiddenColumns', () => {
 
       const $handle = $('.manualColumnResizer');
 
-      expect($handle.offset().left).toBe($headerTH.offset().left + $headerTH.outerWidth() - $handle.outerWidth() - 1);
+      expect($handle.offset().left).forThemes(({ classic, main }) => {
+        classic.toBe($headerTH.offset().left + $headerTH.outerWidth() - $handle.outerWidth() - 1);
+        main.toBe($headerTH.offset().left + $headerTH.outerWidth() - ($handle.outerWidth() / 2) - 1);
+      });
       expect($handle.height()).toBe($headerTH.outerHeight());
     });
 
@@ -91,19 +94,22 @@ describe('HiddenColumns', () => {
           columns: [1],
           indicators: true,
         },
-        fixedColumnsLeft: 3,
+        fixedColumnsStart: 3,
         manualColumnResize: true
       });
 
       // Show resize handler using the third renderable column. This column belongs to master as
-      // the "fixedColumnsLeft" is decreased to 2.
+      // the `fixedColumnsStart` setting is decreased to 2
       const $headerTH = getTopClone().find('thead tr:eq(0) th:eq(2)'); // Header "D"
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualColumnResizer');
 
-      expect($handle.offset().left).toBe($headerTH.offset().left + $headerTH.outerWidth() - $handle.outerWidth() - 1);
+      expect($handle.offset().left).forThemes(({ classic, main }) => {
+        classic.toBe($headerTH.offset().left + $headerTH.outerWidth() - $handle.outerWidth() - 1);
+        main.toBe($headerTH.offset().left + $headerTH.outerWidth() - ($handle.outerWidth() / 2) - 1);
+      });
       expect($handle.height()).toBe($headerTH.outerHeight());
     });
 
@@ -137,7 +143,10 @@ describe('HiddenColumns', () => {
         .simulate('mouseup')
       ;
 
-      expect(colWidth(spec().$container, 1)).toBe(80); // 50 (initial column width) + 30
+      expect(colWidth(spec().$container, 1)).forThemes(({ classic, main }) => {
+        classic.toBe(80); // 50 (initial column width) + 30
+        main.toBe(93); // 63 (initial column width) + 30
+      });
     });
   });
 });

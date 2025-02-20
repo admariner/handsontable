@@ -6,16 +6,14 @@ describe('ColumnSorting', () => {
 
     this.sortByClickOnColumnHeader = (columnIndex) => {
       const hot = this.$container.data('handsontable');
-      const $columnHeader = $(hot.view.wt.wtTable.getColumnHeader(columnIndex));
+      const $columnHeader = $(hot.view._wt.wtTable.getColumnHeader(columnIndex));
       const $spanInsideHeader = $columnHeader.find('.columnSorting');
 
       if ($spanInsideHeader.length === 0) {
         throw Error('Please check the test scenario. The header doesn\'t exist.');
       }
 
-      $spanInsideHeader.simulate('mousedown');
-      $spanInsideHeader.simulate('mouseup');
-      $spanInsideHeader.simulate('click');
+      simulateClick($spanInsideHeader);
     };
   });
 
@@ -190,29 +188,79 @@ describe('ColumnSorting', () => {
     expect(getPlugin('columnSorting').getSortConfig(1)).toEqual({ column: 1, sortOrder: 'asc' });
   });
 
-  it('should display indicator properly after changing sorted column sequence', () => {
-    const hot = handsontable({
-      data: [
-        [1, 9, 3, 4, 5, 6, 7, 8, 9],
-        [9, 8, 7, 6, 5, 4, 3, 2, 1],
-        [8, 7, 6, 5, 4, 3, 3, 1, 9],
-        [0, 3, 0, 5, 6, 7, 8, 9, 1]
-      ],
-      colHeaders: true,
-      columnSorting: {
-        indicator: true
-      }
+  using('configuration object', [
+    { htmlDir: 'ltr', layoutDirection: 'inherit' },
+    { htmlDir: 'rtl', layoutDirection: 'ltr' },
+  ], ({ htmlDir, layoutDirection }) => {
+    beforeEach(() => {
+      $('html').attr('dir', htmlDir);
     });
 
-    getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
+    afterEach(() => {
+      $('html').attr('dir', 'ltr');
+    });
 
-    // changing column sequence: 0 <-> 1
-    hot.columnIndexMapper.moveIndexes([1], 0);
-    hot.render();
+    it.forTheme('classic')('should display indicator properly after changing sorted column sequence', () => {
+      const hot = handsontable({
+        layoutDirection,
+        data: [
+          [1, 9, 3, 4, 5, 6, 7, 8, 9],
+          [9, 8, 7, 6, 5, 4, 3, 2, 1],
+          [8, 7, 6, 5, 4, 3, 3, 1, 9],
+          [0, 3, 0, 5, 6, 7, 8, 9, 1]
+        ],
+        colHeaders: true,
+        columnSorting: {
+          indicator: true
+        }
+      });
 
-    const sortedColumn = spec().$container.find('th span.columnSorting')[1];
+      getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
 
-    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).toMatch(/url/);
+      // changing column sequence: 0 <-> 1
+      hot.columnIndexMapper.moveIndexes([1], 0);
+      hot.render();
+
+      const sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+      expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).toMatch(/url/);
+      expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('right')).toEqual('-9px');
+    });
+
+    it.forTheme('main')('should display indicator properly after changing sorted column sequence', () => {
+      const hot = handsontable({
+        layoutDirection,
+        data: [
+          [1, 9, 3, 4, 5, 6, 7, 8, 9],
+          [9, 8, 7, 6, 5, 4, 3, 2, 1],
+          [8, 7, 6, 5, 4, 3, 3, 1, 9],
+          [0, 3, 0, 5, 6, 7, 8, 9, 1]
+        ],
+        colHeaders: true,
+        columnSorting: {
+          indicator: true
+        }
+      });
+
+      getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
+
+      // changing column sequence: 0 <-> 1
+      hot.columnIndexMapper.moveIndexes([1], 0);
+      hot.render();
+
+      const sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+      expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+      if (htmlDir === 'rtl' || layoutDirection === 'rtl') {
+        expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('left')).toEqual('2px');
+
+      } else {
+        expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('right')).toEqual('2px');
+      }
+
+      expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('top')).toEqual('10px');
+    });
   });
 
   it('should clear indicator after disabling plugin', () => {
@@ -314,9 +362,9 @@ describe('ColumnSorting', () => {
       columnSorting: true
     });
 
-    $('.ht_clone_top_left_corner .htCore span').simulate('mousedown');
-    $('.ht_clone_top_left_corner .htCore span').simulate('click');
-    $('.ht_clone_top_left_corner .htCore span').simulate('mouseup');
+    $('.ht_clone_top_inline_start_corner .htCore span').simulate('mousedown');
+    $('.ht_clone_top_inline_start_corner .htCore span').simulate('click');
+    $('.ht_clone_top_inline_start_corner .htCore span').simulate('mouseup');
 
     expect(onErrorSpy).not.toHaveBeenCalled();
   });
@@ -852,11 +900,182 @@ describe('ColumnSorting', () => {
       ]);
     });
 
-    it('should sort date columns (MM/DD/YYYY)', () => {
+    describe('sorting date-typed files', () => {
+      using('data set', [
+        {
+          values: ['01/02/2032', '11/02/2023', '01/05/2023', '01/02/1975'],
+          dateFormat: 'DD/MM/YYYY'
+        },
+        {
+          values: ['01/02/32', '11/02/23', '01/05/23', '01/02/75'],
+          dateFormat: 'DD/MM/YY'
+        },
+        {
+          values: ['1/2/32', '11/2/23', '1/5/23', '1/2/75'],
+          dateFormat: 'D/M/YY'
+        },
+        {
+          values: ['01/02/32', '11/02/23', '01/05/23', '01/02/75'],
+          dateFormat: 'D/M/YY'
+        },
+        {
+          values: ['01-02-2032', '11-02-2023', '01-05-2023', '01-02-1975'],
+          dateFormat: 'DD-MM-YYYY'
+        },
+        {
+          values: ['1-2-32', '11-2-23', '1-5-23', '1-2-75'],
+          dateFormat: 'D-M-YY'
+        },
+        {
+          values: ['2032 February 1st', '2023 February 11th', '2023 May 1st', '1975 February 1st'],
+          dateFormat: 'YYYY MMMM Do'
+        },
+        {
+          values: [
+            'The 1st of February \'32', 'The 11th of February \'23', 'The 1st of May \'23', 'The 1st of' +
+            ' February \'75'],
+          dateFormat: '[The] Do [of] MMMM \'YY'
+        },
+
+        // Improper date format configuration:
+        {
+          values: ['01/02/32', '11/02/23', '01/05/23', '01/02/75'],
+          dateFormat: 'DD/MM/YYYY'
+        },
+        {
+          values: ['1/2/32', '11/2/23', '1/5/23', '1/2/75'],
+          dateFormat: 'DD/MM/YY'
+        },
+        {
+          values: ['01/02/32', '11/02/23', '01/05/23', '01/02/75'],
+          dateFormat: 'D/M/YY'
+        },
+        {
+          values: ['1-2-32', '11-2-23', '1-5-23', '1-2-75'],
+          dateFormat: 'DD-MM-YYYY'
+        },
+        {
+          values: ['32 February 1st', '23 February 11th', '23 May 1st', '75 February 1st'],
+          dateFormat: 'YYYY MMMM Do'
+        },
+        {
+          values: ['1/2/2032', '11/2/2023', '1/5/2023', '1/2/1975'],
+          dateFormat: 'D.M.YYYY'
+        }
+      ], ({ values, dateFormat }) => {
+        // TODO: not sure if all of them work by design
+        it('it should be sorted properly', () => {
+          const data = values.map((value, ind) => [value, ind]);
+
+          handsontable({
+            data,
+            columns: [
+              { type: 'date', dateFormat },
+              { type: 'numeric' },
+            ],
+            columnSorting: true
+          });
+
+          getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' }); // ASC
+
+          expect(getDataAtCol(1).join(', ')).toEqual('3, 1, 2, 0');
+
+          getPlugin('columnSorting').sort({ column: 0, sortOrder: 'desc' }); // DESC
+
+          expect(getDataAtCol(1).join(', ')).toEqual('0, 2, 1, 3');
+        });
+      });
+
+      using('data set', [
+        {
+          values: ['1.2.2032', '11.2.2023', '1.5.2023', '1.2.1975'],
+          dateFormat: 'D.M.YY'
+        },
+        {
+          values: ['1-2-2032', '11-2-2023', '1-5-2023', '1-2-1975'],
+          dateFormat: 'DD/MM/YY'
+        },
+
+      ], ({ values, dateFormat }) => {
+        // TODO: not sure if this works by design
+        it('it should NOT be sorted properly (wrong date format declaration)', () => {
+          const data = values.map((value, ind) => [value, ind]);
+
+          handsontable({
+            data,
+            columns: [
+              { type: 'date', dateFormat },
+              { type: 'numeric' },
+            ],
+            columnSorting: true
+          });
+
+          getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' }); // ASC
+
+          expect(getDataAtCol(1).join(', ')).not.toEqual('3, 1, 2, 0');
+
+          getPlugin('columnSorting').sort({ column: 0, sortOrder: 'desc' }); // DESC
+
+          expect(getDataAtCol(1).join(', ')).not.toEqual('0, 2, 1, 3');
+        });
+      });
+    });
+
+    describe('sorting time-typed files', () => {
+      using('data set', [
+        { values: ['23:15', '20:44', '21:00', '14:12'], timeFormat: 'HH:mm' },
+        { values: ['11:15 PM', '08:44 PM', '09:00 PM', '02:12 PM'], timeFormat: 'hh:mm A' },
+        { values: ['11:15 pm', '08:44 pm', '09:00 pm', '02:12 pm'], timeFormat: 'hh:mm a' },
+        { values: ['08:44 pm', '11:15 am', '02:12 pm', '09:00 am'], timeFormat: 'hh:mm a' }, // mix pm/am
+        { values: ['23:15:22:33', '20:44:11:11', '21:00:11:11', '14:12:11:11'], timeFormat: 'HH:mm:mm:ss' },
+        { values: ['23:15:3:4', '20:44:1:1', '21:00:1:1', '14:12:1:1'], timeFormat: 'H:m:m:s' },
+        {
+          values: ['23:15:22:33 +02:00', '20:44:22:33 +02:00', '21:00:22:33 +02:00', '14:12:22:33 +02:00'],
+          timeFormat: 'HH:mm:mm:ss Z'
+        },
+        {
+          values: ['23:15:22:33 +0200', '20:44:22:33 +0200', '21:00:22:33 +0200', '14:12:22:33 +0200'],
+          timeFormat: 'HH:mm:mm:ss ZZ'
+        },
+
+        // Improper format:
+        { values: ['23:15:22:33', '20:44:11:11', '21:00:11:11', '14:12:11:11'], timeFormat: 'H:m:m:s' },
+        {
+          values: ['23:15:22:33 +02:00', '20:44:22:33 +02:00', '21:00:22:33 +02:00', '14:12:22:33 +02:00'],
+          timeFormat: 'HH:mm:mm:ss ZZ'
+        },
+      ], ({ values, timeFormat }) => {
+        // TODO: not sure if all of them work by design
+        it('it should be sorted properly', () => {
+          const data = values.map((value, ind) => [value, ind]);
+
+          handsontable({
+            data,
+            columns: [
+              { type: 'time', timeFormat },
+              { type: 'numeric' },
+            ],
+            columnSorting: true
+          });
+
+          getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' }); // ASC
+
+          expect(getDataAtCol(1).join(', ')).toEqual('3, 1, 2, 0');
+
+          getPlugin('columnSorting').sort({ column: 0, sortOrder: 'desc' }); // DESC
+
+          expect(getDataAtCol(1).join(', ')).toEqual('0, 2, 1, 3');
+        });
+      });
+    });
+
+    it('should sort date columns along with empty and null values', () => {
       handsontable({
         data: [
           ['Mercedes', 'A 160', '01/14/2006', 6999.9999],
           ['Citroen', 'C4 Coupe', '12/01/2008', 8330],
+          ['Citroen', 'C4 Coupe null', null, 8330],
+          ['Citroen', 'C4 Coupe empty', '', 8330],
           ['Audi', 'A4 Avant', '11/19/2011', 33900],
           ['Opel', 'Astra', '02/02/2004', 7000],
           ['BMW', '320i Coupe', '07/24/2011', 30500]
@@ -891,131 +1110,6 @@ describe('ColumnSorting', () => {
       expect(getDataAtRow(2)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
       expect(getDataAtRow(3)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
       expect(getDataAtRow(4)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
-    });
-
-    it('should sort date columns (DD/MM/YYYY)', () => {
-      handsontable({
-        data: [
-          ['Mercedes', 'A 160', '01/12/2012', 6999.9999],
-          ['Citroen', 'C4 Coupe', '12/01/2013', 8330],
-          ['Audi', 'A4 Avant', '11/10/2014', 33900],
-          ['Opel', 'Astra', '02/02/2015', 7000],
-          ['BMW', '320i Coupe', '07/02/2013', 30500]
-        ],
-        columns: [
-          {},
-          {},
-          {
-            type: 'date',
-            dateFormat: 'DD/MM/YYYY'
-          },
-          {
-            type: 'numeric'
-          }
-        ],
-        colHeaders: true,
-        columnSorting: true
-      });
-
-      getPlugin('columnSorting').sort({ column: 2, sortOrder: 'asc' }); // ASC
-
-      expect(getDataAtRow(0)).toEqual(['Mercedes', 'A 160', '01/12/2012', 6999.9999]);
-      expect(getDataAtRow(1)).toEqual(['Citroen', 'C4 Coupe', '12/01/2013', 8330]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', '07/02/2013', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Audi', 'A4 Avant', '11/10/2014', 33900]);
-      expect(getDataAtRow(4)).toEqual(['Opel', 'Astra', '02/02/2015', 7000]);
-
-      getPlugin('columnSorting').sort({ column: 2, sortOrder: 'desc' }); // DESC
-
-      expect(getDataAtRow(0)).toEqual(['Opel', 'Astra', '02/02/2015', 7000]);
-      expect(getDataAtRow(1)).toEqual(['Audi', 'A4 Avant', '11/10/2014', 33900]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', '07/02/2013', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Citroen', 'C4 Coupe', '12/01/2013', 8330]);
-      expect(getDataAtRow(4)).toEqual(['Mercedes', 'A 160', '01/12/2012', 6999.9999]);
-    });
-
-    it('should sort date columns (MMMM Do YYYY)', () => {
-      handsontable({
-        data: [
-          ['Mercedes', 'A 160', 'October 28th 2016', 6999.9999],
-          ['Citroen', 'C4 Coupe', 'October 27th 2001', 8330],
-          ['Audi', 'A4 Avant', 'July 8th 1999', 33900],
-          ['Opel', 'Astra', 'June 1st 2001', 7000],
-          ['BMW', '320i Coupe', 'August 3rd 2001', 30500]
-        ],
-        columns: [
-          {},
-          {},
-          {
-            type: 'date',
-            dateFormat: 'MMMM Do YYYY'
-          },
-          {
-            type: 'numeric'
-          }
-        ],
-        colHeaders: true,
-        columnSorting: true
-      });
-
-      getPlugin('columnSorting').sort({ column: 2, sortOrder: 'asc' }); // ASC
-
-      expect(getDataAtRow(0)).toEqual(['Audi', 'A4 Avant', 'July 8th 1999', 33900]);
-      expect(getDataAtRow(1)).toEqual(['Opel', 'Astra', 'June 1st 2001', 7000]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', 'August 3rd 2001', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Citroen', 'C4 Coupe', 'October 27th 2001', 8330]);
-      expect(getDataAtRow(4)).toEqual(['Mercedes', 'A 160', 'October 28th 2016', 6999.9999]);
-
-      getPlugin('columnSorting').sort({ column: 2, sortOrder: 'desc' }); // DESC
-
-      expect(getDataAtRow(0)).toEqual(['Mercedes', 'A 160', 'October 28th 2016', 6999.9999]);
-      expect(getDataAtRow(1)).toEqual(['Citroen', 'C4 Coupe', 'October 27th 2001', 8330]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', 'August 3rd 2001', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Opel', 'Astra', 'June 1st 2001', 7000]);
-      expect(getDataAtRow(4)).toEqual(['Audi', 'A4 Avant', 'July 8th 1999', 33900]);
-    });
-
-    it('should sort date columns along with empty and null values', () => {
-      handsontable({
-        data: [
-          ['Mercedes', 'A 160', '01/14/2006', 6999.9999],
-          ['Citroen', 'C4 Coupe', '12/01/2008', 8330],
-          ['Citroen', 'C4 Coupe null', null, 8330],
-          ['Citroen', 'C4 Coupe empty', '', 8330],
-          ['Audi', 'A4 Avant', '11/19/2011', 33900],
-          ['Opel', 'Astra', '02/02/2004', 7000],
-          ['BMW', '320i Coupe', '07/24/2011', 30500]
-        ],
-        columns: [
-          {},
-          {},
-          {
-            type: 'date',
-            dateFormat: 'mm/dd/yy'
-          },
-          {
-            type: 'numeric'
-          }
-        ],
-        colHeaders: true,
-        columnSorting: true
-      });
-
-      getPlugin('columnSorting').sort({ column: 2, sortOrder: 'asc' }); // ASC
-
-      expect(getDataAtRow(0)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
-      expect(getDataAtRow(1)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', '07/24/2011', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Audi', 'A4 Avant', '11/19/2011', 33900]);
-      expect(getDataAtRow(4)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
-
-      getPlugin('columnSorting').sort({ column: 2, sortOrder: 'desc' }); // DESC
-
-      expect(getDataAtRow(0)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
-      expect(getDataAtRow(1)).toEqual(['Audi', 'A4 Avant', '11/19/2011', 33900]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', '07/24/2011', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
-      expect(getDataAtRow(4)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
     });
   });
 
@@ -1716,7 +1810,7 @@ describe('ColumnSorting', () => {
     expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('0');
 
     updateSettings({
-      columnSorting: void 0
+      columnSorting: undefined
     });
 
     expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('1');
@@ -1890,7 +1984,7 @@ describe('ColumnSorting', () => {
 
     expect(countRows()).toEqual(4);
 
-    alter('insert_row');
+    alter('insert_row_above');
 
     expect(countRows()).toEqual(5);
   });
@@ -1915,7 +2009,7 @@ describe('ColumnSorting', () => {
     spec().$container2.handsontable();
 
     selectCell(0, 1);
-    keyDown('enter');
+    keyDownUp('enter');
     expect($('.handsontableInput').val()).toEqual('A');
 
     spec().$container2.handsontable('destroy');
@@ -2120,7 +2214,8 @@ describe('ColumnSorting', () => {
 
   });
 
-  it('should add a sorting indicator to the column header after it\'s been sorted, if `indicator` property is set to `true` (by default)', () => {
+  it.forTheme('classic')('should add a sorting indicator to the column header after it\'s been ' +
+    'sorted, if `indicator` property is set to `true` (by default)', () => {
     handsontable({
       data: [
         [1, 'Ted', 'Right'],
@@ -2177,7 +2272,66 @@ describe('ColumnSorting', () => {
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).not.toMatch(/url/);
   });
 
-  it('should change sorting indicator state on every plugin API method (calling for different columns)', () => {
+  it.forTheme('main')('should add a sorting indicator to the column header after it\'s been sorted, ' +
+    'if `indicator` property is set to `true` (by default)', () => {
+    handsontable({
+      data: [
+        [1, 'Ted', 'Right'],
+        [2, '', 'Honest'],
+        [3, '', 'Well'],
+        [4, 'Sid', 'Strong'],
+        [5, 'Jane', 'Neat'],
+      ],
+      colHeaders: true,
+      columns(column) {
+        if (column === 2) {
+          return {
+            columnSorting: {
+              indicator: false,
+              headerAction: false,
+            }
+          };
+        }
+
+        return {};
+      },
+      columnSorting: true,
+    });
+
+    spec().sortByClickOnColumnHeader(2);
+
+    let sortedColumn = spec().$container.find('th span.columnSorting')[2];
+
+    // not sorted
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(2);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    // not sorted
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(1);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    // ascending
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(1);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    // descending
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(1);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    // not sorted
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+  });
+
+  it.forTheme('classic')('should change sorting indicator state on every plugin API method ' +
+    '(calling for different columns)', () => {
     handsontable({
       data: [
         [1, 'Ted', 'Right'],
@@ -2230,7 +2384,61 @@ describe('ColumnSorting', () => {
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).toMatch(/url/);
   });
 
-  it('should change sorting indicator state when initial column sorting was provided', () => {
+  it.forTheme('main')('should change sorting indicator state on every plugin API method ' +
+    '(calling for different columns)', () => {
+    handsontable({
+      data: [
+        [1, 'Ted', 'Right'],
+        [2, '', 'Honest'],
+        [3, '', 'Well'],
+        [4, 'Sid', 'Strong'],
+        [5, 'Jane', 'Neat'],
+      ],
+      colHeaders: true,
+      columnSorting: {
+        indicator: true
+      },
+    });
+
+    getPlugin('columnSorting').sort({ column: 1, sortOrder: 'asc' });
+
+    // ascending
+    let sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 2, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 1, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 2, sortOrder: 'desc' });
+
+    // descending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 2, sortOrder: 'desc' });
+
+    // descending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 2, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+  });
+
+  it.forTheme('classic')('should change sorting indicator state when initial column sorting was provided', () => {
     handsontable({
       data: [
         [1, 'Ted', 'Right'],
@@ -2279,6 +2487,55 @@ describe('ColumnSorting', () => {
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).not.toMatch(/url/);
   });
 
+  it.forTheme('main')('should change sorting indicator state when initial column sorting was provided', () => {
+    handsontable({
+      data: [
+        [1, 'Ted', 'Right'],
+        [2, '', 'Honest'],
+        [3, '', 'Well'],
+        [4, 'Sid', 'Strong'],
+        [5, 'Jane', 'Neat'],
+      ],
+      colHeaders: true,
+      columnSorting: {
+        indicator: true,
+        initialConfig: {
+          column: 1,
+          sortOrder: 'desc'
+        }
+      },
+    });
+
+    // descending
+    let sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort();
+
+    // default
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 1, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort({ column: 1, sortOrder: 'desc' });
+
+    // descending
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('columnSorting').sort();
+
+    // default
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+  });
+
   it('should properly sort the table, when it\'s scrolled to the far right', () => {
     const data = [
       ['Jasmine Ferguson', 'Britney Carey', 'Kelly Decker', 'Lacey Mcleod', 'Leona Shaffer', 'Kelli Ochoa',
@@ -2305,7 +2562,7 @@ describe('ColumnSorting', () => {
       columnSorting: true
     });
 
-    hot.view.wt.wtOverlays.leftOverlay.scrollTo(15);
+    hot.view._wt.wtOverlays.inlineStartOverlay.scrollTo(15);
     render();
     getPlugin('columnSorting').sort({ column: 15, sortOrder: 'asc' });
 
@@ -2728,7 +2985,7 @@ describe('ColumnSorting', () => {
         columnSorting: true
       });
 
-      const $columnHeader = $(hot.view.wt.wtTable.getColumnHeader(0));
+      const $columnHeader = $(hot.view._wt.wtTable.getColumnHeader(0));
       const $spanInsideHeader = $columnHeader.find('.columnSorting');
 
       $spanInsideHeader.simulate('mousedown', { button: 2 });
@@ -2796,6 +3053,33 @@ describe('ColumnSorting', () => {
       spec().sortByClickOnColumnHeader(0);
 
       expect(getDataAtCol(0)).toEqual(['Mary', 'Henry', 'Ann', 'Robert', 'Ann', 'David', 'John', 'Mary', 'Robert']);
+    });
+
+    it('should wait before sorting until the edited cell is validated and saved, if the cell has a validator and its' +
+      ' editor is open while clicking on a sortable header', async() => {
+      const hot = handsontable({
+        data: [
+          { a: 9, b: 9 },
+          { a: 8, b: 8 },
+          { a: 7, b: 7 },
+        ],
+        colHeaders: true,
+        columnSorting: true,
+        columns: [
+          { data: 'a' },
+          { data: 'b', type: 'numeric' }
+        ]
+      });
+
+      selectCell(2, 1);
+      hot._getEditorManager().openEditor();
+      getActiveEditor().setValue('444');
+
+      spec().sortByClickOnColumnHeader(1);
+
+      await sleep(50);
+
+      expect(getDataAtCol(1)).toEqual([8, 9, 444]);
     });
   });
 
@@ -2944,13 +3228,13 @@ describe('ColumnSorting', () => {
       columnSorting: true
     });
 
-    alter('insert_row');
+    alter('insert_row_below');
 
     getPlugin('columnSorting').sort({ column: 0, sortOrder: 'desc' });
 
     loadData(Handsontable.helper.createSpreadsheetData(3, 3));
 
-    alter('insert_row');
+    alter('insert_row_below');
 
     expect(getData()).toEqual([
       ['A1', 'B1', 'C1'],
@@ -2958,6 +3242,68 @@ describe('ColumnSorting', () => {
       ['A3', 'B3', 'C3'],
       [null, null, null],
     ]);
+  });
+
+  describe('undo/redo', () => {
+    it('should be able to undo the sorting action', () => {
+      const hot = handsontable({
+        data: Handsontable.helper.createSpreadsheetData(3, 3),
+        columnSorting: true
+      });
+
+      hot.getPlugin('columnSorting').sort({
+        column: 0,
+        sortOrder: 'desc'
+      });
+
+      expect(getData()).toEqual([
+        ['A3', 'B3', 'C3'],
+        ['A2', 'B2', 'C2'],
+        ['A1', 'B1', 'C1']
+      ]);
+
+      getPlugin('undoRedo').undo();
+
+      expect(getData()).toEqual([
+        ['A1', 'B1', 'C1'],
+        ['A2', 'B2', 'C2'],
+        ['A3', 'B3', 'C3']
+      ]);
+    });
+
+    it('should be able to redo the sorting action', () => {
+      const hot = handsontable({
+        data: Handsontable.helper.createSpreadsheetData(3, 3),
+        columnSorting: true
+      });
+
+      hot.getPlugin('columnSorting').sort({
+        column: 0,
+        sortOrder: 'desc'
+      });
+
+      expect(getData()).toEqual([
+        ['A3', 'B3', 'C3'],
+        ['A2', 'B2', 'C2'],
+        ['A1', 'B1', 'C1']
+      ]);
+
+      getPlugin('undoRedo').undo();
+
+      expect(getData()).toEqual([
+        ['A1', 'B1', 'C1'],
+        ['A2', 'B2', 'C2'],
+        ['A3', 'B3', 'C3']
+      ]);
+
+      getPlugin('undoRedo').redo();
+
+      expect(getData()).toEqual([
+        ['A3', 'B3', 'C3'],
+        ['A2', 'B2', 'C2'],
+        ['A1', 'B1', 'C1']
+      ]);
+    });
   });
 
   describe('cooperation with alter actions', () => {
@@ -2995,7 +3341,7 @@ describe('ColumnSorting', () => {
         },
       });
 
-      alter('insert_col', 1);
+      alter('insert_col_start', 1);
 
       expect(getData()).toEqual([
         ['A3', null, 'B3', 'C3'],
@@ -3015,7 +3361,7 @@ describe('ColumnSorting', () => {
         columnSorting: true
       });
 
-      alter('insert_row', 2);
+      alter('insert_row_above', 2);
 
       expect(getData()).toEqual([
         ['A1', 'B1', 'C1'],
@@ -3035,7 +3381,7 @@ describe('ColumnSorting', () => {
         columnSorting: true
       });
 
-      alter('insert_col', 2, 5);
+      alter('insert_col_start', 2, 5);
 
       expect(getHtCore().find('tbody tr:eq(0) td').length).toEqual(7);
     });
@@ -3057,7 +3403,7 @@ describe('ColumnSorting', () => {
     it('should not break the ability to freeze column', () => {
       const hot = handsontable({
         data: Handsontable.helper.createSpreadsheetData(1, 3),
-        fixedColumnsLeft: 1,
+        fixedColumnsStart: 1,
         columnSorting: true,
         manualColumnFreeze: true,
         contextMenu: true
@@ -3072,7 +3418,7 @@ describe('ColumnSorting', () => {
 
       simulateClick(freezeColumn);
 
-      expect(hot.getSettings().fixedColumnsLeft).toEqual(2);
+      expect(hot.getSettings().fixedColumnsStart).toEqual(2);
       expect(hot.toPhysicalColumn(0)).toEqual(0);
       expect(hot.toPhysicalColumn(1)).toEqual(2);
       expect(hot.toPhysicalColumn(2)).toEqual(1);

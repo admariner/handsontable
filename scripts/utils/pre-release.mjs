@@ -9,12 +9,19 @@ import {
   displayConfirmationMessage
 } from './index.mjs';
 
-import mainPackageJson from '../../package.json';
+import mainPackageJson from '../../package.json' with { type: 'json' };
 import hotConfig from '../../hot.config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const workspacePackages = mainPackageJson.workspaces;
+
+/**
+ * Current version of the monorepo (before updating).
+ *
+ * @type {string}
+ */
+export const CURRENT_VERSION = hotConfig.HOT_VERSION;
 
 /**
  * Check if the provided version number is a valid semver version number.
@@ -80,10 +87,13 @@ export function setVersion(version, packages = workspacePackages) {
           return `"version": "${version}"`;
 
         } else {
-          const maxSatisfyingVersion = `${semver.major(semver.maxSatisfying([version, previousVersion], '*'))}.0.0`;
+          const isPreRelease = version.includes('-next-');
+          const newVersion = isPreRelease ? version : `${semverPrefix}${semver.major(
+            semver.maxSatisfying([version, previousVersion], '*')
+          )}.0.0`;
 
           // Replace the `handsontable` dependency with the current major (or previous major, if it's a prerelease).
-          return `"handsontable": "${semverPrefix}${maxSatisfyingVersion}"`;
+          return `"handsontable": "${newVersion}"`;
         }
       },
       ignore: [

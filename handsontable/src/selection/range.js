@@ -1,5 +1,3 @@
-import { CellRange } from './../3rdparty/walkontable/src';
-
 /**
  * The SelectionRange class is a simple CellRanges collection designed for easy manipulation of the multiple
  * consecutive and non-consecutive selections.
@@ -8,13 +6,19 @@ import { CellRange } from './../3rdparty/walkontable/src';
  * @util
  */
 class SelectionRange {
-  constructor() {
-    /**
-     * List of all CellRanges added to the class instance.
-     *
-     * @type {CellRange[]}
-     */
-    this.ranges = [];
+  /**
+   * List of all CellRanges added to the class instance.
+   *
+   * @type {CellRange[]}
+   */
+  ranges = [];
+  /**
+   * @type {function(CellCoords): CellRange}
+   */
+  createCellRange;
+
+  constructor(createCellRange) {
+    this.createCellRange = createCellRange;
   }
 
   /**
@@ -35,7 +39,7 @@ class SelectionRange {
    */
   set(coords) {
     this.clear();
-    this.ranges.push(new CellRange(coords));
+    this.ranges.push(this.createCellRange(coords));
 
     return this;
   }
@@ -47,7 +51,7 @@ class SelectionRange {
    * @returns {SelectionRange}
    */
   add(coords) {
-    this.ranges.push(new CellRange(coords));
+    this.ranges.push(this.createCellRange(coords));
 
     return this;
   }
@@ -69,7 +73,7 @@ class SelectionRange {
    * @returns {CellRange|undefined}
    */
   current() {
-    return this.peekByIndex(0);
+    return this.peekByIndex(this.size() - 1);
   }
 
   /**
@@ -78,7 +82,7 @@ class SelectionRange {
    * @returns {CellRange|undefined}
    */
   previous() {
-    return this.peekByIndex(-1);
+    return this.peekByIndex(this.size() - 2);
   }
 
   /**
@@ -113,17 +117,17 @@ class SelectionRange {
   }
 
   /**
-   * Peek the coordinates based on the offset where that coordinate resides in the collection.
+   * Peek the coordinates based on the index where that coordinate resides in the collection.
    *
-   * @param {number} [offset=0] An offset where the coordinate will be retrieved from.
+   * @param {number} [index=0] An index where the coordinate will be retrieved from. The index '0' gets the
+   * latest range.
    * @returns {CellRange|undefined}
    */
-  peekByIndex(offset = 0) {
-    const rangeIndex = this.size() + offset - 1;
+  peekByIndex(index = 0) {
     let cellRange;
 
-    if (rangeIndex >= 0) {
-      cellRange = this.ranges[rangeIndex];
+    if (index >= 0 && index < this.size()) {
+      cellRange = this.ranges[index];
     }
 
     return cellRange;

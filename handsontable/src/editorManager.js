@@ -1,130 +1,79 @@
-import { CellCoords } from './3rdparty/walkontable/src';
-import { KEY_CODES, isFunctionKey, isCtrlMetaKey } from './helpers/unicode';
-import { stopImmediatePropagation, isImmediatePropagationStopped } from './helpers/dom/event';
+import { isFunctionKey, isCtrlMetaKey } from './helpers/unicode';
+import { isImmediatePropagationStopped } from './helpers/dom/event';
 import { getEditorInstance } from './editors/registry';
 import EventManager from './eventManager';
-import { EDITOR_STATE } from './editors/baseEditor';
-import { getParentWindow } from './helpers/dom/element';
 
 class EditorManager {
   /**
-   * @param {Core} instance The Handsontable instance.
+   * Instance of {@link Handsontable}.
+   *
+   * @private
+   * @type {Handsontable}
+   */
+  hot;
+  /**
+   * Reference to an instance's private GridSettings object.
+   *
+   * @private
+   * @type {GridSettings}
+   */
+  tableMeta;
+  /**
+   * Instance of {@link Selection}.
+   *
+   * @private
+   * @type {Selection}
+   */
+  selection;
+  /**
+   * Instance of {@link EventManager}.
+   *
+   * @private
+   * @type {EventManager}
+   */
+  eventManager;
+  /**
+   * Determines if EditorManager is destroyed.
+   *
+   * @private
+   * @type {boolean}
+   */
+  destroyed = false;
+  /**
+   * A reference to an instance of the activeEditor.
+   *
+   * @private
+   * @type {BaseEditor}
+   */
+  activeEditor;
+  /**
+   * Keeps a reference to the cell's properties object.
+   *
+   * @type {object}
+   */
+  cellProperties;
+
+  /**
+   * @param {Core} hotInstance The Handsontable instance.
    * @param {TableMeta} tableMeta The table meta instance.
    * @param {Selection} selection The selection instance.
    */
-  constructor(instance, tableMeta, selection) {
-    /**
-     * Instance of {@link Handsontable}.
-     *
-     * @private
-     * @type {Handsontable}
-     */
-    this.instance = instance;
-    /**
-     * Reference to an instance's private GridSettings object.
-     *
-     * @private
-     * @type {GridSettings}
-     */
+  constructor(hotInstance, tableMeta, selection) {
+    this.hot = hotInstance;
     this.tableMeta = tableMeta;
-    /**
-     * Instance of {@link Selection}.
-     *
-     * @private
-     * @type {Selection}
-     */
     this.selection = selection;
-    /**
-     * Instance of {@link EventManager}.
-     *
-     * @private
-     * @type {EventManager}
-     */
-    this.eventManager = new EventManager(instance);
-    /**
-     * Determines if EditorManager is destroyed.
-     *
-     * @private
-     * @type {boolean}
-     */
-    this.destroyed = false;
-    /**
-     * Determines if EditorManager is locked.
-     *
-     * @private
-     * @type {boolean}
-     */
-    this.lock = false;
-    /**
-     * A reference to an instance of the activeEditor.
-     *
-     * @private
-     * @type {BaseEditor}
-     */
-    this.activeEditor = void 0;
-    /**
-     * Keeps a reference to the cell's properties object.
-     *
-     * @type {object}
-     */
-    this.cellProperties = void 0;
-    /**
-     * Keeps last keyCode pressed from the keydown event.
-     *
-     * @type {number}
-     */
-    this.lastKeyCode = void 0;
+    this.eventManager = new EventManager(hotInstance);
 
-    this.instance.addHook('afterDocumentKeyDown', event => this.onAfterDocumentKeyDown(event));
-
-    let frame = this.instance.rootWindow;
-
-    while (frame) {
-      this.eventManager.addEventListener(frame.document.documentElement, 'keydown', (event) => {
-        if (!this.destroyed) {
-          this.instance.runHooks('afterDocumentKeyDown', event);
-        }
-      });
-
-      frame = getParentWindow(frame);
-    }
+    this.hot.addHook('afterDocumentKeyDown', event => this.#onAfterDocumentKeyDown(event));
 
     // Open editor when text composition is started (IME editor)
-    this.eventManager.addEventListener(this.instance.rootDocument.documentElement, 'compositionstart', (event) => {
-      if (!this.destroyed && this.activeEditor && !this.activeEditor.isOpened() && this.instance.isListening()) {
+    this.eventManager.addEventListener(this.hot.rootDocument.documentElement, 'compositionstart', (event) => {
+      if (!this.destroyed && this.hot.isListening()) {
         this.openEditor('', event);
       }
     });
 
-    this.instance.view.wt.update('onCellDblClick', (event, coords, elem) => this.onCellDblClick(event, coords, elem));
-  }
-
-  /**
-   * Lock the editor from being prepared and closed. Locking the editor prevents its closing and
-   * reinitialized after selecting the new cell. This feature is necessary for a mobile editor.
-   */
-  lockEditor() {
-    this.lock = true;
-  }
-
-  /**
-   * Unlock the editor from being prepared and closed. This method restores the original behavior of
-   * the editors where for every new selection its instances are closed.
-   */
-  unlockEditor() {
-    this.lock = false;
-  }
-
-  /**
-   * Destroy current editor, if exists.
-   *
-   * @param {boolean} revertOriginal If `false` and the cell using allowInvalid option,
-   *                                 then an editor won't be closed until validation is passed.
-   */
-  destroyEditor(revertOriginal) {
-    if (!this.lock) {
-      this.closeEditor(revertOriginal);
-    }
+    this.hot.view._wt.update('onCellDblClick', (event, coords, elem) => this.#onCellDblClick(event, coords, elem));
   }
 
   /**
@@ -140,10 +89,6 @@ class EditorManager {
    * Prepare text input to be displayed at given grid cell.
    */
   prepareEditor() {
-    if (this.lock) {
-      return;
-    }
-
     if (this.activeEditor && this.activeEditor.isWaiting()) {
       this.closeEditor(false, false, (dataSaved) => {
         if (dataSaved) {
@@ -154,8 +99,14 @@ class EditorManager {
       return;
     }
 
-    const { row, col } = this.instance.selection.selectedRange.current().highlight;
-    const modifiedCellCoords = this.instance.runHooks('modifyGetCellCoords', row, col);
+    const highlight = this.hot.getSelectedRangeLast()?.highlight;
+
+    if (!highlight || highlight.isHeader()) {
+      return;
+    }
+
+    const { row, col } = highlight;
+    const modifiedCellCoords = this.hot.runHooks('modifyGetCellCoords', row, col, false, 'meta');
     let visualRowToCheck = row;
     let visualColumnToCheck = col;
 
@@ -164,40 +115,28 @@ class EditorManager {
     }
 
     // Getting values using the modified coordinates.
-    this.cellProperties = this.instance.getCellMeta(visualRowToCheck, visualColumnToCheck);
+    this.cellProperties = this.hot.getCellMeta(visualRowToCheck, visualColumnToCheck);
 
-    const { activeElement } = this.instance.rootDocument;
-
-    if (activeElement) {
-      // Bluring the activeElement removes unwanted border around the focusable element
-      // (and resets activeElement prop). Without blurring the activeElement points to the
-      // previously focusable element after clicking onto the cell (#6877).
-      activeElement.blur();
-    }
-
-    if (this.cellProperties.readOnly) {
+    if (!this.isCellEditable()) {
       this.clearActiveEditor();
 
       return;
     }
 
-    const editorClass = this.instance.getCellEditor(this.cellProperties);
-    // Getting element using coordinates from the selection.
-    const td = this.instance.getCell(row, col, true);
+    const td = this.hot.getCell(row, col, true);
 
-    if (editorClass && td) {
-      const prop = this.instance.colToProp(visualColumnToCheck);
-
+    // Skip the preparation when the cell is not rendered in the DOM. The cell is scrolled out of
+    // the table's viewport.
+    if (td) {
+      const editorClass = this.hot.getCellEditor(this.cellProperties);
+      const prop = this.hot.colToProp(visualColumnToCheck);
       const originalValue =
-        this.instance.getSourceDataAtCell(this.instance.toPhysicalRow(visualRowToCheck), visualColumnToCheck);
+        this.hot.getSourceDataAtCell(this.hot.toPhysicalRow(visualRowToCheck), visualColumnToCheck);
 
-      this.activeEditor = getEditorInstance(editorClass, this.instance);
+      this.activeEditor = getEditorInstance(editorClass, this.hot);
       // Using not modified coordinates, as we need to get the table element using selection coordinates.
       // There is an extra translation in the editor for saving value.
       this.activeEditor.prepare(row, col, prop, td, originalValue, this.cellProperties);
-
-    } else {
-      this.clearActiveEditor();
     }
   }
 
@@ -215,13 +154,51 @@ class EditorManager {
    *
    * @param {null|string} newInitialValue New value from which editor will start if handled property it's not the `null`.
    * @param {Event} event The event object.
+   * @param {boolean} [enableFullEditMode=false] When true, an editor works in full editing mode. Mode disallows closing an editor
+   *                                             when arrow keys are pressed.
    */
-  openEditor(newInitialValue, event) {
-    if (!this.activeEditor) {
+  openEditor(newInitialValue, event, enableFullEditMode = false) {
+    if (!this.isCellEditable()) {
+      this.clearActiveEditor();
+
       return;
     }
 
-    this.activeEditor.beginEditing(newInitialValue, event);
+    const selection = this.hot.getSelectedRangeLast();
+    let allowOpening = this.hot.runHooks(
+      'beforeBeginEditing',
+      selection.highlight.row,
+      selection.highlight.col,
+      newInitialValue,
+      event,
+      enableFullEditMode,
+    );
+
+    // If the above hook does not return boolean then the default behavior is applied which disallows opening
+    // an editor after double mouse click for non-contiguous selection (while pressing Ctrl/Cmd) and
+    // for multiple selected cells (while pressing SHIFT).
+    if (event instanceof MouseEvent && typeof allowOpening !== 'boolean') {
+      allowOpening = this.hot.selection.getLayerLevel() === 0 && selection.isSingle();
+    }
+
+    if (allowOpening === false) {
+      this.clearActiveEditor();
+
+      return;
+    }
+
+    if (!this.activeEditor) {
+      this.hot.scrollToFocusedCell();
+      this.prepareEditor();
+    }
+
+    if (this.activeEditor) {
+      if (enableFullEditMode) {
+        this.activeEditor.enableFullEditMode();
+      }
+
+      this.activeEditor.beginEditing(newInitialValue, event);
+    }
   }
 
   /**
@@ -264,314 +241,98 @@ class EditorManager {
    * @private
    */
   clearActiveEditor() {
-    this.activeEditor = void 0;
+    this.activeEditor = undefined;
   }
 
   /**
-   * Controls selection's behaviour after clicking `Enter`.
+   * Checks if the currently selected cell (pointed by selection highlight coords) is editable.
+   * Editable cell is when:
+   *   - the cell has defined an editor type;
+   *   - the cell is not marked as read-only;
+   *   - the cell is not hidden.
    *
    * @private
-   * @param {boolean} isShiftPressed If `true`, then the selection will move up after hit enter.
+   * @returns {boolean}
    */
-  moveSelectionAfterEnter(isShiftPressed) {
-    const enterMoves = typeof this.tableMeta.enterMoves === 'function' ?
-      this.tableMeta.enterMoves(event) : this.tableMeta.enterMoves;
+  isCellEditable() {
+    const selection = this.hot.getSelectedRangeLast();
 
-    if (isShiftPressed) {
-      // move selection up
-      this.selection.transformStart(-enterMoves.row, -enterMoves.col);
+    if (!selection) {
+      return false;
+    }
+
+    const editorClass = this.hot.getCellEditor(this.cellProperties);
+    const { row, col } = selection.highlight;
+    const {
+      rowIndexMapper,
+      columnIndexMapper
+    } = this.hot;
+    const isCellHidden = rowIndexMapper.isHidden(this.hot.toPhysicalRow(row)) ||
+      columnIndexMapper.isHidden(this.hot.toPhysicalColumn(col));
+
+    if (this.cellProperties.readOnly || !editorClass || isCellHidden) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Controls selection's behavior after clicking `Enter`.
+   *
+   * @private
+   * @param {KeyboardEvent} event The keyboard event object.
+   */
+  moveSelectionAfterEnter(event) {
+    const enterMoves = { ...typeof this.tableMeta.enterMoves === 'function' ?
+      this.tableMeta.enterMoves(event) : this.tableMeta.enterMoves };
+
+    if (event.shiftKey) {
+      enterMoves.row = -enterMoves.row;
+      enterMoves.col = -enterMoves.col;
+    }
+
+    if (this.hot.selection.isMultiple()) {
+      this.selection.transformFocus(enterMoves.row, enterMoves.col);
     } else {
-      // move selection down (add a new row if needed)
       this.selection.transformStart(enterMoves.row, enterMoves.col, true);
-    }
-  }
-
-  /**
-   * Controls selection behaviour after clicking `arrow up`.
-   *
-   * @private
-   * @param {boolean} isShiftPressed If `true`, then the selection will expand up.
-   */
-  moveSelectionUp(isShiftPressed) {
-    if (isShiftPressed) {
-      this.selection.transformEnd(-1, 0);
-    } else {
-      this.selection.transformStart(-1, 0);
-    }
-  }
-
-  /**
-   * Controls selection's behaviour after clicking `arrow down`.
-   *
-   * @private
-   * @param {boolean} isShiftPressed If `true`, then the selection will expand down.
-   */
-  moveSelectionDown(isShiftPressed) {
-    if (isShiftPressed) {
-      // expanding selection down with shift
-      this.selection.transformEnd(1, 0);
-    } else {
-      this.selection.transformStart(1, 0);
-    }
-  }
-
-  /**
-   * Controls selection's behaviour after clicking `arrow right`.
-   *
-   * @private
-   * @param {boolean} isShiftPressed If `true`, then the selection will expand right.
-   */
-  moveSelectionRight(isShiftPressed) {
-    if (isShiftPressed) {
-      this.selection.transformEnd(0, this.instance.getDirectionFactor());
-    } else {
-      this.selection.transformStart(0, this.instance.getDirectionFactor());
-    }
-  }
-
-  /**
-   * Controls selection's behaviour after clicking `arrow left`.
-   *
-   * @private
-   * @param {boolean} isShiftPressed If `true`, then the selection will expand left.
-   */
-  moveSelectionLeft(isShiftPressed) {
-    if (isShiftPressed) {
-      this.selection.transformEnd(0, -1 * this.instance.getDirectionFactor());
-    } else {
-      this.selection.transformStart(0, -1 * this.instance.getDirectionFactor());
     }
   }
 
   /**
    * OnAfterDocumentKeyDown callback.
    *
-   * @private
    * @param {KeyboardEvent} event The keyboard event object.
    */
-  onAfterDocumentKeyDown(event) {
-    if (!this.instance.isListening()) {
+  #onAfterDocumentKeyDown(event) {
+    const selection = this.hot.getSelectedRangeLast();
+
+    if (!this.hot.isListening() || !selection || selection.highlight.isHeader() ||
+        isImmediatePropagationStopped(event)) {
       return;
     }
-
-    this.instance.runHooks('beforeKeyDown', event);
 
     const { keyCode } = event;
 
-    // keyCode 229 aka 'uninitialized' doesn't take into account with editors. This key code is produced when unfinished
-    // character is entering (using IME editor). It is fired mainly on linux (ubuntu) with installed ibus-pinyin package.
-    if (this.destroyed || keyCode === 229) {
-      return;
-    }
-    if (isImmediatePropagationStopped(event)) {
-      return;
-    }
-
-    this.lastKeyCode = keyCode;
-
-    if (!this.selection.isSelected()) {
-      return;
-    }
     // catch CTRL but not right ALT (which in some systems triggers ALT+CTRL)
     const isCtrlPressed = (event.ctrlKey || event.metaKey) && !event.altKey;
 
-    if (this.activeEditor && !this.activeEditor.isWaiting()) {
+    if (!this.activeEditor || (this.activeEditor && !this.activeEditor.isWaiting())) {
       if (!isFunctionKey(keyCode) && !isCtrlMetaKey(keyCode) && !isCtrlPressed && !this.isEditorOpened()) {
         this.openEditor('', event);
-
-        return;
       }
-    }
-
-    const isShiftPressed = event.shiftKey;
-
-    const rangeModifier = isShiftPressed ? this.selection.setRangeEnd : this.selection.setRangeStart;
-    let tabMoves;
-
-    switch (keyCode) {
-      case KEY_CODES.A:
-        if (!this.isEditorOpened() && isCtrlPressed) {
-          this.instance.selectAll();
-
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        break;
-
-      case KEY_CODES.ARROW_UP:
-        if (this.isEditorOpened() && !this.activeEditor.isWaiting()) {
-          this.closeEditorAndSaveChanges(isCtrlPressed);
-        }
-        this.moveSelectionUp(isShiftPressed);
-
-        event.preventDefault();
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.ARROW_DOWN:
-        if (this.isEditorOpened() && !this.activeEditor.isWaiting()) {
-          this.closeEditorAndSaveChanges(isCtrlPressed);
-        }
-
-        this.moveSelectionDown(isShiftPressed);
-
-        event.preventDefault();
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.ARROW_RIGHT:
-        if (this.isEditorOpened() && !this.activeEditor.isWaiting()) {
-          this.closeEditorAndSaveChanges(isCtrlPressed);
-        }
-
-        this.moveSelectionRight(isShiftPressed);
-
-        event.preventDefault();
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.ARROW_LEFT:
-        if (this.isEditorOpened() && !this.activeEditor.isWaiting()) {
-          this.closeEditorAndSaveChanges(isCtrlPressed);
-        }
-
-        this.moveSelectionLeft(isShiftPressed);
-
-        event.preventDefault();
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.TAB:
-        tabMoves = typeof this.tableMeta.tabMoves === 'function' ?
-          this.tableMeta.tabMoves(event) : this.tableMeta.tabMoves;
-
-        if (isShiftPressed) {
-          // move selection left
-          this.selection.transformStart(-tabMoves.row, -tabMoves.col);
-        } else {
-          // move selection right (add a new column if needed)
-          this.selection.transformStart(tabMoves.row, tabMoves.col, true);
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.BACKSPACE:
-      case KEY_CODES.DELETE:
-        this.instance.emptySelectedCells();
-        this.prepareEditor();
-        event.preventDefault();
-        break;
-
-      case KEY_CODES.F2:
-        /* F2 */
-        if (this.activeEditor) {
-          this.activeEditor.enableFullEditMode();
-        }
-        this.openEditor(null, event);
-
-        event.preventDefault(); // prevent Opera from opening 'Go to Page dialog'
-        break;
-
-      case KEY_CODES.ENTER:
-        /* return/enter */
-        if (this.isEditorOpened()) {
-
-          if (this.activeEditor && this.activeEditor.state !== EDITOR_STATE.WAITING) {
-            this.closeEditorAndSaveChanges(isCtrlPressed);
-          }
-          this.moveSelectionAfterEnter(isShiftPressed);
-
-        } else if (this.instance.getSettings().enterBeginsEditing) {
-          if (this.cellProperties.readOnly) {
-            this.moveSelectionAfterEnter();
-
-          } else if (this.activeEditor) {
-            this.activeEditor.enableFullEditMode();
-            this.openEditor(null, event);
-          }
-
-        } else {
-          this.moveSelectionAfterEnter(isShiftPressed);
-        }
-        event.preventDefault(); // don't add newline to field
-        stopImmediatePropagation(event); // required by HandsontableEditor
-        break;
-
-      case KEY_CODES.ESCAPE:
-        if (this.isEditorOpened()) {
-          this.closeEditorAndRestoreOriginalValue(isCtrlPressed);
-
-          this.activeEditor.focus();
-        }
-        event.preventDefault();
-        break;
-
-      case KEY_CODES.HOME:
-        if (event.ctrlKey || event.metaKey) {
-          rangeModifier.call(this.selection,
-            new CellCoords(
-              this.instance.rowIndexMapper.getFirstNotHiddenIndex(0, 1),
-              this.selection.selectedRange.current().from.col));
-        } else {
-          rangeModifier.call(this.selection,
-            new CellCoords(this.selection.selectedRange.current().from.row,
-              this.instance.columnIndexMapper.getFirstNotHiddenIndex(0, 1)));
-        }
-        event.preventDefault(); // don't scroll the window
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.END:
-        if (event.ctrlKey || event.metaKey) {
-          rangeModifier.call(
-            this.selection,
-            new CellCoords(this.instance.rowIndexMapper.getFirstNotHiddenIndex(this.instance.countRows() - 1, -1),
-              this.selection.selectedRange.current().from.col)
-          );
-        } else {
-          rangeModifier.call(
-            this.selection,
-            new CellCoords(this.selection.selectedRange.current().from.row,
-              this.instance.columnIndexMapper.getFirstNotHiddenIndex(this.instance.countCols() - 1, -1))
-          );
-        }
-        event.preventDefault(); // don't scroll the window
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.PAGE_UP:
-        this.selection.transformStart(-this.instance.countVisibleRows(), 0);
-        event.preventDefault(); // don't page up the window
-        event.stopPropagation();
-        break;
-
-      case KEY_CODES.PAGE_DOWN:
-        this.selection.transformStart(this.instance.countVisibleRows(), 0);
-        event.preventDefault(); // don't page down the window
-        event.stopPropagation();
-        break;
-
-      default:
-        break;
     }
   }
 
   /**
    * OnCellDblClick callback.
    *
-   * @private
    * @param {MouseEvent} event The mouse event object.
    * @param {object} coords The cell coordinates.
-   * @param {HTMLTableCellElement|HTMLTableHeaderCellElement} elem The element which triggers the action.
    */
-  onCellDblClick(event, coords, elem) {
-    // may be TD or TH
-    if (elem.nodeName === 'TD') {
-      if (this.activeEditor) {
-        this.activeEditor.enableFullEditMode();
-      }
-      this.openEditor(null, event);
+  #onCellDblClick(event, coords) {
+    if (coords.isCell()) {
+      this.openEditor(null, event, true);
     }
   }
 

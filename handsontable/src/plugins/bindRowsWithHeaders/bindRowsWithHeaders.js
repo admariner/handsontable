@@ -23,6 +23,7 @@ const bindTypeToMapStrategy = new Map([
  * at the initialization row 0 has a header titled "A", it will have it no matter what you do with the table.
  *
  * @example
+ * ::: only-for javascript
  * ```js
  * const container = document.getElementById('example');
  * const hot = new Handsontable(container, {
@@ -31,6 +32,17 @@ const bindTypeToMapStrategy = new Map([
  *   bindRowsWithHeaders: true
  * });
  * ```
+ * :::
+ *
+ * ::: only-for react
+ * ```jsx
+ * <HotTable
+ *   data={getData()}
+ *   // enable plugin
+ *   bindRowsWithHeaders={true}
+ * />
+ * ```
+ * :::
  */
 export class BindRowsWithHeaders extends BasePlugin {
   static get PLUGIN_KEY() {
@@ -41,20 +53,17 @@ export class BindRowsWithHeaders extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Plugin indexes cache.
-     *
-     * @private
-     * @type {null|IndexMap}
-     */
-    this.headerIndexes = null;
-  }
+  /**
+   * Plugin indexes cache.
+   *
+   * @private
+   * @type {null|IndexMap}
+   */
+  headerIndexes = null;
 
   /**
    * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link BindRowsWithHeaders#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link BindRowsWithHeaders#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -70,17 +79,11 @@ export class BindRowsWithHeaders extends BasePlugin {
       return;
     }
 
-    let bindType = this.hot.getSettings()[PLUGIN_KEY];
-
-    if (typeof bindType !== 'string') {
-      bindType = DEFAULT_BIND;
-    }
-
-    const MapStrategy = bindTypeToMapStrategy.get(bindType);
+    const MapStrategy = bindTypeToMapStrategy.get(this.getSetting()) ?? bindTypeToMapStrategy.get(DEFAULT_BIND);
 
     this.headerIndexes = this.hot.rowIndexMapper.registerMap('bindRowsWithHeaders', new MapStrategy());
 
-    this.addHook('modifyRowHeader', row => this.onModifyRowHeader(row));
+    this.addHook('modifyRowHeader', row => this.#onModifyRowHeader(row));
 
     super.enablePlugin();
   }
@@ -97,11 +100,10 @@ export class BindRowsWithHeaders extends BasePlugin {
   /**
    * On modify row header listener.
    *
-   * @private
    * @param {number} row Row index.
    * @returns {number}
    */
-  onModifyRowHeader(row) {
+  #onModifyRowHeader(row) {
     return this.headerIndexes.getValueAtIndex(this.hot.toPhysicalRow(row));
   }
 

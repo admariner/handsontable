@@ -5,6 +5,8 @@ import { arrayEach, arrayReduce } from '../../helpers/array';
 export const PLUGIN_KEY = 'trimRows';
 export const PLUGIN_PRIORITY = 330;
 
+/* eslint-disable jsdoc/require-description-complete-sentence */
+
 /**
  * @plugin TrimRows
  * @class TrimRows
@@ -15,6 +17,7 @@ export const PLUGIN_PRIORITY = 330;
  * data is not visible to other plugins.
  *
  * @example
+ * ::: only-for javascript
  * ```js
  * const container = document.getElementById('example');
  * const hot = new Handsontable(container, {
@@ -47,6 +50,47 @@ export const PLUGIN_PRIORITY = 330;
  * // rerender table to see the changes
  * hot.render();
  * ```
+ * :::
+ *
+ * ::: only-for react
+ * ```jsx
+ * const hotRef = useRef(null);
+ *
+ * ...
+ *
+ * <HotTable
+ *   ref={hotRef}
+ *   data={getData()}
+ *   // hide selected rows on table initialization
+ *   trimRows={[1, 2, 5]}
+ * />
+ *
+ * const hot = hotRef.current.hotInstance;
+ * // access the trimRows plugin instance
+ * const trimRowsPlugin = hot.getPlugin('trimRows');
+ *
+ * // hide single row
+ * trimRowsPlugin.trimRow(1);
+ *
+ * // hide multiple rows
+ * trimRowsPlugin.trimRow(1, 2, 9);
+ *
+ * // or as an array
+ * trimRowsPlugin.trimRows([1, 2, 9]);
+ *
+ * // show single row
+ * trimRowsPlugin.untrimRow(1);
+ *
+ * // show multiple rows
+ * trimRowsPlugin.untrimRow(1, 2, 9);
+ *
+ * // or as an array
+ * trimRowsPlugin.untrimRows([1, 2, 9]);
+ *
+ * // rerender table to see the changes
+ * hot.render();
+ * ```
+ * :::
  */
 export class TrimRows extends BasePlugin {
   static get PLUGIN_KEY() {
@@ -57,19 +101,17 @@ export class TrimRows extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Map of skipped rows by the plugin.
-     *
-     * @private
-     * @type {null|TrimmingMap}
-     */
-    this.trimmedRowsMap = null;
-  }
+  /**
+   * Map of skipped rows by the plugin.
+   *
+   * @private
+   * @type {null|TrimmingMap}
+   */
+  trimmedRowsMap = null;
+
   /**
    * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link AutoRowSize#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link AutoRowSize#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -86,13 +128,16 @@ export class TrimRows extends BasePlugin {
     }
 
     this.trimmedRowsMap = this.hot.rowIndexMapper.registerMap('trimRows', new TrimmingMap());
-    this.trimmedRowsMap.addLocalHook('init', () => this.onMapInit());
+    this.trimmedRowsMap.addLocalHook('init', () => this.#onMapInit());
 
     super.enablePlugin();
   }
 
   /**
-   * Updates the plugin state. This method is executed when {@link Core#updateSettings} is invoked.
+   * Updates the plugin's state.
+   *
+   * This method is executed when [`updateSettings()`](@/api/core.md#updatesettings) is invoked with any of the following configuration options:
+   *  - [`trimRows`](@/api/options.md#trimrows)
    */
   updatePlugin() {
     const trimmedRows = this.hot.getSettings()[PLUGIN_KEY];
@@ -164,7 +209,7 @@ export class TrimRows extends BasePlugin {
   }
 
   /**
-   * Trims the row provided as physical row index (counting from 0).
+   * Trims the row provided as a physical row index (counting from 0).
    *
    * @param {...number} row Physical row index.
    */
@@ -218,7 +263,7 @@ export class TrimRows extends BasePlugin {
   }
 
   /**
-   * Untrims the row provided as row index (counting from 0).
+   * Untrims the row provided as a physical row index (counting from 0).
    *
    * @param {...number} row Physical row index.
    */
@@ -244,7 +289,7 @@ export class TrimRows extends BasePlugin {
   }
 
   /**
-   * Get if trim config is valid. Check whether all of the provided row indexes are within source data.
+   * Get if trim config is valid. Check whether all of the provided physical row indexes are within source data.
    *
    * @param {Array} trimmedRows List of physical row indexes.
    * @returns {boolean}
@@ -258,10 +303,8 @@ export class TrimRows extends BasePlugin {
 
   /**
    * On map initialized hook callback.
-   *
-   * @private
    */
-  onMapInit() {
+  #onMapInit() {
     const trimmedRows = this.hot.getSettings()[PLUGIN_KEY];
 
     if (Array.isArray(trimmedRows)) {

@@ -1,7 +1,7 @@
 /**
  * @preserve
  * Authors: Handsoncode
- * Last updated: Nov 17, 2017
+ * Last updated: Dec 5, 2022
  *
  * Description: Definition file for Polish - Poland language-country.
  */
@@ -49,6 +49,12 @@ const dictionary = {
   [C.CONTEXTMENU_ITEMS_UNMERGE_CELLS]: 'Rozdziel komórki',
 
   [C.CONTEXTMENU_ITEMS_COPY]: 'Kopiuj',
+  [C.CONTEXTMENU_ITEMS_COPY_WITH_COLUMN_HEADERS]: ['Kopiuj z nagłówkiem', 'Kopiuj z nagłówkami'],
+  [C.CONTEXTMENU_ITEMS_COPY_WITH_COLUMN_GROUP_HEADERS]: [
+    'Kopiuj z nagłówkiem grupowym',
+    'Kopiuj z nagłówkami grupowymi'
+  ],
+  [C.CONTEXTMENU_ITEMS_COPY_COLUMN_HEADERS_ONLY]: ['Kopiuj sam nagłówek', 'Kopiuj same nagłówki'],
   [C.CONTEXTMENU_ITEMS_CUT]: 'Wytnij',
 
   [C.CONTEXTMENU_ITEMS_NESTED_ROWS_INSERT_CHILD]: 'Wstaw wiersz podrzędny',
@@ -96,7 +102,10 @@ const dictionary = {
 
   [C.FILTERS_BUTTONS_PLACEHOLDER_SEARCH]: 'Szukaj',
   [C.FILTERS_BUTTONS_PLACEHOLDER_VALUE]: 'Wartość',
-  [C.FILTERS_BUTTONS_PLACEHOLDER_SECOND_VALUE]: 'Druga wartość'
+  [C.FILTERS_BUTTONS_PLACEHOLDER_SECOND_VALUE]: 'Druga wartość',
+
+  [C.CHECKBOX_CHECKED]: 'Zaznaczony',
+  [C.CHECKBOX_UNCHECKED]: 'Odznaczony',
 };
 
 export default dictionary;

@@ -1,11 +1,14 @@
-import { Component, VERSION as AngularVersion } from '@angular/core';
-import { HotTableModule } from '@handsontable/angular';
+import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import Handsontable from 'handsontable';
+import { HotTableModule } from '@handsontable/angular';
 
 @Component({
+  standalone: true,
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss']
+  styleUrls: ['./app.component.scss'],
+  imports: [HotTableModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class AppComponent {
 
@@ -22,19 +25,4 @@ export class AppComponent {
     height: '100%',
     licenseKey: 'non-commercial-and-evaluation'
   };
-
-  ngOnInit() {
-    console.log(this.getDebugInfo());
-  }
-
-  private getDebugInfo() {
-    let debug = 'Handsontable:';
-    debug += ` v${Handsontable.version}`;
-    debug += ` (${Handsontable.buildDate})`;
-    debug += ' Wrapper:';
-    debug += ` v${HotTableModule.version}`;
-    debug += ' Angular:';
-    debug += ` v${AngularVersion.full}`;
-    return debug;
-  }
 }

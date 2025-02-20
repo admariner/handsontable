@@ -7,6 +7,7 @@ const path = require('path');
 const webpack = require('webpack');
 const fsExtra = require('fs-extra');
 const JasmineHtml = require('./plugin/jasmine-html');
+const compilationDoneMarker = require('./plugin/webpack/compilation-done-marker');
 
 const wotPath = path.resolve(__dirname, '../src/3rdparty/walkontable');
 
@@ -18,6 +19,7 @@ module.exports.create = function create(envArgs) {
     output: {
       filename: '[name].entry.js',
       globalObject: `typeof self !== 'undefined' ? self : this`,
+      library: '__wot_tests__',
       libraryTarget: 'var',
       path: path.resolve(wotPath, 'test/dist'),
     },
@@ -41,8 +43,6 @@ module.exports.create = function create(envArgs) {
       },
     ],
     plugins: [
-      // This helps ensure the builds are consistent if source code hasn't changed
-      new webpack.optimize.OccurrenceOrderPlugin(),
       new JasmineHtml({
         filename: path.resolve(wotPath, 'test/SpecRunner.html'),
         baseJasminePath: `${
@@ -51,7 +51,7 @@ module.exports.create = function create(envArgs) {
           ) ? '../../../../' : '../../../../../'
         }`,
         externalCssFiles: [
-          '../css/walkontable.css',
+          '../dist/walkontable.css',
           '../css/walkontable.test.css',
         ],
         externalJsFiles: [
@@ -64,6 +64,7 @@ module.exports.create = function create(envArgs) {
       new webpack.DefinePlugin({
         '__ENV_ARGS__': JSON.stringify(envArgs),
       }),
+      compilationDoneMarker(),
     ],
   };
 

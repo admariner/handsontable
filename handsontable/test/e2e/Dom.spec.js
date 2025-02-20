@@ -179,7 +179,7 @@ describe('Handsontable.Dom', () => {
     it('should properly calculate element\'s width if it\'s a floating value (less than x.5)', () => {
       element.css({ width: '10.25px' });
 
-      expect(Handsontable.dom.outerWidth(element[0])).toBe(11);
+      expect(Handsontable.dom.outerWidth(element[0])).toBe(10);
     });
 
     it('should properly calculate element\'s width if it\'s a floating value (equal or greater than x.5)', () => {
@@ -209,7 +209,7 @@ describe('Handsontable.Dom', () => {
       .appendTo('body');
 
     const span = document.getElementById('testable');
-    const compStyle = Handsontable.dom.getComputedStyle(span);
+    const compStyle = getComputedStyle(span);
 
     expect(compStyle.fontSize).toBe('12px');
 
@@ -221,7 +221,7 @@ describe('Handsontable.Dom', () => {
       .appendTo('body');
 
     const div = document.getElementById('testable');
-    const compStyle = Handsontable.dom.getComputedStyle(div);
+    const compStyle = getComputedStyle(div);
 
     expect(compStyle.borderTopWidth).toBe('10px');
 

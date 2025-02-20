@@ -15,9 +15,10 @@ const calculatedRows = {
    * Get the source index of the first rendered row. If no rows are rendered, returns an error code: -1.
    *
    * @returns {number}
+   * @this Table
    */
   getFirstRenderedRow() {
-    const startRow = this.wot.wtViewport.rowsRenderCalculator.startRow;
+    const startRow = this.dataAccessObject.startRowRendered;
 
     if (startRow === null) {
       return -1;
@@ -30,9 +31,26 @@ const calculatedRows = {
    * Get the source index of the first row fully visible in the viewport. If no rows are fully visible, returns an error code: -1.
    *
    * @returns {number}
+   * @this Table
    */
   getFirstVisibleRow() {
-    const startRow = this.wot.wtViewport.rowsVisibleCalculator.startRow;
+    const startRow = this.dataAccessObject.startRowVisible;
+
+    if (startRow === null) {
+      return -1;
+    }
+
+    return startRow;
+  },
+
+  /**
+   * Get the source index of the first row partially visible in the viewport. If no rows are partially visible, returns an error code: -1.
+   *
+   * @returns {number}
+   * @this Table
+   */
+  getFirstPartiallyVisibleRow() {
+    const startRow = this.dataAccessObject.startRowPartiallyVisible;
 
     if (startRow === null) {
       return -1;
@@ -45,9 +63,10 @@ const calculatedRows = {
    * Get the source index of the last rendered row. If no rows are rendered, returns an error code: -1.
    *
    * @returns {number}
+   * @this Table
    */
   getLastRenderedRow() {
-    const endRow = this.wot.wtViewport.rowsRenderCalculator.endRow;
+    const endRow = this.dataAccessObject.endRowRendered;
 
     if (endRow === null) {
       return -1;
@@ -60,9 +79,26 @@ const calculatedRows = {
    * Get the source index of the last row fully visible in the viewport. If no rows are fully visible, returns an error code: -1.
    *
    * @returns {number}
+   * @this Table
    */
   getLastVisibleRow() {
-    const endRow = this.wot.wtViewport.rowsVisibleCalculator.endRow;
+    const endRow = this.dataAccessObject.endRowVisible;
+
+    if (endRow === null) {
+      return -1;
+    }
+
+    return endRow;
+  },
+
+  /**
+   * Get the source index of the last row partially visible in the viewport. If no rows are partially visible, returns an error code: -1.
+   *
+   * @returns {number}
+   * @this Table
+   */
+  getLastPartiallyVisibleRow() {
+    const endRow = this.dataAccessObject.endRowPartiallyVisible;
 
     if (endRow === null) {
       return -1;
@@ -75,19 +111,31 @@ const calculatedRows = {
    * Get the number of rendered rows.
    *
    * @returns {number}
+   * @this Table
    */
   getRenderedRowsCount() {
-    return this.wot.wtViewport.rowsRenderCalculator.count;
+    return this.dataAccessObject.countRowsRendered;
   },
 
   /**
    * Get the number of fully visible rows in the viewport.
    *
    * @returns {number}
+   * @this Table
    */
   getVisibleRowsCount() {
-    return this.wot.wtViewport.rowsVisibleCalculator.count;
-  }
+    return this.dataAccessObject.countRowsVisible;
+  },
+
+  /**
+   * Get the number of rendered column headers.
+   *
+   * @returns {number}
+   * @this Table
+   */
+  getColumnHeadersCount() {
+    return this.dataAccessObject.columnHeaders.length;
+  },
 };
 
 defineGetter(calculatedRows, 'MIXIN_NAME', MIXIN_NAME, {

@@ -1,12 +1,17 @@
 import { BasePlugin } from '../base';
+import { Hooks } from '../../core/hooks';
 import freezeColumnItem from './contextMenuItem/freezeColumn';
 import unfreezeColumnItem from './contextMenuItem/unfreezeColumn';
 
-import './manualColumnFreeze.css';
+Hooks.getSingleton().register('beforeColumnFreeze');
+Hooks.getSingleton().register('afterColumnFreeze');
+Hooks.getSingleton().register('beforeColumnUnfreeze');
+Hooks.getSingleton().register('afterColumnUnfreeze');
 
 export const PLUGIN_KEY = 'manualColumnFreeze';
 export const PLUGIN_PRIORITY = 110;
-const privatePool = new WeakMap();
+
+/* eslint-disable jsdoc/require-description-complete-sentence */
 
 /**
  * @plugin ManualColumnFreeze
@@ -31,17 +36,16 @@ export class ManualColumnFreeze extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-
-    privatePool.set(this, {
-      afterFirstUse: false,
-    });
-  }
+  /**
+   * Determines when the moving operation is allowed.
+   *
+   * @type {boolean}
+   */
+  #afterFirstUse = false;
 
   /**
    * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link ManualColumnFreeze#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link ManualColumnFreeze#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -57,8 +61,8 @@ export class ManualColumnFreeze extends BasePlugin {
       return;
     }
 
-    this.addHook('afterContextMenuDefaultOptions', options => this.addContextMenuEntry(options));
-    this.addHook('beforeColumnMove', (columns, finalIndex) => this.onBeforeColumnMove(columns, finalIndex));
+    this.addHook('afterContextMenuDefaultOptions', options => this.#addContextMenuEntry(options));
+    this.addHook('beforeColumnMove', (columns, finalIndex) => this.#onBeforeColumnMove(columns, finalIndex));
 
     super.enablePlugin();
   }
@@ -67,15 +71,16 @@ export class ManualColumnFreeze extends BasePlugin {
    * Disables the plugin functionality for this Handsontable instance.
    */
   disablePlugin() {
-    const priv = privatePool.get(this);
-
-    priv.afterFirstUse = false;
+    this.#afterFirstUse = false;
 
     super.disablePlugin();
   }
 
   /**
-   * Updates the plugin state. This method is executed when {@link Core#updateSettings} is invoked.
+   * Updates the plugin's state.
+   *
+   * This method is executed when [`updateSettings()`](@/api/core.md#updatesettings) is invoked with any of the following configuration options:
+   *  - [`manualColumnFreeze`](@/api/options.md#manualcolumnfreeze)
    */
   updatePlugin() {
     this.disablePlugin();
@@ -93,20 +98,32 @@ export class ManualColumnFreeze extends BasePlugin {
    * @param {number} column Visual column index.
    */
   freezeColumn(column) {
-    const priv = privatePool.get(this);
     const settings = this.hot.getSettings();
+    // columns are already fixed (frozen)
+    const freezePerformed = settings.fixedColumnsStart < this.hot.countCols()
+      && column > settings.fixedColumnsStart - 1;
 
-    if (!priv.afterFirstUse) {
-      priv.afterFirstUse = true;
+    if (!this.#afterFirstUse) {
+      this.#afterFirstUse = true;
     }
 
-    if (settings.fixedColumnsLeft === this.hot.countCols() || column <= settings.fixedColumnsLeft - 1) {
-      return; // already fixed
+    const beforeColumnFreezeHook = this.hot.runHooks('beforeColumnFreeze', column, freezePerformed);
+
+    if (beforeColumnFreezeHook === false) {
+      return;
     }
 
-    this.hot.columnIndexMapper.moveIndexes(column, settings.fixedColumnsLeft);
+    if (freezePerformed) {
+      this.hot.columnIndexMapper.moveIndexes(column, settings.fixedColumnsStart);
 
-    settings.fixedColumnsLeft += 1;
+      // Since 12.0.0, the "fixedColumnsLeft" is replaced with the "fixedColumnsStart" option.
+      // However, keeping the old name still in effect. When both option names are used together,
+      // the error is thrown. To prevent that, the plugin needs to modify the original option key
+      // to bypass the validation.
+      settings._fixedColumnsStart += 1;
+    }
+
+    this.hot.runHooks('afterColumnFreeze', column, freezePerformed);
   }
 
   /**
@@ -115,20 +132,31 @@ export class ManualColumnFreeze extends BasePlugin {
    * @param {number} column Visual column index.
    */
   unfreezeColumn(column) {
-    const priv = privatePool.get(this);
     const settings = this.hot.getSettings();
+    // columns are not fixed (not frozen)
+    const unfreezePerformed = settings.fixedColumnsStart > 0 && (column <= settings.fixedColumnsStart - 1);
 
-    if (!priv.afterFirstUse) {
-      priv.afterFirstUse = true;
+    if (!this.#afterFirstUse) {
+      this.#afterFirstUse = true;
     }
 
-    if (settings.fixedColumnsLeft <= 0 || (column > settings.fixedColumnsLeft - 1)) {
-      return; // not fixed
+    const beforeColumnUnfreezeHook = this.hot.runHooks('beforeColumnUnfreeze', column, unfreezePerformed);
+
+    if (beforeColumnUnfreezeHook === false) {
+      return;
     }
 
-    settings.fixedColumnsLeft -= 1;
+    if (unfreezePerformed) {
+      // Since 12.0.0, the "fixedColumnsLeft" is replaced with the "fixedColumnsStart" option.
+      // However, keeping the old name still in effect. When both option names are used together,
+      // the error is thrown. To prevent that, the plugin needs to modify the original option key
+      // to bypass the validation.
+      settings._fixedColumnsStart -= 1;
 
-    this.hot.columnIndexMapper.moveIndexes(column, settings.fixedColumnsLeft);
+      this.hot.columnIndexMapper.moveIndexes(column, settings.fixedColumnsStart);
+    }
+
+    this.hot.runHooks('afterColumnUnfreeze', column, unfreezePerformed);
   }
 
   /**
@@ -137,7 +165,7 @@ export class ManualColumnFreeze extends BasePlugin {
    * @private
    * @param {object} options Context menu options.
    */
-  addContextMenuEntry(options) {
+  #addContextMenuEntry(options) {
     options.items.push(
       { name: '---------' },
       freezeColumnItem(this),
@@ -153,11 +181,9 @@ export class ManualColumnFreeze extends BasePlugin {
    * @param {number} finalIndex Visual column index, being a start index for the moved columns. Points to where the elements will be placed after the moving action.
    * @returns {boolean|undefined}
    */
-  onBeforeColumnMove(columns, finalIndex) {
-    const priv = privatePool.get(this);
-
-    if (priv.afterFirstUse) {
-      const freezeLine = this.hot.getSettings().fixedColumnsLeft;
+  #onBeforeColumnMove(columns, finalIndex) {
+    if (this.#afterFirstUse) {
+      const freezeLine = this.hot.getSettings().fixedColumnsStart;
 
       // Moving any column before the "freeze line" isn't possible.
       if (finalIndex < freezeLine) {

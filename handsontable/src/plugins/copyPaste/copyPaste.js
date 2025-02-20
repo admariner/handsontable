@@ -1,17 +1,25 @@
 import { BasePlugin } from '../base';
-import Hooks from '../../pluginHooks';
+import { Hooks } from '../../core/hooks';
 import { stringify, parse } from '../../3rdparty/SheetClip';
 import { arrayEach } from '../../helpers/array';
-import { rangeEach } from '../../helpers/number';
 import { sanitize } from '../../helpers/string';
-import { getSelectionText } from '../../helpers/dom/element';
+import {
+  removeContentEditableFromElementAndDeselect,
+  runWithSelectedContendEditableElement,
+  makeElementContentEditableAndSelectItsContent
+} from '../../helpers/dom/element';
+import { isSafari } from '../../helpers/browser';
 import copyItem from './contextMenuItem/copy';
+import copyColumnHeadersOnlyItem from './contextMenuItem/copyColumnHeadersOnly';
+import copyWithColumnGroupHeadersItem from './contextMenuItem/copyWithColumnGroupHeaders';
+import copyWithColumnHeadersItem from './contextMenuItem/copyWithColumnHeaders';
 import cutItem from './contextMenuItem/cut';
 import PasteEvent from './pasteEvent';
-import { createElement, destroyElement } from './focusableElement';
+import {
+  CopyableRangesFactory,
+  normalizeRanges,
+} from './copyableRanges';
 import { _dataToHTML, htmlToGridSettings } from '../../utils/parseTable';
-
-import './copyPaste.css';
 
 Hooks.getSingleton().register('afterCopyLimit');
 Hooks.getSingleton().register('modifyCopyableRange');
@@ -24,9 +32,7 @@ Hooks.getSingleton().register('afterCopy');
 
 export const PLUGIN_KEY = 'copyPaste';
 export const PLUGIN_PRIORITY = 80;
-const ROWS_LIMIT = Infinity;
-const COLUMNS_LIMIT = Infinity;
-const privatePool = new WeakMap();
+const SETTING_KEYS = ['fragmentSelection'];
 const META_HEAD = [
   '<meta name="generator" content="Handsontable"/>',
   '<style type="text/css">td{white-space:normal}br{mso-data-placement:same-cell}</style>',
@@ -35,104 +41,173 @@ const META_HEAD = [
 /* eslint-disable jsdoc/require-description-complete-sentence */
 /**
  * @description
- * This plugin enables the copy/paste functionality in the Handsontable. The functionality works for API, Context Menu,
- * using keyboard shortcuts and menu bar from the browser.
- * Possible values:
- * * `true` (to enable default options),
- * * `false` (to disable completely).
+ * Copy, cut, and paste data by using the `CopyPaste` plugin.
  *
- * or an object with values:
- * * `'columnsLimit'` (see {@link CopyPaste#columnsLimit})
- * * `'rowsLimit'` (see {@link CopyPaste#rowsLimit})
- * * `'pasteMode'` (see {@link CopyPaste#pasteMode})
- * * `'uiContainer'` (see {@link CopyPaste#uiContainer}).
+ * Control the `CopyPaste` plugin programmatically through its [API methods](#methods).
  *
- * See [the copy/paste demo](@/guides/cell-features/clipboard.md) for examples.
+ * The user can access the copy-paste features through:
+ * - The [context menu](@/guides/cell-features/clipboard/clipboard.md#context-menu).
+ * - The [keyboard shortcuts](@/guides/cell-features/clipboard/clipboard.md#related-keyboard-shortcuts).
+ * - The browser's menu bar.
+ *
+ * Read more:
+ * - [Guides: Clipboard](@/guides/cell-features/clipboard/clipboard.md)
+ * - [Configuration options: `copyPaste`](@/api/options.md#copypaste)
  *
  * @example
  * ```js
- * // Enables the plugin with default values
+ * // enable the plugin with the default configuration
  * copyPaste: true,
- * // Enables the plugin with custom values
+ *
+ * // or, enable the plugin with a custom configuration
  * copyPaste: {
  *   columnsLimit: 25,
  *   rowsLimit: 50,
  *   pasteMode: 'shift_down',
+ *   copyColumnHeaders: true,
+ *   copyColumnGroupHeaders: true,
+ *   copyColumnHeadersOnly: true,
  *   uiContainer: document.body,
  * },
  * ```
  * @class CopyPaste
  * @plugin CopyPaste
  */
-/* eslint-enable jsdoc/require-description-complete-sentence */
 export class CopyPaste extends BasePlugin {
   static get PLUGIN_KEY() {
     return PLUGIN_KEY;
+  }
+
+  static get SETTING_KEYS() {
+    return [
+      PLUGIN_KEY,
+      ...SETTING_KEYS
+    ];
   }
 
   static get PLUGIN_PRIORITY() {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Maximum number of columns than can be copied to clipboard using <kbd>CTRL</kbd> + <kbd>C</kbd>.
-     *
-     * @type {number}
-     * @default Infinity
-     */
-    this.columnsLimit = COLUMNS_LIMIT;
-    /**
-     * Ranges of the cells coordinates, which should be used to copy/cut/paste actions.
-     *
-     * @private
-     * @type {Array}
-     */
-    this.copyableRanges = [];
-    /**
-     * Provides focusable element to support IME and copy/paste/cut actions.
-     *
-     * @private
-     * @type {FocusableWrapper}
-     */
-    this.focusableElement = void 0;
-    /**
-     * Defines paste (<kbd>CTRL</kbd> + <kbd>V</kbd>) behavior.
-     * * Default value `"overwrite"` will paste clipboard value over current selection.
-     * * When set to `"shift_down"`, clipboard data will be pasted in place of current selection, while all selected cells are moved down.
-     * * When set to `"shift_right"`, clipboard data will be pasted in place of current selection, while all selected cells are moved right.
-     *
-     * @type {string}
-     * @default 'overwrite'
-     */
-    this.pasteMode = 'overwrite';
-    /**
-     * Maximum number of rows than can be copied to clipboard using <kbd>CTRL</kbd> + <kbd>C</kbd>.
-     *
-     * @type {number}
-     * @default Infinity
-     */
-    this.rowsLimit = ROWS_LIMIT;
-
-    /**
-     * UI container for the secondary focusable element.
-     *
-     * @type {HTMLElement}
-     */
-    this.uiContainer = this.hot.rootDocument.body;
-
-    privatePool.set(this, {
-      isTriggeredByCopy: false,
-      isTriggeredByCut: false,
-      isBeginEditing: false,
-      isFragmentSelectionEnabled: false,
-    });
+  static get DEFAULT_SETTINGS() {
+    return {
+      pasteMode: 'overwrite',
+      rowsLimit: Infinity,
+      columnsLimit: Infinity,
+      copyColumnHeaders: false,
+      copyColumnGroupHeaders: false,
+      copyColumnHeadersOnly: false,
+    };
   }
 
   /**
-   * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link CopyPaste#enablePlugin} method is called.
+   * The maximum number of columns than can be copied to the clipboard.
+   *
+   * @type {number}
+   * @default Infinity
+   */
+  columnsLimit = Infinity;
+  /**
+   * The maximum number of rows than can be copied to the clipboard.
+   *
+   * @type {number}
+   * @default Infinity
+   */
+  rowsLimit = Infinity;
+  /**
+   * When pasting:
+   * - `'overwrite'` - overwrite the currently-selected cells
+   * - `'shift_down'` - move currently-selected cells down
+   * - `'shift_right'` - move currently-selected cells to the right
+   *
+   * @type {string}
+   * @default 'overwrite'
+   */
+  pasteMode = 'overwrite';
+  /**
+   * The UI container for the secondary focusable element.
+   *
+   * @type {HTMLElement}
+   */
+  uiContainer = this.hot.rootDocument.body;
+  /**
+   * Shows the "Copy with headers" item in the context menu and extends the context menu with the
+   * `'copy_with_column_headers'` option that can be used for creating custom menus arrangements.
+   *
+   * @type {boolean}
+   * @default false
+   */
+  #enableCopyColumnHeaders = false;
+  /**
+   * Shows the "Copy with group headers" item in the context menu and extends the context menu with the
+   * `'copy_with_column_group headers'` option that can be used for creating custom menus arrangements.
+   *
+   * @type {boolean}
+   * @default false
+   */
+  #enableCopyColumnGroupHeaders = false;
+  /**
+   * Shows the "Copy headers only" item in the context menu and extends the context menu with the
+   * `'copy_column_headers_only'` option that can be used for creating custom menus arrangements.
+   *
+   * @type {boolean}
+   * @default false
+   */
+  #enableCopyColumnHeadersOnly = false;
+  /**
+   * Defines the data range to copy. Possible values:
+   *  * `'cells-only'` Copy selected cells only;
+   *  * `'column-headers-only'` Copy column headers only;
+   *  * `'with-column-group-headers'` Copy cells with all column headers;
+   *  * `'with-column-headers'` Copy cells with column headers;
+   *
+   * @type {'cells-only' | 'column-headers-only' | 'with-column-group-headers' | 'with-column-headers'}
+   */
+  #copyMode = 'cells-only';
+  /**
+   * Flag that is used to prevent copying when the native shortcut was not pressed.
+   *
+   * @type {boolean}
+   */
+  #isTriggeredByCopy = false;
+  /**
+   * Flag that is used to prevent cutting when the native shortcut was not pressed.
+   *
+   * @type {boolean}
+   */
+  #isTriggeredByCut = false;
+  /**
+   * Class that helps generate copyable ranges based on the current selection for different copy mode
+   * types.
+   *
+   * @type {CopyableRangesFactory}
+   */
+  #copyableRangesFactory = new CopyableRangesFactory({
+    countRows: () => this.hot.countRows(),
+    countColumns: () => this.hot.countCols(),
+    rowsLimit: () => this.rowsLimit,
+    columnsLimit: () => this.columnsLimit,
+    countColumnHeaders: () => this.hot.view.getColumnHeadersCount(),
+  });
+  /**
+   * Flag that indicates if the viewport scroll should be prevented after pasting the data.
+   *
+   * @type {boolean}
+   */
+  #preventViewportScrollOnPaste = false;
+  /**
+   * Ranges of the cells coordinates, which should be used to copy/cut/paste actions.
+   *
+   * @private
+   * @type {Array<{startRow: number, startCol: number, endRow: number, endCol: number}>}
+   */
+  copyableRanges = [];
+
+  /**
+   * Checks if the [`CopyPaste`](#copypaste) plugin is enabled.
+   *
+   * This method gets called by Handsontable's [`beforeInit`](@/api/hooks.md#beforeinit) hook.
+   * If it returns `true`, the [`enablePlugin()`](#enableplugin) method gets called.
    *
    * @returns {boolean}
    */
@@ -141,167 +216,167 @@ export class CopyPaste extends BasePlugin {
   }
 
   /**
-   * Enables the plugin functionality for this Handsontable instance.
+   * Enables the [`CopyPaste`](#copypaste) plugin for your Handsontable instance.
    */
   enablePlugin() {
     if (this.enabled) {
       return;
     }
-    const { [PLUGIN_KEY]: settings, fragmentSelection } = this.hot.getSettings();
-    const priv = privatePool.get(this);
 
-    priv.isFragmentSelectionEnabled = !!fragmentSelection;
+    this.pasteMode = this.getSetting('pasteMode') ?? this.pasteMode;
+    this.rowsLimit = isNaN(this.getSetting('rowsLimit')) ? this.rowsLimit : this.getSetting('rowsLimit');
+    this.columnsLimit = isNaN(this.getSetting('columnsLimit')) ? this.columnsLimit : this.getSetting('columnsLimit');
+    this.#enableCopyColumnHeaders = this.getSetting('copyColumnHeaders');
+    this.#enableCopyColumnGroupHeaders = this.getSetting('copyColumnGroupHeaders');
+    this.#enableCopyColumnHeadersOnly = this.getSetting('copyColumnHeadersOnly');
+    this.uiContainer = this.getSetting('uiContainer') ?? this.uiContainer;
 
-    if (typeof settings === 'object') {
-      this.pasteMode = settings.pasteMode || this.pasteMode;
-      this.rowsLimit = isNaN(settings.rowsLimit) ? this.rowsLimit : settings.rowsLimit;
-      this.columnsLimit = isNaN(settings.columnsLimit) ? this.columnsLimit : settings.columnsLimit;
-      this.uiContainer = settings.uiContainer || this.uiContainer;
+    this.addHook('afterContextMenuDefaultOptions', options => this.#onAfterContextMenuDefaultOptions(options));
+    this.addHook('afterSelection', (...args) => this.#onAfterSelection(...args));
+    this.addHook('afterSelectionEnd', () => this.#onAfterSelectionEnd());
+
+    this.eventManager.addEventListener(this.hot.rootDocument, 'copy', (...args) => this.onCopy(...args));
+    this.eventManager.addEventListener(this.hot.rootDocument, 'cut', (...args) => this.onCut(...args));
+    this.eventManager.addEventListener(this.hot.rootDocument, 'paste', (...args) => this.onPaste(...args));
+
+    // Without this workaround Safari (tested on Safari@16.5.2) does allow copying/cutting from the browser menu.
+    if (isSafari()) {
+      this.eventManager.addEventListener(
+        this.hot.rootDocument.body, 'mouseenter', (...args) => this.#onSafariMouseEnter(...args)
+      );
+      this.eventManager.addEventListener(
+        this.hot.rootDocument.body, 'mouseleave', (...args) => this.#onSafariMouseLeave(...args)
+      );
+
+      this.addHook('afterSelection', () => this.#onSafariAfterSelection());
     }
-
-    this.addHook('afterContextMenuDefaultOptions', options => this.onAfterContextMenuDefaultOptions(options));
-    this.addHook('afterOnCellMouseUp', () => this.onAfterOnCellMouseUp());
-    this.addHook('afterSelectionEnd', () => this.onAfterSelectionEnd());
-    this.addHook('beforeKeyDown', () => this.onBeforeKeyDown());
-
-    this.focusableElement = createElement(this.uiContainer);
-    this.focusableElement
-      .addLocalHook('copy', event => this.onCopy(event))
-      .addLocalHook('cut', event => this.onCut(event))
-      .addLocalHook('paste', event => this.onPaste(event));
 
     super.enablePlugin();
   }
 
   /**
-   * Updates the plugin state. This method is executed when {@link Core#updateSettings} is invoked.
+   * Updates the state of the [`CopyPaste`](#copypaste) plugin.
+   *
+   * Gets called when [`updateSettings()`](@/api/core.md#updatesettings)
+   * is invoked with any of the following configuration options:
+   *  - [`copyPaste`](@/api/options.md#copypaste)
+   *  - [`fragmentSelection`](@/api/options.md#fragmentselection)
    */
   updatePlugin() {
     this.disablePlugin();
     this.enablePlugin();
-    this.getOrCreateFocusableElement();
 
     super.updatePlugin();
   }
 
   /**
-   * Disables the plugin functionality for this Handsontable instance.
+   * Disables the [`CopyPaste`](#copypaste) plugin for your Handsontable instance.
    */
   disablePlugin() {
-    if (this.focusableElement) {
-      destroyElement(this.focusableElement);
-    }
-
     super.disablePlugin();
   }
 
   /**
-   * Copies the selected cell into the clipboard.
+   * Copies the contents of the selected cells (and/or their related column headers) to the system clipboard.
+   *
+   * Takes an optional parameter (`copyMode`) that defines the scope of copying:
+   *
+   * | `copyMode` value              | Description                                                     |
+   * | ----------------------------- | --------------------------------------------------------------- |
+   * | `'cells-only'` (default)      | Copy the selected cells                                         |
+   * | `'with-column-headers'`       | - Copy the selected cells<br>- Copy the nearest column headers  |
+   * | `'with-column-group-headers'` | - Copy the selected cells<br>- Copy all related columns headers |
+   * | `'column-headers-only'`       | Copy the nearest column headers (without copying cells)         |
+   *
+   * @param {string} [copyMode='cells-only'] Copy mode.
    */
-  copy() {
-    const priv = privatePool.get(this);
+  copy(copyMode = 'cells-only') {
+    this.#copyMode = copyMode;
+    this.#isTriggeredByCopy = true;
 
-    priv.isTriggeredByCopy = true;
-
-    this.getOrCreateFocusableElement();
-    this.focusableElement.focus();
-    this.hot.rootDocument.execCommand('copy');
+    this.#ensureClipboardEventsGetTriggered('copy');
   }
 
   /**
-   * Cuts the selected cell into the clipboard.
+   * Copies the contents of the selected cells.
+   */
+  copyCellsOnly() {
+    this.copy('cells-only');
+  }
+  /**
+   * Copies the contents of column headers that are nearest to the selected cells.
+   */
+  copyColumnHeadersOnly() {
+    this.copy('column-headers-only');
+  }
+  /**
+   * Copies the contents of the selected cells and all their related column headers.
+   */
+  copyWithAllColumnHeaders() {
+    this.copy('with-column-group-headers');
+  }
+  /**
+   * Copies the contents of the selected cells and their nearest column headers.
+   */
+  copyWithColumnHeaders() {
+    this.copy('with-column-headers');
+  }
+
+  /**
+   * Cuts the contents of the selected cells to the system clipboard.
    */
   cut() {
-    const priv = privatePool.get(this);
+    this.#isTriggeredByCut = true;
 
-    priv.isTriggeredByCut = true;
-
-    this.getOrCreateFocusableElement();
-    this.focusableElement.focus();
-    this.hot.rootDocument.execCommand('cut');
+    this.#ensureClipboardEventsGetTriggered('cut');
   }
 
   /**
-   * Creates copyable text releated to range objects.
+   * Converts the contents of multiple ranges (`ranges`) into a single string.
    *
-   * @param {object[]} ranges Array of objects with properties `startRow`, `endRow`, `startCol` and `endCol`.
-   * @returns {string} Returns string which will be copied into clipboard.
+   * @param {Array<{startRow: number, startCol: number, endRow: number, endCol: number}>} ranges Array of objects with properties `startRow`, `endRow`, `startCol` and `endCol`.
+   * @returns {string} A string that will be copied to the clipboard.
    */
   getRangedCopyableData(ranges) {
-    const dataSet = [];
-    const copyableRows = [];
-    const copyableColumns = [];
-
-    // Count all copyable rows and columns
-    arrayEach(ranges, (range) => {
-      rangeEach(range.startRow, range.endRow, (row) => {
-        if (copyableRows.indexOf(row) === -1) {
-          copyableRows.push(row);
-        }
-      });
-      rangeEach(range.startCol, range.endCol, (column) => {
-        if (copyableColumns.indexOf(column) === -1) {
-          copyableColumns.push(column);
-        }
-      });
-    });
-    // Concat all rows and columns data defined in ranges into one copyable string
-    arrayEach(copyableRows, (row) => {
-      const rowSet = [];
-
-      arrayEach(copyableColumns, (column) => {
-        rowSet.push(this.hot.getCopyableData(row, column));
-      });
-
-      dataSet.push(rowSet);
-    });
-
-    return stringify(dataSet);
+    return stringify(this.getRangedData(ranges));
   }
 
   /**
-   * Creates copyable text releated to range objects.
+   * Converts the contents of multiple ranges (`ranges`) into an array of arrays.
    *
-   * @param {object[]} ranges Array of objects with properties `startRow`, `startCol`, `endRow` and `endCol`.
-   * @returns {Array[]} Returns array of arrays which will be copied into clipboard.
+   * @param {Array<{startRow: number, startCol: number, endRow: number, endCol: number}>} ranges Array of objects with properties `startRow`, `startCol`, `endRow` and `endCol`.
+   * @returns {Array[]} An array of arrays that will be copied to the clipboard.
    */
   getRangedData(ranges) {
-    const dataSet = [];
-    const copyableRows = [];
-    const copyableColumns = [];
+    const data = [];
+    const { rows, columns } = normalizeRanges(ranges);
 
-    // Count all copyable rows and columns
-    arrayEach(ranges, (range) => {
-      rangeEach(range.startRow, range.endRow, (row) => {
-        if (copyableRows.indexOf(row) === -1) {
-          copyableRows.push(row);
-        }
-      });
-      rangeEach(range.startCol, range.endCol, (column) => {
-        if (copyableColumns.indexOf(column) === -1) {
-          copyableColumns.push(column);
-        }
-      });
-    });
-    // Concat all rows and columns data defined in ranges into one copyable string
-    arrayEach(copyableRows, (row) => {
+    // concatenate all rows and columns data defined in ranges into one copyable string
+    arrayEach(rows, (row) => {
       const rowSet = [];
 
-      arrayEach(copyableColumns, (column) => {
-        rowSet.push(this.hot.getCopyableData(row, column));
+      arrayEach(columns, (column) => {
+        if (row < 0) {
+          // `row` as the second argument acts here as the `headerLevel` argument
+          rowSet.push(this.hot.getColHeader(column, row));
+        } else {
+          rowSet.push(this.hot.getCopyableData(row, column));
+        }
       });
 
-      dataSet.push(rowSet);
+      data.push(rowSet);
     });
 
-    return dataSet;
+    return data;
   }
 
   /**
    * Simulates the paste action.
    *
-   * @param {string} pastableText Value as raw string to paste.
-   * @param {string} [pastableHtml=''] Value as HTML to paste.
+   * For security reasons, modern browsers don't allow reading from the system clipboard.
+   *
+   * @param {string} pastableText The value to paste, as a raw string.
+   * @param {string} [pastableHtml=''] The value to paste, as HTML.
    */
   paste(pastableText = '', pastableHtml = pastableText) {
     if (!pastableText && !pastableHtml) {
@@ -317,7 +392,6 @@ export class CopyPaste extends BasePlugin {
       pasteData.clipboardData.setData('text/html', pastableHtml);
     }
 
-    this.getOrCreateFocusableElement();
     this.onPaste(pasteData);
   }
 
@@ -325,51 +399,54 @@ export class CopyPaste extends BasePlugin {
    * Prepares copyable text from the cells selection in the invisible textarea.
    */
   setCopyableText() {
-    const selRange = this.hot.getSelectedRangeLast();
+    const selectionRange = this.hot.getSelectedRangeLast();
 
-    if (!selRange) {
+    if (!selectionRange) {
       return;
     }
 
-    const topLeft = selRange.getTopLeftCorner();
-    const bottomRight = selRange.getBottomRightCorner();
-    const startRow = topLeft.row;
-    const startCol = topLeft.col;
-    const endRow = bottomRight.row;
-    const endCol = bottomRight.col;
-    const finalEndRow = Math.min(endRow, startRow + this.rowsLimit - 1);
-    const finalEndCol = Math.min(endCol, startCol + this.columnsLimit - 1);
+    if (selectionRange.isSingleHeader()) {
+      this.copyableRanges = [];
 
-    this.copyableRanges.length = 0;
+      return;
+    }
 
-    this.copyableRanges.push({
-      startRow,
-      startCol,
-      endRow: finalEndRow,
-      endCol: finalEndCol
-    });
+    this.#copyableRangesFactory.setSelectedRange(selectionRange);
+
+    const groupedRanges = new Map([
+      ['headers', null],
+      ['cells', null],
+    ]);
+
+    if (this.#copyMode === 'column-headers-only') {
+      groupedRanges.set('headers', this.#copyableRangesFactory.getMostBottomColumnHeadersRange());
+
+    } else {
+      if (this.#copyMode === 'with-column-headers') {
+        groupedRanges.set('headers', this.#copyableRangesFactory.getMostBottomColumnHeadersRange());
+
+      } else if (this.#copyMode === 'with-column-group-headers') {
+        groupedRanges.set('headers', this.#copyableRangesFactory.getAllColumnHeadersRange());
+      }
+
+      groupedRanges.set('cells', this.#copyableRangesFactory.getCellsRange());
+    }
+
+    this.copyableRanges = Array.from(groupedRanges.values())
+      .filter(range => range !== null)
+      .map(({ startRow, startCol, endRow, endCol }) => ({ startRow, startCol, endRow, endCol }));
 
     this.copyableRanges = this.hot.runHooks('modifyCopyableRange', this.copyableRanges);
 
-    if (endRow !== finalEndRow || endCol !== finalEndCol) {
-      this.hot
-        .runHooks('afterCopyLimit', endRow - startRow + 1, endCol - startCol + 1, this.rowsLimit, this.columnsLimit);
-    }
-  }
+    const cellsRange = groupedRanges.get('cells');
 
-  /**
-   * Force focus on editable element.
-   *
-   * @private
-   */
-  getOrCreateFocusableElement() {
-    const editor = this.hot.getActiveEditor();
-    const editableElement = editor ? editor.TEXTAREA : void 0;
+    if (cellsRange !== null && cellsRange.isRangeTrimmed) {
+      const {
+        startRow, startCol, endRow, endCol
+      } = cellsRange;
 
-    if (editableElement) {
-      this.focusableElement.setFocusableElement(editableElement);
-    } else {
-      this.focusableElement.useSecondaryElement();
+      this.hot.runHooks('afterCopyLimit',
+        endRow - startRow + 1, endCol - startCol + 1, this.rowsLimit, this.columnsLimit);
     }
   }
 
@@ -380,9 +457,58 @@ export class CopyPaste extends BasePlugin {
    * @returns {boolean}
    */
   isEditorOpened() {
-    const editor = this.hot.getActiveEditor();
+    return this.hot.getActiveEditor()?.isOpened();
+  }
 
-    return editor && editor.isOpened();
+  /**
+   * Ensure that the `copy`/`cut` events get triggered properly in Safari.
+   *
+   * @param {string} eventName Name of the event to get triggered.
+   */
+  #ensureClipboardEventsGetTriggered(eventName) {
+    // Without this workaround Safari (tested on Safari@16.5.2) does not trigger the 'copy' event.
+    if (isSafari()) {
+      const lastSelectedRange = this.hot.getSelectedRangeLast();
+
+      if (lastSelectedRange) {
+        const { row: highlightRow, col: highlightColumn } = lastSelectedRange.highlight;
+        const currentlySelectedCell = this.hot.getCell(highlightRow, highlightColumn, true);
+
+        if (currentlySelectedCell) {
+          runWithSelectedContendEditableElement(currentlySelectedCell, () => {
+            this.hot.rootDocument.execCommand(eventName);
+          });
+        }
+      }
+
+    } else {
+      this.hot.rootDocument.execCommand(eventName);
+    }
+  }
+
+  /**
+   * Counts how many column headers will be copied based on the passed range.
+   *
+   * @private
+   * @param {Array<{startRow: number, startCol: number, endRow: number, endCol: number}>} ranges Array of objects with properties `startRow`, `startCol`, `endRow` and `endCol`.
+   * @returns {{ columnHeadersCount: number }} Returns an object with keys that holds
+   *                                           information with the number of copied headers.
+   */
+  #countCopiedHeaders(ranges) {
+    const { rows } = normalizeRanges(ranges);
+    let columnHeadersCount = 0;
+
+    for (let row = 0; row < rows.length; row++) {
+      if (rows[row] >= 0) {
+        break;
+      }
+
+      columnHeadersCount += 1;
+    }
+
+    return {
+      columnHeadersCount,
+    };
   }
 
   /**
@@ -402,8 +528,8 @@ export class CopyPaste extends BasePlugin {
     const populatedColumnsLength = inputArray[0].length;
     const newRows = [];
 
-    const { row: startRow, col: startColumn } = selection.getTopLeftCorner();
-    const { row: endRowFromSelection, col: endColumnFromSelection } = selection.getBottomRightCorner();
+    const { row: startRow, col: startColumn } = selection.getTopStartCorner();
+    const { row: endRowFromSelection, col: endColumnFromSelection } = selection.getBottomEndCorner();
 
     let visualRowForPopulatedData = startRow;
     let visualColumnForPopulatedData = startColumn;
@@ -448,9 +574,47 @@ export class CopyPaste extends BasePlugin {
       newRows.push(newRow);
     }
 
-    this.hot.populateFromArray(startRow, startColumn, newRows, void 0, void 0, 'CopyPaste.paste', this.pasteMode);
+    this.#preventViewportScrollOnPaste = true;
+    this.hot.populateFromArray(startRow, startColumn, newRows, undefined, undefined, 'CopyPaste.paste', this.pasteMode);
 
     return [startRow, startColumn, lastVisualRow, lastVisualColumn];
+  }
+
+  /**
+   * Add the `contenteditable` attribute to the highlighted cell and select its content.
+   */
+  #addContentEditableToHighlightedCell() {
+    if (this.hot.isListening()) {
+      const lastSelectedRange = this.hot.getSelectedRangeLast();
+
+      if (lastSelectedRange) {
+        const { row: highlightRow, col: highlightColumn } = lastSelectedRange.highlight;
+        const currentlySelectedCell = this.hot.getCell(highlightRow, highlightColumn, true);
+
+        if (currentlySelectedCell) {
+          makeElementContentEditableAndSelectItsContent(currentlySelectedCell);
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove the `contenteditable` attribute from the highlighted cell and deselect its content.
+   */
+  #removeContentEditableFromHighlightedCell() {
+    // If the instance is not listening, the workaround is not needed.
+    if (this.hot.isListening()) {
+      const lastSelectedRange = this.hot.getSelectedRangeLast();
+
+      if (lastSelectedRange) {
+        const { row: highlightRow, col: highlightColumn } = lastSelectedRange.highlight;
+        const currentlySelectedCell = this.hot.getCell(highlightRow, highlightColumn, true);
+
+        if (currentlySelectedCell?.hasAttribute('contenteditable')) {
+          removeContentEditableFromElementAndDeselect(currentlySelectedCell);
+        }
+      }
+    }
   }
 
   /**
@@ -460,23 +624,35 @@ export class CopyPaste extends BasePlugin {
    * @private
    */
   onCopy(event) {
-    const priv = privatePool.get(this);
+    const focusedElement = this.hot.getFocusManager().getRefocusElement();
+    const isHotInput = event.target?.hasAttribute('data-hot-input');
+    const selectedCell = this.hot.getSelectedRangeLast()?.highlight;
+    const TD = selectedCell ? this.hot.getCell(selectedCell.row, selectedCell.col, true) : null;
 
-    if ((!this.hot.isListening() && !priv.isTriggeredByCopy) || this.isEditorOpened()) {
+    if (
+      !this.hot.isListening() && !this.#isTriggeredByCopy ||
+      this.isEditorOpened() ||
+      event.target instanceof HTMLElement && (
+        isHotInput && event.target !== focusedElement ||
+        !isHotInput && event.target !== this.hot.rootDocument.body && TD !== event.target
+      )
+    ) {
       return;
     }
 
+    event.preventDefault();
     this.setCopyableText();
-    priv.isTriggeredByCopy = false;
+    this.#isTriggeredByCopy = false;
 
-    const rangedData = this.getRangedData(this.copyableRanges);
-    const allowCopying = !!this.hot.runHooks('beforeCopy', rangedData, this.copyableRanges);
+    const data = this.getRangedData(this.copyableRanges);
+    const copiedHeadersCount = this.#countCopiedHeaders(this.copyableRanges);
+    const allowCopying = !!this.hot.runHooks('beforeCopy', data, this.copyableRanges, copiedHeadersCount);
 
     if (allowCopying) {
-      const textPlain = stringify(rangedData);
+      const textPlain = stringify(data);
 
       if (event && event.clipboardData) {
-        const textHTML = _dataToHTML(rangedData, this.hot.rootDocument);
+        const textHTML = _dataToHTML(data, this.hot.rootDocument);
 
         event.clipboardData.setData('text/plain', textPlain);
         event.clipboardData.setData('text/html', [META_HEAD, textHTML].join(''));
@@ -485,10 +661,10 @@ export class CopyPaste extends BasePlugin {
         this.hot.rootWindow.clipboardData.setData('Text', textPlain);
       }
 
-      this.hot.runHooks('afterCopy', rangedData, this.copyableRanges);
+      this.hot.runHooks('afterCopy', data, this.copyableRanges, copiedHeadersCount);
     }
 
-    event.preventDefault();
+    this.#copyMode = 'cells-only';
   }
 
   /**
@@ -498,14 +674,25 @@ export class CopyPaste extends BasePlugin {
    * @private
    */
   onCut(event) {
-    const priv = privatePool.get(this);
+    const focusedElement = this.hot.getFocusManager().getRefocusElement();
+    const isHotInput = event.target?.hasAttribute('data-hot-input');
+    const selectedCell = this.hot.getSelectedRangeLast()?.highlight;
+    const TD = selectedCell ? this.hot.getCell(selectedCell.row, selectedCell.col, true) : null;
 
-    if ((!this.hot.isListening() && !priv.isTriggeredByCut) || this.isEditorOpened()) {
+    if (
+      !this.hot.isListening() && !this.#isTriggeredByCut ||
+      this.isEditorOpened() ||
+      event.target instanceof HTMLElement && (
+        isHotInput && event.target !== focusedElement ||
+        !isHotInput && event.target !== this.hot.rootDocument.body && TD !== event.target
+      )
+    ) {
       return;
     }
 
+    event.preventDefault();
     this.setCopyableText();
-    priv.isTriggeredByCut = false;
+    this.#isTriggeredByCut = false;
 
     const rangedData = this.getRangedData(this.copyableRanges);
     const allowCuttingOut = !!this.hot.runHooks('beforeCut', rangedData, this.copyableRanges);
@@ -526,8 +713,6 @@ export class CopyPaste extends BasePlugin {
       this.hot.emptySelectedCells('CopyPaste.cut');
       this.hot.runHooks('afterCut', rangedData, this.copyableRanges);
     }
-
-    event.preventDefault();
   }
 
   /**
@@ -537,13 +722,24 @@ export class CopyPaste extends BasePlugin {
    * @private
    */
   onPaste(event) {
-    if (!this.hot.isListening() || this.isEditorOpened()) {
+    const focusedElement = this.hot.getFocusManager().getRefocusElement();
+    const isHotInput = event.target?.hasAttribute('data-hot-input');
+    const selectedCell = this.hot.getSelectedRangeLast()?.highlight;
+    const TD = selectedCell ? this.hot.getCell(selectedCell.row, selectedCell.col, true) : null;
+
+    if (
+      !this.hot.isListening() ||
+      this.isEditorOpened() ||
+      !this.hot.getSelected() ||
+      event.target instanceof HTMLElement && (
+        isHotInput && event.target !== focusedElement ||
+        !isHotInput && event.target !== this.hot.rootDocument.body && TD !== event.target
+      )
+    ) {
       return;
     }
 
-    if (event && event.preventDefault) {
-      event.preventDefault();
-    }
+    event.preventDefault();
 
     let pastedData;
 
@@ -570,7 +766,7 @@ export class CopyPaste extends BasePlugin {
       pastedData = parse(pastedData);
     }
 
-    if (pastedData && pastedData.length === 0) {
+    if (pastedData === void 0 || pastedData && pastedData.length === 0) {
       return;
     }
 
@@ -593,88 +789,92 @@ export class CopyPaste extends BasePlugin {
   /**
    * Add copy and cut options to the Context Menu.
    *
-   * @private
    * @param {object} options Contains default added options of the Context Menu.
    */
-  onAfterContextMenuDefaultOptions(options) {
+  #onAfterContextMenuDefaultOptions(options) {
     options.items.push(
-      {
-        name: '---------',
-      },
+      { name: '---------' },
       copyItem(this),
-      cutItem(this)
     );
+
+    if (this.#enableCopyColumnHeaders) {
+      options.items.push(
+        copyWithColumnHeadersItem(this),
+      );
+    }
+    if (this.#enableCopyColumnGroupHeaders) {
+      options.items.push(
+        copyWithColumnGroupHeadersItem(this),
+      );
+    }
+    if (this.#enableCopyColumnHeadersOnly) {
+      options.items.push(
+        copyColumnHeadersOnlyItem(this),
+      );
+    }
+
+    options.items.push(cutItem(this));
   }
 
   /**
-   * Force focus on focusableElement.
+   * Disables the viewport scroll after pasting the data.
    *
-   * @private
+   * @param {number} fromRow Selection start row visual index.
+   * @param {number} fromColumn Selection start column visual index.
+   * @param {number} toRow Selection end row visual index.
+   * @param {number} toColumn Selection end column visual index.
+   * @param {object} preventScrolling Object with `value` property. If `true`, the viewport scroll will be prevented.
    */
-  onAfterOnCellMouseUp() {
-    // Changing focused element will remove current selection. It's unnecessary in case when we give possibility
-    // for fragment selection
-    if (!this.hot.isListening() || this.isEditorOpened() || this.hot.getSettings().fragmentSelection) {
-      return;
+  #onAfterSelection(fromRow, fromColumn, toRow, toColumn, preventScrolling) {
+    if (this.#preventViewportScrollOnPaste) {
+      preventScrolling.value = true;
     }
 
-    this.getOrCreateFocusableElement();
-    this.focusableElement.focus();
+    this.#preventViewportScrollOnPaste = false;
   }
 
   /**
    * Force focus on focusableElement after end of the selection.
-   *
-   * @private
    */
-  onAfterSelectionEnd() {
-    const { isFragmentSelectionEnabled } = privatePool.get(this);
-
+  #onAfterSelectionEnd() {
     if (this.isEditorOpened()) {
       return;
     }
 
-    this.getOrCreateFocusableElement();
-
-    if (isFragmentSelectionEnabled &&
-        this.focusableElement.getFocusableElement() !== this.hot.rootDocument.activeElement && getSelectionText()) {
+    if (this.hot.getSettings().fragmentSelection) {
       return;
     }
 
     this.setCopyableText();
-    this.focusableElement.focus();
   }
 
   /**
-   * `beforeKeyDown` listener to force focus of focusableElement.
-   *
-   * @private
+   * `document.body` `mouseenter` callback used to work around a Safari's problem with copying/cutting from the
+   * browser's menu.
    */
-  onBeforeKeyDown() {
-    if (!this.hot.isListening() || this.isEditorOpened()) {
-      return;
-    }
-    const activeElement = this.hot.rootDocument.activeElement;
-    const activeEditor = this.hot.getActiveEditor();
-
-    if (!activeEditor ||
-        (activeElement !== this.focusableElement.getFocusableElement() && activeElement !== activeEditor.select)) {
-      return;
-    }
-
-    this.getOrCreateFocusableElement();
-    this.focusableElement.focus();
+  #onSafariMouseEnter() {
+    this.#removeContentEditableFromHighlightedCell();
   }
 
   /**
-   * Destroys the plugin instance.
+   * `document.body` `mouseleave` callback used to work around a Safari's problem with copying/cutting from the
+   * browser's menu.
+   */
+  #onSafariMouseLeave() {
+    this.#addContentEditableToHighlightedCell();
+  }
+
+  /**
+   * `afterSelection` hook callback triggered only on Safari.
+   */
+  #onSafariAfterSelection() {
+    this.#removeContentEditableFromHighlightedCell();
+  }
+
+  /**
+   * Destroys the `CopyPaste` plugin instance.
    */
   destroy() {
-    if (this.focusableElement) {
-      destroyElement(this.focusableElement);
-      this.focusableElement = null;
-    }
-
     super.destroy();
   }
 }

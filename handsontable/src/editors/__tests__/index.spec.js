@@ -23,7 +23,7 @@ describe('editors', () => {
         this.TEXTAREA_PARENT = document.createElement('DIV');
 
         this.TEXTAREA_PARENT.appendChild(this.TEXTAREA);
-        this.instance.rootElement.appendChild(this.TEXTAREA_PARENT);
+        this.hot.rootElement.appendChild(this.TEXTAREA_PARENT);
       }
       getValue() {
         return `--${this.TEXTAREA.value}--`;
@@ -49,7 +49,7 @@ describe('editors', () => {
     });
 
     selectCell(0, 0);
-    keyDown('enter');
+    keyDownUp('enter');
     document.activeElement.value = 'hello';
     destroyEditor();
 
@@ -67,6 +67,12 @@ describe('editors', () => {
     expect(getEditor('password')).toBeFunction();
     expect(getEditor('select')).toBeFunction();
     expect(getEditor('text')).toBeFunction();
+  });
+
+  it('should return the original editor function when it was passed directly to the getter', () => {
+    class MyEditor {}
+
+    expect(getEditor(MyEditor)).toBe(MyEditor);
   });
 
   it('should retrieve custom editor by its names', () => {
@@ -90,7 +96,7 @@ describe('editors', () => {
     });
 
     selectCell(0, 0);
-    keyDownUp('1'.charCodeAt(0));
+    keyDownUp('1');
 
     destroyEditor();
 
@@ -99,7 +105,7 @@ describe('editors', () => {
     expect(getCell(0, 0).innerHTML).not.toEqual('10');
 
     selectCell(0, 1);
-    keyDownUp('a'.charCodeAt(0));
+    keyDownUp('a');
 
     destroyEditor();
 

@@ -1,6 +1,5 @@
 import {
   getStyle,
-  getComputedStyle,
   getTrimmingContainer,
   isVisible,
 } from './../../../../helpers/dom/element';
@@ -11,14 +10,27 @@ import { mixin } from './../../../../helpers/object';
 
 /**
  * Subclass of `Table` that provides the helper methods relevant to the master table (not overlays), implemented through mixins.
+ *
+ * @mixes calculatedRows
+ * @mixes calculatedColumns
  */
 class MasterTable extends Table {
+  /**
+   * @param {TableDao} dataAccessObject The data access object.
+   * @param {FacadeGetter} facadeGetter Function which return proper facade.
+   * @param {DomBindings} domBindings Bindings into DOM.
+   * @param {Settings} wtSettings The Walkontable settings.
+   */
+  constructor(dataAccessObject, facadeGetter, domBindings, wtSettings) {
+    super(dataAccessObject, facadeGetter, domBindings, wtSettings, 'master');
+  }
+
   alignOverlaysWithTrimmingContainer() {
     const trimmingElement = getTrimmingContainer(this.wtRootElement);
-    const { rootWindow } = this.wot;
+    const { rootWindow } = this.domBindings;
 
     if (trimmingElement === rootWindow) {
-      const preventOverflow = this.wot.getSetting('preventOverflow');
+      const preventOverflow = this.wtSettings.getSetting('preventOverflow');
 
       if (!preventOverflow) {
         this.holder.style.overflow = 'visible';
@@ -30,7 +42,8 @@ class MasterTable extends Table {
       const trimmingOverflow = getStyle(trimmingElement, 'overflow', rootWindow);
       const holderStyle = this.holder.style;
       const { scrollWidth, scrollHeight } = trimmingElement;
-      let { width, height } = trimmingElement.getBoundingClientRect();
+      let width = trimmingElement.offsetWidth;
+      let height = trimmingElement.offsetHeight;
       const overflow = ['auto', 'hidden', 'scroll'];
 
       if (trimmingElementParent && overflow.includes(trimmingOverflow)) {
@@ -40,6 +53,9 @@ class MasterTable extends Table {
         // An issue occurred on Firefox, where an empty element with overflow: scroll returns an element height higher than 0px
         // despite an empty content within.
         cloneNode.style.overflow = 'auto';
+        // Issue #9545 shows problem with calculating height for HOT on Firefox while placing instance in some
+        // flex containers and setting overflow for some `div` section.
+        cloneNode.style.position = 'absolute';
 
         if (trimmingElement.nextElementSibling) {
           trimmingElementParent.insertBefore(cloneNode, trimmingElement.nextElementSibling);
@@ -47,7 +63,7 @@ class MasterTable extends Table {
           trimmingElementParent.appendChild(cloneNode);
         }
 
-        const cloneHeight = parseInt(getComputedStyle(cloneNode, rootWindow).height, 10);
+        const cloneHeight = parseInt(rootWindow.getComputedStyle(cloneNode).height, 10);
 
         trimmingElementParent.removeChild(cloneNode);
 
@@ -71,13 +87,14 @@ class MasterTable extends Table {
   }
 
   markOversizedColumnHeaders() {
-    const { wot } = this;
-    const overlayName = wot.getOverlayName();
-    const columnHeaders = wot.getSetting('columnHeaders');
+    const { wtSettings } = this;
+    const { wtViewport } = this.dataAccessObject;
+    const overlayName = 'master';
+    const columnHeaders = wtSettings.getSetting('columnHeaders');
     const columnHeadersCount = columnHeaders.length;
 
-    if (columnHeadersCount && !wot.wtViewport.hasOversizedColumnHeadersMarked[overlayName]) {
-      const rowHeaders = wot.getSetting('rowHeaders');
+    if (columnHeadersCount && !wtViewport.hasOversizedColumnHeadersMarked[overlayName]) {
+      const rowHeaders = wtSettings.getSetting('rowHeaders');
       const rowHeaderCount = rowHeaders.length;
       const columnCount = this.getRenderedColumnsCount();
 
@@ -86,7 +103,7 @@ class MasterTable extends Table {
           this.markIfOversizedColumnHeader(renderedColumnIndex);
         }
       }
-      wot.wtViewport.hasOversizedColumnHeadersMarked[overlayName] = true;
+      wtViewport.hasOversizedColumnHeadersMarked[overlayName] = true;
     }
   }
 }

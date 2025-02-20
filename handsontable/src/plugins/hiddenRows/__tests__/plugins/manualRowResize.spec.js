@@ -24,7 +24,10 @@ describe('HiddenRows', () => {
         manualRowResize: true,
       });
 
-      expect(rowHeight(spec().$container, 1)).toEqual(23);
+      expect(rowHeight(spec().$container, 1)).forThemes(({ classic, main }) => {
+        classic.toEqual(23);
+        main.toEqual(29);
+      });
 
       // Resize renderable row index `1` (within visual index term the index at 1 is hidden).
       resizeRow(1, 100);
@@ -43,7 +46,10 @@ describe('HiddenRows', () => {
         manualRowResize: true,
       });
 
-      expect(rowHeight(spec().$container, 1)).toEqual(23);
+      expect(rowHeight(spec().$container, 1)).forThemes(({ classic, main }) => {
+        classic.toEqual(23);
+        main.toEqual(29);
+      });
 
       getPlugin('manualRowResize').setManualSize(2, 100);
       render();
@@ -68,14 +74,16 @@ describe('HiddenRows', () => {
         manualRowResize: true
       });
 
-      const $headerTH = getLeftClone().find('tbody tr:eq(1) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(1) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualRowResizer');
 
-      expect($handle.offset().top)
-        .toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+      expect($handle.offset().top).forThemes(({ classic, main }) => {
+        classic.toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+        main.toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - ($handle.outerHeight() / 2) - 1, 0);
+      });
       expect($handle.width()).toBeCloseTo($headerTH.outerWidth(), 0);
     });
 
@@ -99,14 +107,16 @@ describe('HiddenRows', () => {
 
       // Show resize handler using the third renderable row. This row belongs to master as
       // the "fixedRowsTop" is decreased to 2.
-      const $headerTH = getLeftClone().find('tbody tr:eq(2) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(2) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualRowResizer');
 
-      expect($handle.offset().top)
-        .toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+      expect($handle.offset().top).forThemes(({ classic, main }) => {
+        classic.toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+        main.toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - ($handle.outerHeight() / 2) - 1, 0);
+      });
       expect($handle.width()).toBeCloseTo($headerTH.outerWidth(), 0);
     });
 
@@ -130,14 +140,16 @@ describe('HiddenRows', () => {
 
       // Show resize handler using the second renderable row. This row belongs to master as
       // the "fixedRowsBottom" is decreased to 2.
-      const $headerTH = getLeftClone().find('tbody tr:eq(1) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(1) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualRowResizer');
 
-      expect($handle.offset().top)
-        .toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+      expect($handle.offset().top).forThemes(({ classic, main }) => {
+        classic.toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+        main.toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - ($handle.outerHeight() / 2) - 1, 0);
+      });
       expect($handle.width()).toBeCloseTo($headerTH.outerWidth(), 0);
     });
 
@@ -158,7 +170,7 @@ describe('HiddenRows', () => {
         manualRowResize: true
       });
 
-      const $headerTH = getLeftClone().find('tbody tr:eq(1) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(1) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
@@ -171,7 +183,10 @@ describe('HiddenRows', () => {
         .simulate('mouseup')
       ;
 
-      expect(rowHeight(spec().$container, 1)).toEqual(53);
+      expect(rowHeight(spec().$container, 1)).forThemes(({ classic, main }) => {
+        classic.toEqual(53);
+        main.toEqual(59);
+      });
     });
   });
 });

@@ -16,20 +16,20 @@ export default function unfreezeColumnItem(manualColumnFreezePlugin) {
       manualColumnFreezePlugin.unfreezeColumn(selectedColumn);
 
       this.render();
-      this.view.adjustElementsSize(true);
+      this.view.adjustElementsSize();
     },
     hidden() {
       const selection = this.getSelectedRange();
       let hide = false;
 
-      if (selection === void 0) {
+      if (selection === undefined) {
         hide = true;
 
       } else if (selection.length > 1) {
         hide = true;
 
       } else if ((selection[0].from.col !== selection[0].to.col) ||
-                  selection[0].from.col >= this.getSettings().fixedColumnsLeft) {
+                  selection[0].from.col >= this.getSettings().fixedColumnsStart) {
         hide = true;
       }
 

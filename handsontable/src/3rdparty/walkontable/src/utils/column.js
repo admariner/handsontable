@@ -1,16 +1,29 @@
-import {
-  getScrollbarWidth,
-} from './../../../../helpers/dom/element';
-
 /**
  * Column utils class contains all necessary information about sizes of the columns.
  *
  * @class {ColumnUtils}
  */
 export default class ColumnUtils {
-  constructor(wot) {
-    this.wot = wot;
-    this.headerWidths = new Map();
+  /**
+   * @type {TableDao}
+   */
+  dataAccessObject;
+  /**
+   * @type {Settings}
+   */
+  wtSettings;
+  /**
+   * @type {Map<number, number>}
+   */
+  headerWidths = new Map();
+
+  /**
+   * @param {TableDao} dataAccessObject The table Data Access Object.
+   * @param {Settings} wtSettings The walkontable settings.
+   */
+  constructor(dataAccessObject, wtSettings) {
+    this.dataAccessObject = dataAccessObject;
+    this.wtSettings = wtSettings;
   }
 
   /**
@@ -20,36 +33,8 @@ export default class ColumnUtils {
    * @returns {number}
    */
   getWidth(sourceIndex) {
-    let width = this.wot.wtSettings.settings.columnWidth;
-
-    if (typeof width === 'function') {
-      width = width(sourceIndex);
-
-    } else if (typeof width === 'object') {
-      width = width[sourceIndex];
-    }
-
-    return width || this.wot.wtSettings.settings.defaultColumnWidth;
-  }
-
-  /**
-   * Returns stretched column width based on passed source index.
-   *
-   * @param {number} sourceIndex Column source index.
-   * @returns {number}
-   */
-  getStretchedColumnWidth(sourceIndex) {
-    const columnWidth = this.getWidth(sourceIndex);
-    const calculator = this.wot.wtViewport.columnsRenderCalculator;
-    let width = columnWidth ?? this.wot.wtSettings.settings.defaultColumnWidth;
-
-    if (calculator) {
-      const stretchedWidth = calculator.getStretchedColumnWidth(sourceIndex, width);
-
-      if (stretchedWidth) {
-        width = stretchedWidth;
-      }
-    }
+    const width = this.wtSettings.getSetting('columnWidth', sourceIndex)
+      || this.wtSettings.getSetting('defaultColumnWidth');
 
     return width;
   }
@@ -61,10 +46,10 @@ export default class ColumnUtils {
    * @returns {number}
    */
   getHeaderHeight(level) {
-    let height = this.wot.wtSettings.settings.defaultRowHeight;
-    const oversizedHeight = this.wot.wtViewport.oversizedColumnHeaders[level];
+    let height = this.dataAccessObject.stylesHandler.getDefaultRowHeight();
+    const oversizedHeight = this.dataAccessObject.wtViewport.oversizedColumnHeaders[level];
 
-    if (oversizedHeight !== void 0) {
+    if (oversizedHeight !== undefined) {
       height = height ? Math.max(height, oversizedHeight) : oversizedHeight;
     }
 
@@ -78,32 +63,27 @@ export default class ColumnUtils {
    * @returns {number}
    */
   getHeaderWidth(sourceIndex) {
-    return this.headerWidths.get(this.wot.wtTable.columnFilter.sourceToRendered(sourceIndex));
+    return this.headerWidths.get(this.dataAccessObject.wtTable.columnFilter.sourceToRendered(sourceIndex));
   }
 
   /**
    * Calculates column header widths that can be retrieved from the cache.
    */
   calculateWidths() {
-    const { wot } = this;
-    const { wtTable, wtViewport, cloneSource } = wot;
-    const mainHolder = cloneSource ? cloneSource.wtTable.holder : wtTable.holder;
-    const scrollbarCompensation = mainHolder.offsetHeight < mainHolder.scrollHeight ? getScrollbarWidth() : 0;
-    let rowHeaderWidthSetting = wot.getSetting('rowHeaderWidth');
+    const { wtSettings } = this;
+    let rowHeaderWidthSetting = wtSettings.getSetting('rowHeaderWidth');
 
-    wtViewport.columnsRenderCalculator.refreshStretching(wtViewport.getViewportWidth() - scrollbarCompensation);
+    rowHeaderWidthSetting = wtSettings.getSetting('onModifyRowHeaderWidth', rowHeaderWidthSetting);
 
-    rowHeaderWidthSetting = wot.getSetting('onModifyRowHeaderWidth', rowHeaderWidthSetting);
-
-    if (rowHeaderWidthSetting !== null && rowHeaderWidthSetting !== void 0) {
-      const rowHeadersCount = wot.getSetting('rowHeaders').length;
-      const defaultColumnWidth = wot.getSetting('defaultColumnWidth');
+    if (rowHeaderWidthSetting !== null && rowHeaderWidthSetting !== undefined) {
+      const rowHeadersCount = wtSettings.getSetting('rowHeaders').length;
+      const defaultColumnWidth = wtSettings.getSetting('defaultColumnWidth');
 
       for (let visibleColumnIndex = 0; visibleColumnIndex < rowHeadersCount; visibleColumnIndex++) {
         let width = Array.isArray(rowHeaderWidthSetting)
           ? rowHeaderWidthSetting[visibleColumnIndex] : rowHeaderWidthSetting;
 
-        width = (width === null || width === void 0) ? defaultColumnWidth : width;
+        width = (width === null || width === undefined) ? defaultColumnWidth : width;
 
         this.headerWidths.set(visibleColumnIndex, width);
       }

@@ -1,5 +1,3 @@
-import { getValidSelection } from '../utils';
-import { isDefined } from '../../../helpers/mixed';
 import * as C from '../../../i18n/constants';
 
 export const KEY = 'row_below';
@@ -13,31 +11,19 @@ export default function rowBelowItem() {
     name() {
       return this.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_ROW_BELOW);
     },
-    callback(key, normalizedSelection) {
-      const isSelectedByCorner = this.selection.isSelectedByCorner();
-      let rowBelow = 0;
+    callback() {
+      const latestSelection = this.getSelectedRangeLast().getBottomRightCorner();
 
-      if (isSelectedByCorner) {
-        rowBelow = this.countRows();
-
-      } else {
-        const latestSelection = normalizedSelection[Math.max(normalizedSelection.length - 1, 0)];
-        const selectedRow = latestSelection?.end?.row;
-
-        // If there is no selection we have clicked on the corner and there is no data.
-        rowBelow = isDefined(selectedRow) ? selectedRow + 1 : 0;
-      }
-
-      this.alter('insert_row', rowBelow, 1, 'ContextMenu.rowBelow');
-
-      if (isSelectedByCorner) {
-        this.selectAll();
-      }
+      this.alter('insert_row_below', latestSelection.row, 1, 'ContextMenu.rowBelow');
     },
     disabled() {
-      const selected = getValidSelection(this);
+      const range = this.getSelectedRangeLast();
 
-      if (!selected) {
+      if (!range) {
+        return true;
+      }
+
+      if (range.isSingleHeader() && range.highlight.row < 0) {
         return true;
       }
 

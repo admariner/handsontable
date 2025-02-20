@@ -67,7 +67,7 @@ describe('Object helper', () => {
   // Handsontable.helper.duckSchema
   //
   describe('duckSchema', () => {
-    it('should returns valid schema object', () => {
+    it('should return a valid schema object', () => {
       expect(duckSchema({})).toEqual({});
       expect(duckSchema({ test: 1 })).toEqual({ test: null });
       expect(duckSchema({ test: 'foo' })).toEqual({ test: null });
@@ -77,11 +77,17 @@ describe('Object helper', () => {
       expect(duckSchema({ test: [1, 2, 3] })).toEqual({ test: [] });
     });
 
-    it('should returns valid schema object (deeply)', () => {
+    it('should return a valid schema object (deeply)', () => {
       expect(duckSchema({ test: { a: { b: 11 } } })).toEqual({ test: { a: { b: null } } });
       expect(duckSchema({ test: { a: { b: [] } } })).toEqual({ test: { a: { b: [] } } });
       expect(duckSchema({ test: { a: { b: [{ q: 1, w: 2 }] } } }))
         .toEqual({ test: { a: { b: [{ q: null, w: null }] } } });
+    });
+
+    it('should return a valid schema object for an array of array', () => {
+      expect(duckSchema([])).toEqual([]);
+      expect(duckSchema([[]])).toEqual([null]);
+      expect(duckSchema([1, 2, 3])).toEqual([null, null, null]);
     });
   });
 
@@ -188,7 +194,7 @@ describe('Object helper', () => {
       const object1 = {};
       const object2 = {
         foo: false,
-        und: void 0,
+        und: undefined,
         bar: 0,
         baz: object1,
         func: function1,
@@ -358,10 +364,10 @@ describe('Object helper', () => {
     it('should detect change value to undefined', () => {
       const propListener = createObjectPropListener('foo');
 
-      propListener.value = void 0;
+      propListener.value = undefined;
 
       expect(propListener.isTouched()).toBe(true);
-      expect(propListener.value).toBe(void 0);
+      expect(propListener.value).toBe(undefined);
     });
   });
 

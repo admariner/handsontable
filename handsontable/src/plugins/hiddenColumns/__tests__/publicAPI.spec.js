@@ -58,14 +58,14 @@ describe('HiddenColumns', () => {
           },
         });
 
-        const initialHiderWidth = $(hot().view.wt.wtTable.hider).width();
+        const initialHiderWidth = $(hot().view._wt.wtTable.hider).width();
 
         getPlugin('hiddenColumns').hideColumns([2, 3, 4, 5]);
         render();
         getPlugin('hiddenColumns').showColumns([2, 3, 4, 5]);
         render();
 
-        expect($(hot().view.wt.wtTable.hider).width()).toEqual(initialHiderWidth);
+        expect($(hot().view._wt.wtTable.hider).width()).toEqual(initialHiderWidth);
       });
     });
 
@@ -164,13 +164,13 @@ describe('HiddenColumns', () => {
 
         expect(plugin.isValidConfig()).toBe(false);
         expect(plugin.isValidConfig(null)).toBe(false);
-        expect(plugin.isValidConfig(void 0)).toBe(false);
+        expect(plugin.isValidConfig(undefined)).toBe(false);
         expect(plugin.isValidConfig(1)).toBe(false);
         expect(plugin.isValidConfig({ index: 1 })).toBe(false);
         expect(plugin.isValidConfig([])).toBe(false);
         expect(plugin.isValidConfig([[]])).toBe(false);
         expect(plugin.isValidConfig([null])).toBe(false);
-        expect(plugin.isValidConfig([void 0])).toBe(false);
+        expect(plugin.isValidConfig([undefined])).toBe(false);
         expect(plugin.isValidConfig(['1'])).toBe(false);
         expect(plugin.isValidConfig([{ index: 1 }])).toBe(false);
       });

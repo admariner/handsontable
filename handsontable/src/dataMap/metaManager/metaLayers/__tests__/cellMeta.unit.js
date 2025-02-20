@@ -1,9 +1,9 @@
 import GlobalMeta from '../globalMeta';
 import ColumnMeta from '../columnMeta';
 import CellMeta from '../cellMeta';
-import { registerCellType, TextCellType } from '../../../../cellTypes';
+import { registerAllCellTypes, getCellType } from '../../../../cellTypes';
 
-registerCellType(TextCellType);
+registerAllCellTypes();
 
 describe('ColumnMeta', () => {
   it('should reflect the changes in the cell meta when the global meta properties were changed', () => {
@@ -46,8 +46,8 @@ describe('ColumnMeta', () => {
     expect(meta.getMeta(2, 5)).toHaveProperty('_myCustomKey.foo', 'bar');
 
     expect(meta.getMeta(26, 6)).toHaveProperty('copyable', true);
-    expect(meta.getMeta(26, 6)).toHaveProperty('renderer', void 0);
-    expect(meta.getMeta(26, 6)).toHaveProperty('rowHeights', void 0);
+    expect(meta.getMeta(26, 6)).toHaveProperty('renderer', undefined);
+    expect(meta.getMeta(26, 6)).toHaveProperty('rowHeights', undefined);
     expect(meta.getMeta(26, 6)).not.toHaveProperty('_myCustomKey');
   });
 
@@ -62,9 +62,9 @@ describe('ColumnMeta', () => {
     meta.getMeta(1, 1)._myCustomKey = { foo: 'bar' };
 
     expect(columnMeta.getMeta(1)).toHaveProperty('copyable', true);
-    expect(columnMeta.getMeta(1)).toHaveProperty('renderer', void 0);
-    expect(columnMeta.getMeta(1)).toHaveProperty('rowHeights', void 0);
-    expect(columnMeta.getMeta(1)).toHaveProperty('_myCustomKey', void 0);
+    expect(columnMeta.getMeta(1)).toHaveProperty('renderer', undefined);
+    expect(columnMeta.getMeta(1)).toHaveProperty('rowHeights', undefined);
+    expect(columnMeta.getMeta(1)).toHaveProperty('_myCustomKey', undefined);
   });
 
   describe('getMeta()', () => {
@@ -88,14 +88,14 @@ describe('ColumnMeta', () => {
       meta.getMeta(10, 990)._test = 'test';
 
       expect(meta.getMeta(2, 4)._test).toBe(3);
-      expect(meta.getMeta(2, 5)._test).toBe(void 0);
-      expect(meta.getMeta(1, 4)._test).toBe(void 0);
+      expect(meta.getMeta(2, 5)._test).toBe(undefined);
+      expect(meta.getMeta(1, 4)._test).toBe(undefined);
       expect(meta.getMeta(0, 0)._test).toBe(0);
-      expect(meta.getMeta(0, 1)._test).toBe(void 0);
-      expect(meta.getMeta(1, 0)._test).toBe(void 0);
+      expect(meta.getMeta(0, 1)._test).toBe(undefined);
+      expect(meta.getMeta(1, 0)._test).toBe(undefined);
       expect(meta.getMeta(10, 990)._test).toBe('test');
-      expect(meta.getMeta(10, 991)._test).toBe(void 0);
-      expect(meta.getMeta(11, 990)._test).toBe(void 0);
+      expect(meta.getMeta(10, 991)._test).toBe(undefined);
+      expect(meta.getMeta(11, 990)._test).toBe(undefined);
     });
 
     it('should get cell meta property by key', () => {
@@ -112,17 +112,17 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(2, 0, 'activeHeaderClassName')).toBe('ht__active_highlight'); // Gets default value from global meta
       expect(meta.getMeta(1, 0, 'activeHeaderClassName')).toBe('ht__active_highlight'); // Gets default value from global meta
       expect(meta.getMeta(0, 0, 'hiddenColumns')).toBe(true);
-      expect(meta.getMeta(0, 4, 'hiddenColumns')).toBe(void 0);
-      expect(meta.getMeta(1, 4, 'hiddenColumns')).toBe(void 0);
+      expect(meta.getMeta(0, 4, 'hiddenColumns')).toBe(undefined);
+      expect(meta.getMeta(1, 4, 'hiddenColumns')).toBe(undefined);
       expect(meta.getMeta(10, 990, 'nestedHeaders')).toEqual({ row: 1, col: 2 });
-      expect(meta.getMeta(10, 991, 'nestedHeaders')).toBe(void 0);
-      expect(meta.getMeta(11, 990, 'nestedHeaders')).toBe(void 0);
+      expect(meta.getMeta(10, 991, 'nestedHeaders')).toBe(undefined);
+      expect(meta.getMeta(11, 990, 'nestedHeaders')).toBe(undefined);
       expect(meta.getMeta(10, 20, '_myCustomKey')).toBe('bar');
-      expect(meta.getMeta(10, 21, '_myCustomKey')).toBe(void 0);
-      expect(meta.getMeta(11, 22, '_myCustomKey')).toBe(void 0);
-      expect(meta.getMeta(11, 22, '0')).toBe(void 0);
-      expect(meta.getMeta(11, 22, 0)).toBe(void 0);
-      expect(meta.getMeta(11, 22, false)).toBe(void 0);
+      expect(meta.getMeta(10, 21, '_myCustomKey')).toBe(undefined);
+      expect(meta.getMeta(11, 22, '_myCustomKey')).toBe(undefined);
+      expect(meta.getMeta(11, 22, '0')).toBe(undefined);
+      expect(meta.getMeta(11, 22, 0)).toBe(undefined);
+      expect(meta.getMeta(11, 22, false)).toBe(undefined);
     });
   });
 
@@ -137,14 +137,14 @@ describe('ColumnMeta', () => {
       meta.setMeta(10, 990, 'custom', { myCustom: 'foo' });
 
       expect(meta.getMeta(2, 4)._test).toBe(3);
-      expect(meta.getMeta(1, 4)._test).toBe(void 0);
-      expect(meta.getMeta(2, 5)._test).toBe(void 0);
+      expect(meta.getMeta(1, 4)._test).toBe(undefined);
+      expect(meta.getMeta(2, 5)._test).toBe(undefined);
       expect(meta.getMeta(0, 0).activeHeaderClassName).toBe('my-class');
       expect(meta.getMeta(1, 0).activeHeaderClassName).toBe('ht__active_highlight');
       expect(meta.getMeta(0, 1).activeHeaderClassName).toBe('ht__active_highlight');
       expect(meta.getMeta(10, 990).custom).toEqual({ myCustom: 'foo' });
-      expect(meta.getMeta(11, 990)._test).toBe(void 0);
-      expect(meta.getMeta(10, 989)._test).toBe(void 0);
+      expect(meta.getMeta(11, 990)._test).toBe(undefined);
+      expect(meta.getMeta(10, 989)._test).toBe(undefined);
     });
   });
 
@@ -229,9 +229,9 @@ describe('ColumnMeta', () => {
       meta.removeMeta(0, 0, 'activeHeaderClassName');
       meta.removeMeta(10, 990, 'custom');
 
-      expect(meta.getMeta(2, 4)._test).toBe(void 0);
+      expect(meta.getMeta(2, 4)._test).toBe(undefined);
       expect(meta.getMeta(0, 0).activeHeaderClassName).toBe('ht__active_highlight');
-      expect(meta.getMeta(10, 990).custom).toBe(void 0);
+      expect(meta.getMeta(10, 990).custom).toBe(undefined);
     });
   });
 
@@ -250,16 +250,16 @@ describe('ColumnMeta', () => {
       meta.createColumn(1);
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
-      expect(meta.getMeta(0, 1)._test).toBe(void 0);
+      expect(meta.getMeta(0, 1)._test).toBe(undefined);
       expect(meta.getMeta(0, 2)._test).toBe(2);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
       expect(meta.getMeta(2, 3)._test).toBe(3);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
       expect(meta.getMeta(3, 4)._test).toBe(4);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
       expect(meta.getMeta(4, 5)._test).toBe(5);
-      expect(meta.getMeta(5, 5)._test).toBe(void 0);
-      expect(meta.getMeta(5, 6)._test).toBe(void 0);
+      expect(meta.getMeta(5, 5)._test).toBe(undefined);
+      expect(meta.getMeta(5, 6)._test).toBe(undefined);
     });
 
     it('should create columns while maintaining data consistently', () => {
@@ -277,13 +277,13 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
       expect(meta.getMeta(0, 1)._test).toBe(2);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
       expect(meta.getMeta(2, 5)._test).toBe(3);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
       expect(meta.getMeta(3, 6)._test).toBe(4);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
       expect(meta.getMeta(4, 7)._test).toBe(5);
-      expect(meta.getMeta(5, 5)._test).toBe(void 0);
+      expect(meta.getMeta(5, 5)._test).toBe(undefined);
     });
   });
 
@@ -302,14 +302,14 @@ describe('ColumnMeta', () => {
       meta.removeColumn(1);
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
-      expect(meta.getMeta(0, 1)._test).toBe(void 0);
+      expect(meta.getMeta(0, 1)._test).toBe(undefined);
       expect(meta.getMeta(2, 1)._test).toBe(3);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
       expect(meta.getMeta(3, 2)._test).toBe(4);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
       expect(meta.getMeta(4, 3)._test).toBe(5);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
-      expect(meta.getMeta(5, 5)._test).toBe(void 0);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
+      expect(meta.getMeta(5, 5)._test).toBe(undefined);
     });
 
     it('should remove columns while maintaining data consistently', () => {
@@ -327,13 +327,13 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
       expect(meta.getMeta(0, 1)._test).toBe(2);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
-      expect(meta.getMeta(2, 5)._test).toBe(void 0);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
-      expect(meta.getMeta(3, 6)._test).toBe(void 0);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
-      expect(meta.getMeta(4, 7)._test).toBe(void 0);
-      expect(meta.getMeta(5, 5)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
+      expect(meta.getMeta(2, 5)._test).toBe(undefined);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
+      expect(meta.getMeta(3, 6)._test).toBe(undefined);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
+      expect(meta.getMeta(4, 7)._test).toBe(undefined);
+      expect(meta.getMeta(5, 5)._test).toBe(undefined);
     });
   });
 
@@ -353,11 +353,11 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
       expect(meta.getMeta(0, 1)._test).toBe(2);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
       expect(meta.getMeta(3, 2)._test).toBe(3);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
       expect(meta.getMeta(4, 3)._test).toBe(4);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
       expect(meta.getMeta(5, 4)._test).toBe(5);
     });
 
@@ -376,11 +376,11 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
       expect(meta.getMeta(0, 1)._test).toBe(2);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
       expect(meta.getMeta(5, 2)._test).toBe(3);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
       expect(meta.getMeta(6, 3)._test).toBe(4);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
       expect(meta.getMeta(7, 4)._test).toBe(5);
     });
   });
@@ -402,11 +402,11 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(0, 0)._test).toBe(1);
       expect(meta.getMeta(0, 1)._test).toBe(2);
       expect(meta.getMeta(1, 2)._test).toBe(3);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
       expect(meta.getMeta(2, 3)._test).toBe(4);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
       expect(meta.getMeta(3, 4)._test).toBe(5);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
     });
 
     it('should remove rows while maintaining data consistently', () => {
@@ -424,9 +424,9 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0, 0)._test).toBe(1);
       expect(meta.getMeta(0, 1)._test).toBe(2);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
-      expect(meta.getMeta(3, 3)._test).toBe(void 0);
-      expect(meta.getMeta(4, 4)._test).toBe(void 0);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
+      expect(meta.getMeta(3, 3)._test).toBe(undefined);
+      expect(meta.getMeta(4, 4)._test).toBe(undefined);
     });
   });
 
@@ -453,7 +453,7 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(2, 3)).toHaveProperty('outsideClickDeselects', true);
     });
 
-    it('should expand "type" property as an object to "editor", "renderer" and "validator" keys', () => {
+    it('should merge "type" property as an object to meta settings', () => {
       const globalMeta = new GlobalMeta();
       const columnMeta = new ColumnMeta(globalMeta);
       const meta = new CellMeta(columnMeta);
@@ -477,7 +477,7 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(5, 2)).toHaveProperty('validator', 'baz');
     });
 
-    it('should expand "type" property as string to "editor", "renderer" and "validator" keys', () => {
+    it('should expand "type" property as string to meta settings', () => {
       const globalMeta = new GlobalMeta();
       const columnMeta = new ColumnMeta(globalMeta);
       const meta = new CellMeta(columnMeta);
@@ -488,11 +488,11 @@ describe('ColumnMeta', () => {
       meta.updateMeta(7, 90, settings);
 
       expect(meta.getMeta(7, 90)).toHaveProperty('type', 'text');
-      expect(meta.getMeta(7, 90).editor).toBeFunction();
-      expect(meta.getMeta(7, 90).renderer).toBeFunction();
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(getCellType('text').renderer);
     });
 
-    it('should expand "type" property but without overwriting already defined properties', () => {
+    it('should expand "type" property as object but without overwriting already defined properties', () => {
       const globalMeta = new GlobalMeta();
       const columnMeta = new ColumnMeta(globalMeta);
       const meta = new CellMeta(columnMeta);
@@ -516,6 +516,132 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', true);
       expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+    });
+
+    it('should expand "type" property as string but without overwriting already defined properties ' +
+       '(updates from simple cell type to more complex)', () => {
+      const globalMeta = new GlobalMeta();
+      const columnMeta = new ColumnMeta(globalMeta);
+      const meta = new CellMeta(columnMeta);
+      const myRenderer = (hot, TD) => { TD.innerText = '*'; };
+      const myRenderer2 = (hot, TD) => { TD.innerText = '*'; };
+      const myValidator = (value, callback) => callback(true);
+      const settings = {
+        type: 'text',
+        renderer: myRenderer,
+        validator: myValidator,
+      };
+
+      meta.getMeta(7, 90).copyable = true;
+      meta.getMeta(7, 90)._test = 'bar';
+
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(myRenderer);
+      expect(meta.getMeta(7, 90).validator).toBe(myValidator);
+      expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', true);
+      expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+
+      settings.renderer = myRenderer2;
+      settings.copyPaste = false;
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7, 90).validator).toBe(myValidator);
+      expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+
+      settings.type = 'numeric';
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7, 90).validator).toBe(myValidator);
+      expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+    });
+
+    it('should expand "type" property as string but without overwriting already defined properties ' +
+       '(updates from complex cell type to more simple)', () => {
+      const globalMeta = new GlobalMeta();
+      const columnMeta = new ColumnMeta(globalMeta);
+      const meta = new CellMeta(columnMeta);
+      const myRenderer = (hot, TD) => { TD.innerText = '*'; };
+      const myRenderer2 = (hot, TD) => { TD.innerText = '*'; };
+      const myValidator = (value, callback) => callback(true);
+      const settings = {
+        type: 'numeric',
+        renderer: myRenderer,
+        validator: myValidator,
+      };
+
+      meta.getMeta(7, 90).copyable = true;
+      meta.getMeta(7, 90)._test = 'bar';
+
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(myRenderer);
+      expect(meta.getMeta(7, 90).validator).toBe(myValidator);
+      expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', true);
+      expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+
+      settings.renderer = myRenderer2;
+      settings.copyPaste = false;
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7, 90).validator).toBe(myValidator);
+      expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+
+      settings.type = 'text';
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7, 90).validator).toBe(myValidator);
+      expect(meta.getMeta(7, 90)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7, 90)).toHaveProperty('_test', 'bar');
+    });
+
+    it('should be possible to update "type" multiple times', () => {
+      const globalMeta = new GlobalMeta();
+      const columnMeta = new ColumnMeta(globalMeta);
+      const meta = new CellMeta(columnMeta);
+      const settings = {
+        type: 'text',
+      };
+
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(getCellType('text').renderer);
+      expect(meta.getMeta(7, 90).validator).toBeUndefined();
+
+      settings.type = 'autocomplete';
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('autocomplete').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(getCellType('autocomplete').renderer);
+      expect(meta.getMeta(7, 90).validator).toBe(getCellType('autocomplete').validator);
+
+      settings.type = 'text';
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(getCellType('text').renderer);
+      expect(meta.getMeta(7, 90).validator).toBe(getCellType('autocomplete').validator);
+
+      settings.type = 'numeric';
+      meta.updateMeta(7, 90, settings);
+
+      expect(meta.getMeta(7, 90).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7, 90).renderer).toBe(getCellType('numeric').renderer);
+      expect(meta.getMeta(7, 90).validator).toBe(getCellType('numeric').validator);
     });
   });
 
@@ -545,11 +671,11 @@ describe('ColumnMeta', () => {
 
       meta.clearCache();
 
-      expect(meta.getMeta(0, 0)._test).toBe(void 0);
-      expect(meta.getMeta(1, 3)._test).toBe(void 0);
-      expect(meta.getMeta(2, 2)._test).toBe(void 0);
-      expect(meta.getMeta(3, 1)._test).toBe(void 0);
-      expect(meta.getMeta(4, 10)._test).toBe(void 0);
+      expect(meta.getMeta(0, 0)._test).toBe(undefined);
+      expect(meta.getMeta(1, 3)._test).toBe(undefined);
+      expect(meta.getMeta(2, 2)._test).toBe(undefined);
+      expect(meta.getMeta(3, 1)._test).toBe(undefined);
+      expect(meta.getMeta(4, 10)._test).toBe(undefined);
     });
   });
 });

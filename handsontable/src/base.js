@@ -1,12 +1,9 @@
-import './css/bootstrap.css';
-import './3rdparty/walkontable/css/walkontable.css';
-import './css/handsontable.css';
-import './css/mobile.handsontable.css';
+import './styles/handsontable.scss';
 
 import Core from './core';
 import { rootInstanceSymbol } from './utils/rootInstance';
 import { metaSchemaFactory } from './dataMap';
-import Hooks from './pluginHooks';
+import { Hooks } from './core/hooks';
 
 // FIXME: Bug in eslint-plugin-import: https://github.com/benmosher/eslint-plugin-import/issues/1883
 /* eslint-disable import/named */
@@ -21,6 +18,7 @@ import {
 import { registerCellType } from './cellTypes/registry';
 import { TextCellType } from './cellTypes/textType';
 import { BaseEditor } from './editors/baseEditor';
+import { CellCoords, CellRange } from './3rdparty/walkontable/src';
 
 // register default mandatory cell type for the Base package
 registerCellType(TextCellType);
@@ -49,7 +47,8 @@ Handsontable.Core = function(rootElement, userSettings = {}) {
 
 Handsontable.DefaultSettings = metaSchemaFactory();
 Handsontable.hooks = Hooks.getSingleton();
-
+Handsontable.CellCoords = CellCoords;
+Handsontable.CellRange = CellRange;
 Handsontable.packageName = 'handsontable';
 Handsontable.buildDate = process.env.HOT_BUILD_DATE;
 Handsontable.version = process.env.HOT_VERSION;
@@ -62,4 +61,8 @@ Handsontable.languages = {
   getTranslatedPhrase,
 };
 
+export {
+  CellCoords,
+  CellRange,
+};
 export default Handsontable;

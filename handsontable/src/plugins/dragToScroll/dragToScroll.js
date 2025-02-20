@@ -1,10 +1,12 @@
 import { BasePlugin } from '../base';
-import EventManager from '../../eventManager';
 import { isRightClick } from '../../helpers/dom/event';
 import { getParentWindow } from '../../helpers/dom/element';
 
 export const PLUGIN_KEY = 'dragToScroll';
 export const PLUGIN_PRIORITY = 100;
+
+/* eslint-disable jsdoc/require-description-complete-sentence */
+
 /**
  * @description
  * Plugin used to scroll Handsontable by selecting a cell and dragging outside of the visible viewport.
@@ -22,41 +24,31 @@ export class DragToScroll extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Instance of {@link EventManager}.
-     *
-     * @private
-     * @type {EventManager}
-     */
-    this.eventManager = new EventManager(this);
-    /**
-     * Size of an element and its position relative to the viewport,
-     * e.g. {bottom: 449, height: 441, left: 8, right: 814, top: 8, width: 806, x: 8, y:8}.
-     *
-     * @type {DOMRect}
-     */
-    this.boundaries = null;
-    /**
-     * Callback function.
-     *
-     * @private
-     * @type {Function}
-     */
-    this.callback = null;
-    /**
-     * Flag indicates mouseDown/mouseUp.
-     *
-     * @private
-     * @type {boolean}
-     */
-    this.listening = false;
-  }
+  /**
+   * Size of an element and its position relative to the viewport,
+   * e.g. {bottom: 449, height: 441, left: 8, right: 814, top: 8, width: 806, x: 8, y:8}.
+   *
+   * @type {DOMRect}
+   */
+  boundaries = null;
+  /**
+   * Callback function.
+   *
+   * @private
+   * @type {Function}
+   */
+  callback = null;
+  /**
+   * Flag indicates mouseDown/mouseUp.
+   *
+   * @private
+   * @type {boolean}
+   */
+  listening = false;
 
   /**
    * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link DragToScroll#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link DragToScroll#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -72,8 +64,8 @@ export class DragToScroll extends BasePlugin {
       return;
     }
 
-    this.addHook('afterOnCellMouseDown', event => this.setupListening(event));
-    this.addHook('afterOnCellCornerMouseDown', event => this.setupListening(event));
+    this.addHook('afterOnCellMouseDown', event => this.#setupListening(event));
+    this.addHook('afterOnCellCornerMouseDown', event => this.#setupListening(event));
 
     this.registerEvents();
 
@@ -81,7 +73,10 @@ export class DragToScroll extends BasePlugin {
   }
 
   /**
-   * Updates the plugin state. This method is executed when {@link Core#updateSettings} is invoked.
+   * Updates the plugin's state.
+   *
+   * This method is executed when [`updateSettings()`](@/api/core.md#updatesettings) is invoked with any of the following configuration options:
+   *  - [`dragToScroll`](@/api/options.md#dragtoscroll)
    */
   updatePlugin() {
     this.disablePlugin();
@@ -100,11 +95,17 @@ export class DragToScroll extends BasePlugin {
   }
 
   /**
-   * Sets the value of the visible element.
+   * Sets the boundaries/dimensions of the scrollable viewport.
    *
-   * @param {DOMRect} boundaries An object with coordinates compatible with DOMRect.
+   * @param {DOMRect|{left: number, right: number, top: number, bottom: number}} [boundaries] An object with
+   * coordinates. Contains the window boundaries by default. The object is compatible with DOMRect.
    */
-  setBoundaries(boundaries) {
+  setBoundaries(boundaries = {
+    left: 0,
+    right: this.hot.rootWindow.innerWidth,
+    top: 0,
+    bottom: this.hot.rootWindow.innerHeight,
+  }) {
     this.boundaries = boundaries;
   }
 
@@ -118,7 +119,7 @@ export class DragToScroll extends BasePlugin {
   }
 
   /**
-   * Checks if the mouse position (X, Y) is outside of the viewport and fires a callback with calculated X an Y diffs
+   * Checks if the mouse position (X, Y) is outside the viewport and fires a callback with calculated X an Y diffs
    * between passed boundaries.
    *
    * @param {number} x Mouse X coordinate to check.
@@ -208,36 +209,25 @@ export class DragToScroll extends BasePlugin {
   /**
    * On after on cell/cellCorner mouse down listener.
    *
-   * @private
    * @param {MouseEvent} event The mouse event object.
    */
-  setupListening(event) {
+  #setupListening(event) {
     if (isRightClick(event)) {
       return;
     }
 
-    const scrollHandler = this.hot.view.wt.wtTable.holder; // native scroll
+    const scrollHandler = this.hot.view._wt.wtOverlays.topOverlay.mainTableScrollableElement;
 
-    if (scrollHandler === this.hot.rootWindow) {
-      // not much we can do currently
-      return;
-    }
+    this.setBoundaries(scrollHandler !== this.hot.rootWindow ? scrollHandler.getBoundingClientRect() : undefined);
 
-    this.setBoundaries(scrollHandler.getBoundingClientRect());
     this.setCallback((scrollX, scrollY) => {
-      if (scrollX < 0) {
-        scrollHandler.scrollLeft -= 50;
+      const horizontalScrollValue = scrollHandler.scrollLeft ?? scrollHandler.scrollX;
+      const verticalScrollValue = scrollHandler.scrollTop ?? scrollHandler.scrollY;
 
-      } else if (scrollX > 0) {
-        scrollHandler.scrollLeft += 50;
-      }
-
-      if (scrollY < 0) {
-        scrollHandler.scrollTop -= 20;
-
-      } else if (scrollY > 0) {
-        scrollHandler.scrollTop += 20;
-      }
+      scrollHandler.scroll(
+        horizontalScrollValue + (Math.sign(scrollX) * 50),
+        verticalScrollValue + (Math.sign(scrollY) * 20)
+      );
     });
 
     this.listen();

@@ -3,6 +3,8 @@ import {
   rangeEachReverse,
   isNumeric,
   isNumericLike,
+  valueAccordingPercent,
+  clamp,
 } from 'handsontable/helpers/number';
 
 describe('Number helper', () => {
@@ -126,6 +128,9 @@ describe('Number helper', () => {
       expect(isNumeric('a1.22')).toBeFalsy();
       expect(isNumeric('1.22a')).toBeFalsy();
       expect(isNumeric('1,22')).toBeFalsy();
+      expect(isNumeric('- 122')).toBeFalsy();
+      expect(isNumeric('+ 122')).toBeFalsy();
+      expect(isNumeric('100 000')).toBeFalsy();
       expect(isNumeric('10.0,00')).toBeFalsy();
       expect(isNumeric('10,0.00')).toBeFalsy();
       expect(isNumeric('e+22')).toBeFalsy();
@@ -151,6 +156,7 @@ describe('Number helper', () => {
       expect(isNumeric('0')).toBeTruthy();
       expect(isNumeric('1')).toBeTruthy();
       expect(isNumeric('-10000')).toBeTruthy();
+      expect(isNumeric('+10000')).toBeTruthy();
       expect(isNumeric('10000')).toBeTruthy();
       expect(isNumeric('-10.000')).toBeTruthy();
       expect(isNumeric('10.000')).toBeTruthy();
@@ -179,9 +185,9 @@ describe('Number helper', () => {
       expect(isNumeric('   0.020   ')).toBeTruthy();
       expect(isNumeric('   0   ')).toBeTruthy();
       expect(isNumeric('   1   ')).toBeTruthy();
-      expect(isNumeric('   -   10000   ')).toBeTruthy();
+      expect(isNumeric('   -10000   ')).toBeTruthy();
       expect(isNumeric('   10000   ')).toBeTruthy();
-      expect(isNumeric('   -   10.000   ')).toBeTruthy();
+      expect(isNumeric('   -10.000   ')).toBeTruthy();
       expect(isNumeric('   10.000   ')).toBeTruthy();
       expect(isNumeric('   1e+26   ')).toBeTruthy();
       expect(isNumeric('   1e+26   ')).toBeTruthy();
@@ -204,6 +210,9 @@ describe('Number helper', () => {
       expect(isNumericLike('a1.22')).toBeFalsy();
       expect(isNumericLike('1.22a')).toBeFalsy();
       expect(isNumericLike('1,22a')).toBeFalsy();
+      expect(isNumericLike('- 122')).toBeFalsy();
+      expect(isNumericLike('+ 122')).toBeFalsy();
+      expect(isNumericLike('100 000')).toBeFalsy();
       expect(isNumericLike('10.0,00')).toBeFalsy();
       expect(isNumericLike('10,0.00')).toBeFalsy();
       expect(isNumericLike('e+22')).toBeFalsy();
@@ -231,6 +240,7 @@ describe('Number helper', () => {
       expect(isNumericLike('0')).toBeTruthy();
       expect(isNumericLike('1')).toBeTruthy();
       expect(isNumericLike('-10000')).toBeTruthy();
+      expect(isNumericLike('+10000')).toBeTruthy();
       expect(isNumericLike('10000')).toBeTruthy();
       expect(isNumericLike('-10.000')).toBeTruthy();
       expect(isNumericLike('10.000')).toBeTruthy();
@@ -265,11 +275,11 @@ describe('Number helper', () => {
       expect(isNumericLike('   0,020   ')).toBeTruthy();
       expect(isNumericLike('   0   ')).toBeTruthy();
       expect(isNumericLike('   1   ')).toBeTruthy();
-      expect(isNumericLike('   -   10000   ')).toBeTruthy();
+      expect(isNumericLike('   -10000   ')).toBeTruthy();
       expect(isNumericLike('   10000   ')).toBeTruthy();
-      expect(isNumericLike('   -   10.000   ')).toBeTruthy();
+      expect(isNumericLike('   -10.000   ')).toBeTruthy();
       expect(isNumericLike('   10.000   ')).toBeTruthy();
-      expect(isNumericLike('   -   10,000   ')).toBeTruthy();
+      expect(isNumericLike('   -10,000   ')).toBeTruthy();
       expect(isNumericLike('   10,000   ')).toBeTruthy();
       expect(isNumericLike('   1e+26   ')).toBeTruthy();
       expect(isNumericLike('   1e+26   ')).toBeTruthy();
@@ -277,6 +287,77 @@ describe('Number helper', () => {
       expect(isNumericLike('   .2e+26   ')).toBeTruthy();
       expect(isNumericLike('   0,2e+26   ')).toBeTruthy();
       expect(isNumericLike('   ,2e+26   ')).toBeTruthy();
+    });
+  });
+
+  //
+  // Handsontable.helper.clamp
+  //
+  describe('valueAccordingPercent', () => {
+    it('should correctly calculate value when the percent (the second argument) is passed as number', () => {
+      expect(valueAccordingPercent(100, 0)).toBe(0);
+      expect(valueAccordingPercent(200, 0)).toBe(0);
+      expect(valueAccordingPercent(1000, 1)).toBe(10);
+      expect(valueAccordingPercent(1000, 2)).toBe(20);
+      expect(valueAccordingPercent(1000, 20)).toBe(200);
+      expect(valueAccordingPercent(1000, 80)).toBe(800);
+      expect(valueAccordingPercent(1000, 99)).toBe(990);
+      expect(valueAccordingPercent(1000, 100)).toBe(1000);
+      expect(valueAccordingPercent(1000, 101)).toBe(1010);
+      expect(valueAccordingPercent(1000, 199)).toBe(1990);
+    });
+
+    it('should correctly calculate value when the percent (the second argument) is passed as string', () => {
+      expect(valueAccordingPercent(100, '0')).toBe(0);
+      expect(valueAccordingPercent(200, '0')).toBe(0);
+      expect(valueAccordingPercent(1000, '1')).toBe(10);
+      expect(valueAccordingPercent(1000, '2')).toBe(20);
+      expect(valueAccordingPercent(1000, '20')).toBe(200);
+      expect(valueAccordingPercent(1000, '80')).toBe(800);
+      expect(valueAccordingPercent(1000, '99')).toBe(990);
+      expect(valueAccordingPercent(1000, '100')).toBe(1000);
+      expect(valueAccordingPercent(1000, '101')).toBe(1010);
+      expect(valueAccordingPercent(1000, '199')).toBe(1990);
+    });
+
+    it('should correctly calculate value when the percent (the second argument) is passed as string with percent sign at the end', () => {
+      expect(valueAccordingPercent(100, '0%')).toBe(0);
+      expect(valueAccordingPercent(200, '0%')).toBe(0);
+      expect(valueAccordingPercent(1000, '1%')).toBe(10);
+      expect(valueAccordingPercent(1000, '2%')).toBe(20);
+      expect(valueAccordingPercent(1000, '20%')).toBe(200);
+      expect(valueAccordingPercent(1000, '80%')).toBe(800);
+      expect(valueAccordingPercent(1000, '99%')).toBe(990);
+      expect(valueAccordingPercent(1000, '100%')).toBe(1000);
+      expect(valueAccordingPercent(1000, '101%')).toBe(1010);
+      expect(valueAccordingPercent(1000, '199%')).toBe(1990);
+    });
+  });
+
+  //
+  // Handsontable.helper.rangeEach
+  //
+  describe('clamp', () => {
+    it('should limit the value to min number', () => {
+      expect(clamp(0, 10, 20)).toBe(10);
+      expect(clamp(-10, 10, 20)).toBe(10);
+      expect(clamp(10, 10, 20)).toBe(10);
+      expect(clamp(9, 10, 20)).toBe(10);
+    });
+
+    it('should limit the value to max number', () => {
+      expect(clamp(20, -10, 20)).toBe(20);
+      expect(clamp(21, -10, 20)).toBe(20);
+      expect(clamp(200, -10, 20)).toBe(20);
+    });
+
+    it('should pass the value through when it not exceeds the limits', () => {
+      expect(clamp(-9, -10, 20)).toBe(-9);
+      expect(clamp(-1, -10, 20)).toBe(-1);
+      expect(clamp(0, -10, 20)).toBe(0);
+      expect(clamp(10, -10, 20)).toBe(10);
+      expect(clamp(19, -10, 20)).toBe(19);
+      expect(clamp(20, -10, 20)).toBe(20);
     });
   });
 });

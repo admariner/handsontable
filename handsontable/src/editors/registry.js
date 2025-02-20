@@ -1,7 +1,7 @@
 /**
  * Utility to register editors and common namespace for keeping reference to all editor classes.
  */
-import Hooks from '../pluginHooks';
+import { Hooks } from '../core/hooks';
 import staticRegister from '../utils/staticRegister';
 
 const registeredEditorClasses = new WeakMap();
@@ -75,6 +75,9 @@ export function _getEditorInstance(name, hotInstance) {
  * @returns {Function} Returns editor class.
  */
 function _getItem(name) {
+  if (typeof name === 'function') {
+    return name;
+  }
   if (!hasItem(name)) {
     throw Error(`No registered editor found under "${name}" name`);
   }

@@ -10,7 +10,8 @@ export function duckSchema(object) {
   let schema;
 
   if (Array.isArray(object)) {
-    schema = [];
+    schema = object.length ? new Array(object.length).fill(null) : [];
+
   } else {
     schema = {};
 
@@ -147,7 +148,7 @@ export function mixin(Base, ...mixins) {
     Base.MIXINS.push(mixinItem.MIXIN_NAME);
 
     objectEach(mixinItem, (value, key) => {
-      if (Base.prototype[key] !== void 0) {
+      if (Base.prototype[key] !== undefined) {
         throw new Error(`Mixin conflict. Property '${key}' already exist and cannot be overwritten.`);
       }
       if (typeof value === 'function') {
@@ -168,7 +169,7 @@ export function mixin(Base, ...mixins) {
           };
 
           return function() {
-            if (this[propertyName] === void 0) {
+            if (this[propertyName] === undefined) {
               this[propertyName] = initValue(initialValue);
             }
 
@@ -266,8 +267,8 @@ export function getProperty(object, name) {
   objectEach(names, (nameItem) => {
     result = result[nameItem];
 
-    if (result === void 0) {
-      result = void 0;
+    if (result === undefined) {
+      result = undefined;
 
       return false;
     }
@@ -288,6 +289,11 @@ export function setProperty(object, name, value) {
   let workingObject = object;
 
   names.forEach((propName, index) => {
+    if (propName === '__proto__' || propName === 'constructor' || propName === 'prototype') {
+      // Security: prototype-polluting is not allowed
+      return;
+    }
+
     if (index !== names.length - 1) {
       if (!hasOwnProperty(workingObject, propName)) {
         workingObject[propName] = {};
@@ -368,7 +374,7 @@ export function createObjectPropListener(defaultValue, propertyToListen = 'value
 /**
  * Check if at specified `key` there is any value for `object`.
  *
- * @param {object} object Object to search value at specyfic key.
+ * @param {object} object Object to search value at specific key.
  * @param {string} key String key to check.
  * @returns {boolean}
  */

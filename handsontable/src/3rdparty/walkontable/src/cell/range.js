@@ -1,50 +1,75 @@
 import CellCoords from './../cell/coords';
 
+/* eslint-disable jsdoc/require-description-complete-sentence */
 /**
- * CellRange holds cell coordinates as {@link CellCoords} instances. This object represent unit of the selection layer which
- * can contains multiple contiquous cells or single cell.
+ * @description
  *
- * @util
+ * The `CellRange` class holds a set of cell coordinates ([`CellCoords`](@/api/cellCoords.md) instances)
+ * that form a [selection range](@/guides/cell-features/selection/selection.md#select-ranges).
+ *
+ * A single `CellRange` instance represents a single unit of selection
+ * that contains either a single cell or multiple adjacent cells.
+ *
+ * To import the `CellRange` class:
+ *
+ * ```js
+ * import Handsontable, { CellRange } from '/handsontable';
+ *
+ * // or, using modules
+ * import Handsontable, { CellRange } from '/handsontable/base';
+ * ```
  */
 class CellRange {
-  constructor(highlight, from = highlight, to = highlight) {
-    /**
-     * Used to draw bold border around a cell where selection was started and to edit the cell
-     * when you press Enter. The highlight cannot point to headers (negative values) so its
-     * coordinates object is normalized while assigning.
-     *
-     * @type {CellCoords}
-     */
-    this.highlight = highlight.clone().normalize();
-    /**
-     * Usually the same as highlight, but in Excel there is distinction - one can change
-     * highlight within a selection.
-     *
-     * @type {CellCoords}
-     */
+  /**
+   * Used to draw bold border around a cell where selection was started and to edit the cell
+   * when you press Enter. The highlight cannot point to headers (negative values) so its
+   * coordinates object is normalized while assigning.
+   *
+   * @private
+   * @type {CellCoords}
+   */
+  highlight = null;
+  /**
+   * Usually the same as highlight, but in Excel there is distinction - one can change
+   * highlight within a selection.
+   *
+   * @private
+   * @type {CellCoords}
+   */
+  from = null;
+  /**
+   * End selection.
+   *
+   * @private
+   * @type {CellCoords}
+   */
+  to = null;
+  /**
+   * @type {boolean}
+   */
+  #isRtl = false;
+
+  constructor(highlight, from = highlight, to = highlight, isRtl = false) {
+    this.highlight = highlight.clone();
     this.from = from.clone();
-    /**
-     * End selection.
-     *
-     * @type {CellCoords}
-     */
     this.to = to.clone();
+    this.#isRtl = isRtl;
   }
 
   /**
-   * Set the new coordinates for highlighting selection.
+   * Highlights cell selection at the `coords` coordinates.
    *
    * @param {CellCoords} coords Coordinates to use.
    * @returns {CellRange}
    */
   setHighlight(coords) {
-    this.highlight = coords.clone().normalize();
+    this.highlight = coords.clone();
 
     return this;
   }
 
   /**
-   * Set the new coordinates where selection starts from.
+   * Sets the `coords` coordinates as the start of your range.
    *
    * @param {CellCoords} coords Coordinates to use.
    * @returns {CellRange}
@@ -56,7 +81,7 @@ class CellRange {
   }
 
   /**
-   * Set new coordinates where selection ends from.
+   * Sets the `coords` coordinates as the end of your range.
    *
    * @param {CellCoords} coords Coordinates to use.
    * @returns {CellRange}
@@ -68,27 +93,75 @@ class CellRange {
   }
 
   /**
-   * Checks if given coordinates are valid in context of a given Walkontable instance.
+   * Checks if the coordinates in your `CellRange` instance are valid
+   * in the context of given table parameters.
    *
-   * @param {Walkontable} wot The Walkontable instance.
+   * See the [`isValid()`](@/api/cellCoords.md#isvalid) method of the [`CellCoords`](@/api/cellCoords.md) class.
+   *
+   * @param {object} tableParams An object with a defined table size.
+   * @param {number} tableParams.countRows The total number of rows.
+   * @param {number} tableParams.countCols The total number of columns.
+   * @param {number} tableParams.countRowHeaders A number of row headers.
+   * @param {number} tableParams.countColHeaders A number of column headers.
    * @returns {boolean}
    */
-  isValid(wot) {
-    return this.from.isValid(wot) && this.to.isValid(wot);
+  isValid(tableParams) {
+    return this.from.isValid(tableParams) && this.to.isValid(tableParams);
   }
 
   /**
-   * Checks if this cell range is restricted to one cell.
+   * Checks if your range is just a single cell or header.
    *
    * @returns {boolean}
    */
   isSingle() {
+    return this.isSingleCell() || this.isSingleHeader();
+  }
+
+  /**
+   * Checks if your range is just a single cell.
+   *
+   * @returns {boolean}
+   */
+  isSingleCell() {
     return this.from.row >= 0 && this.from.row === this.to.row &&
            this.from.col >= 0 && this.from.col === this.to.col;
   }
 
   /**
-   * Returns selected range height (in number of rows including rows' headers).
+   * Checks if your range is just a single header.
+   *
+   * @returns {boolean}
+   */
+  isSingleHeader() {
+    return (this.from.row < 0 || this.from.col < 0) && this.from.row === this.to.row &&
+           this.from.col === this.to.col;
+  }
+
+  /**
+   * Checks if your range covers only headers range (negative coordinates, without any cells).
+   *
+   * @returns {boolean}
+   */
+  isHeader() {
+    if (this.from.isHeader() && this.to.isHeader()) {
+      return true;
+    }
+
+    return this.from.col < 0 && this.to.col < 0 || this.from.row < 0 && this.to.row < 0;
+  }
+
+  /**
+   * Checks if your range overlaps headers range (negative coordinates).
+   *
+   * @returns {boolean}
+   */
+  containsHeaders() {
+    return this.from.isHeader() || this.to.isHeader();
+  }
+
+  /**
+   * Returns the height of your range (as a number of rows, including row headers).
    *
    * @returns {number}
    */
@@ -97,7 +170,7 @@ class CellRange {
   }
 
   /**
-   * Returns selected range width (in number of columns including columns' headers).
+   * Returns the width of your range (as a number of columns, including column headers).
    *
    * @returns {number}
    */
@@ -106,11 +179,16 @@ class CellRange {
   }
 
   /**
-   * Returns selected range height (in number of rows excluding rows' headers).
+   * Returns the height of your range (as a number of rows, excluding row headers).
    *
    * @returns {number}
    */
   getHeight() {
+    // if the selection contains only row headers, return 0
+    if (this.from.row < 0 && this.to.row < 0) {
+      return 0;
+    }
+
     const fromRow = Math.max(this.from.row, 0);
     const toRow = Math.max(this.to.row, 0);
 
@@ -118,11 +196,16 @@ class CellRange {
   }
 
   /**
-   * Returns selected range width (in number of columns excluding columns' headers).
+   * Returns the width of your range (as a number of columns, excluding column headers).
    *
    * @returns {number}
    */
   getWidth() {
+    // if the selection contains only column headers, return 0
+    if (this.from.col < 0 && this.to.col < 0) {
+      return 0;
+    }
+
     const fromCol = Math.max(this.from.col, 0);
     const toCol = Math.max(this.to.col, 0);
 
@@ -130,34 +213,44 @@ class CellRange {
   }
 
   /**
-   * Checks if given cell coordinates are within `from` and `to` cell coordinates of this range.
+   * Returns the number of cells within your range (excluding column and row headers).
    *
-   * @param {CellCoords} cellCoords The cell coordinates to check.
+   * @returns {number}
+   */
+  getCellsCount() {
+    return this.getWidth() * this.getHeight();
+  }
+
+  /**
+   * Checks if another set of coordinates (`cellCoords`)
+   * is within the `from` and `to` coordinates of your range.
+   *
+   * @param {CellCoords} cellCoords Coordinates to check.
    * @returns {boolean}
    */
   includes(cellCoords) {
     const { row, col } = cellCoords;
-    const topLeft = this.getOuterTopLeftCorner();
-    const bottomRight = this.getOuterBottomRightCorner();
+    const topStart = this.getOuterTopStartCorner();
+    const bottomEnd = this.getOuterBottomEndCorner();
 
-    return topLeft.row <= row && bottomRight.row >= row && topLeft.col <= col && bottomRight.col >= col;
+    return topStart.row <= row && bottomEnd.row >= row && topStart.col <= col && bottomEnd.col >= col;
   }
 
   /**
-   * Checks if given range is within of this range.
+   * Checks if another range (`cellRange`) is within your range.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * @param {CellRange} cellRange A range to check.
    * @returns {boolean}
    */
   includesRange(cellRange) {
-    return this.includes(cellRange.getOuterTopLeftCorner()) &&
-           this.includes(cellRange.getOuterBottomRightCorner());
+    return this.includes(cellRange.getOuterTopStartCorner()) &&
+           this.includes(cellRange.getOuterBottomEndCorner());
   }
 
   /**
-   * Checks if given range is equal to this range.
+   * Checks if another range (`cellRange`) is equal to your range.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * @param {CellRange} cellRange A range to check.
    * @returns {boolean}
    */
   isEqual(cellRange) {
@@ -168,10 +261,11 @@ class CellRange {
   }
 
   /**
-   * Checks if tested range overlaps with the range. Range A is considered to to be overlapping with range B
-   * if intersection of A and B or B and A is not empty.
+   * Checks if another range (`cellRange`) overlaps your range.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * Range A overlaps range B if the intersection of A and B (or B and A) is not empty.
+   *
+   * @param {CellRange} cellRange A range to check.
    * @returns {boolean}
    */
   overlaps(cellRange) {
@@ -180,69 +274,77 @@ class CellRange {
   }
 
   /**
-   * Checks if tested coordinates are positioned in south-east from this cell range.
+   * Checks if coordinates point is south-east of your range.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * @param {CellCoords} cellCoords Coordinates to check.
    * @returns {boolean}
    */
-  isSouthEastOf(cellRange) {
-    return this.getOuterTopLeftCorner().isSouthEastOf(cellRange) ||
-           this.getOuterBottomRightCorner().isSouthEastOf(cellRange);
+  isSouthEastOf(cellCoords) {
+    return this.getOuterTopLeftCorner().isSouthEastOf(cellCoords) ||
+           this.getOuterBottomRightCorner().isSouthEastOf(cellCoords);
   }
 
   /**
-   * Checks if tested coordinates are positioned in north-west from this cell range.
+   * Checks if coordinates point is north-west of your range.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * @param {CellRange} cellCoords Coordinates to check.
    * @returns {boolean}
    */
-  isNorthWestOf(cellRange) {
-    return this.getOuterTopLeftCorner().isNorthWestOf(cellRange) ||
-           this.getOuterBottomRightCorner().isNorthWestOf(cellRange);
+  isNorthWestOf(cellCoords) {
+    return this.getOuterTopLeftCorner().isNorthWestOf(cellCoords) ||
+           this.getOuterBottomRightCorner().isNorthWestOf(cellCoords);
   }
 
   /**
-   * Returns `true` if the provided range is overlapping the current range horizontally (e.g. The current range's last
-   * column is 5 and the provided range's first column is 3).
+   * Checks if another range (`cellRange`) overlaps your range horizontally.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * For example: returns `true` if the last column of your range is `5`
+   * and the first column of the `cellRange` range is `3`.
+   *
+   * @param {CellRange} cellRange A range to check.
    * @returns {boolean}
    */
   isOverlappingHorizontally(cellRange) {
-    return (this.getOuterTopRightCorner().col >= cellRange.getOuterTopLeftCorner().col &&
-            this.getOuterTopRightCorner().col <= cellRange.getOuterTopRightCorner().col) ||
-           (this.getOuterTopLeftCorner().col <= cellRange.getOuterTopRightCorner().col &&
-            this.getOuterTopLeftCorner().col >= cellRange.getOuterTopLeftCorner().col);
+    return (this.getOuterTopEndCorner().col >= cellRange.getOuterTopStartCorner().col &&
+            this.getOuterTopEndCorner().col <= cellRange.getOuterTopEndCorner().col) ||
+           (this.getOuterTopStartCorner().col <= cellRange.getOuterTopEndCorner().col &&
+            this.getOuterTopStartCorner().col >= cellRange.getOuterTopStartCorner().col);
   }
 
   /**
-   * Returns `true` if the provided range is overlapping the current range vertically (e.g. The current range's last
-   *  row is 5 and the provided range's first row is 3).
+   * Checks if another range (`cellRange`) overlaps your range vertically.
    *
-   * @param {CellRange} cellRange The cells range to check.
+   * For example: returns `true` if the last row of your range is `5`
+   * and the first row of the `cellRange` range is `3`.
+   *
+   * @param {CellRange} cellRange A range to check.
    * @returns {boolean}
    */
   isOverlappingVertically(cellRange) {
-    return (this.getOuterBottomRightCorner().row >= cellRange.getOuterTopRightCorner().row &&
-            this.getOuterBottomRightCorner().row <= cellRange.getOuterBottomRightCorner().row) ||
-           (this.getOuterTopRightCorner().row <= cellRange.getOuterBottomRightCorner().row &&
-            this.getOuterTopRightCorner().row >= cellRange.getOuterTopRightCorner().row);
+    return (this.getOuterBottomStartCorner().row >= cellRange.getOuterTopRightCorner().row &&
+            this.getOuterBottomStartCorner().row <= cellRange.getOuterBottomStartCorner().row) ||
+           (this.getOuterTopEndCorner().row <= cellRange.getOuterBottomStartCorner().row &&
+            this.getOuterTopEndCorner().row >= cellRange.getOuterTopRightCorner().row);
   }
 
   /**
-   * Adds a cell to a range (only if exceeds corners of the range). Returns information if range was expanded.
+   * Adds a cell to your range, at `cellCoords` coordinates.
    *
-   * @param {CellCoords} cellCoords The cell coordinates.
+   * The `cellCoords` coordinates must exceed a corner of your range.
+   *
+   * @param {CellCoords} cellCoords A new cell's coordinates.
    * @returns {boolean}
    */
   expand(cellCoords) {
-    const topLeft = this.getOuterTopLeftCorner();
-    const bottomRight = this.getOuterBottomRightCorner();
+    const topStart = this.getOuterTopStartCorner();
+    const bottomEnd = this.getOuterBottomEndCorner();
 
-    if (cellCoords.row < topLeft.row || cellCoords.col < topLeft.col ||
-      cellCoords.row > bottomRight.row || cellCoords.col > bottomRight.col) {
-      this.from = new CellCoords(Math.min(topLeft.row, cellCoords.row), Math.min(topLeft.col, cellCoords.col));
-      this.to = new CellCoords(Math.max(bottomRight.row, cellCoords.row), Math.max(bottomRight.col, cellCoords.col));
+    if (cellCoords.row < topStart.row || cellCoords.col < topStart.col ||
+        cellCoords.row > bottomEnd.row || cellCoords.col > bottomEnd.col) {
+      this.from = this._createCellCoords(Math.min(topStart.row, cellCoords.row),
+        Math.min(topStart.col, cellCoords.col));
+      this.to = this._createCellCoords(Math.max(bottomEnd.row, cellCoords.row),
+        Math.max(bottomEnd.col, cellCoords.col));
 
       return true;
     }
@@ -251,42 +353,46 @@ class CellRange {
   }
 
   /**
-   * Expand the current object by the range passed in the first argument.
+   * Expand your range with another range (`expandingRange`).
    *
-   * @param {CellRange} expandingRange Object extending the range.
+   * @param {CellRange} expandingRange A new range.
+   * @param {boolean} [changeDirection=true] If `true`, the direction of your range is changed to the direction
+   * of the `expandingRange` range.
    * @returns {boolean}
    */
-  expandByRange(expandingRange) {
+  expandByRange(expandingRange, changeDirection = true) {
     if (this.includesRange(expandingRange) || !this.overlaps(expandingRange)) {
       return false;
     }
 
-    const topLeft = this.getOuterTopLeftCorner();
-    const bottomRight = this.getOuterBottomRightCorner();
+    const topStart = this.getOuterTopStartCorner();
+    const bottomEnd = this.getOuterBottomEndCorner();
     const initialDirection = this.getDirection();
 
-    const expandingTopLeft = expandingRange.getOuterTopLeftCorner();
-    const expandingBottomRight = expandingRange.getOuterBottomRightCorner();
+    const expandingTopStart = expandingRange.getOuterTopStartCorner();
+    const expandingBottomEnd = expandingRange.getOuterBottomEndCorner();
 
-    const resultTopRow = Math.min(topLeft.row, expandingTopLeft.row);
-    const resultTopCol = Math.min(topLeft.col, expandingTopLeft.col);
-    const resultBottomRow = Math.max(bottomRight.row, expandingBottomRight.row);
-    const resultBottomCol = Math.max(bottomRight.col, expandingBottomRight.col);
+    const resultTopRow = Math.min(topStart.row, expandingTopStart.row);
+    const resultTopCol = Math.min(topStart.col, expandingTopStart.col);
+    const resultBottomRow = Math.max(bottomEnd.row, expandingBottomEnd.row);
+    const resultBottomCol = Math.max(bottomEnd.col, expandingBottomEnd.col);
 
-    const finalFrom = new CellCoords(resultTopRow, resultTopCol);
-    const finalTo = new CellCoords(resultBottomRow, resultBottomCol);
+    const finalFrom = this._createCellCoords(resultTopRow, resultTopCol);
+    const finalTo = this._createCellCoords(resultBottomRow, resultBottomCol);
 
     this.from = finalFrom;
     this.to = finalTo;
 
     this.setDirection(initialDirection);
 
-    if (this.highlight.row === this.getOuterBottomRightCorner().row && this.getVerticalDirection() === 'N-S') {
-      this.flipDirectionVertically();
-    }
+    if (changeDirection) {
+      if (this.highlight.row === this.getOuterBottomRightCorner().row && this.getVerticalDirection() === 'N-S') {
+        this.flipDirectionVertically();
+      }
 
-    if (this.highlight.col === this.getOuterTopRightCorner().col && this.getHorizontalDirection() === 'W-E') {
-      this.flipDirectionHorizontally();
+      if (this.highlight.col === this.getOuterTopRightCorner().col && this.getHorizontalDirection() === 'W-E') {
+        this.flipDirectionHorizontally();
+      }
     }
 
     return true;
@@ -337,7 +443,7 @@ class CellRange {
   }
 
   /**
-   * Gets the vertical direction of the range.
+   * Gets the vertical direction of the selection.
    *
    * @returns {string} Returns one of the values: `N-S` (north->south), `S-N` (south->north).
    */
@@ -346,7 +452,7 @@ class CellRange {
   }
 
   /**
-   * Gets the horizontal direction of the range.
+   * Gets the horizontal direction of the selection.
    *
    * @returns {string} Returns one of the values: `W-E` (west->east), `E-W` (east->west).
    */
@@ -355,7 +461,7 @@ class CellRange {
   }
 
   /**
-   * Flip the direction vertically. (e.g. `NW-SE` changes to `SW-NE`).
+   * Flips the direction of your range vertically (e.g., `NW-SE` changes to `SW-NE`).
    */
   flipDirectionVertically() {
     const direction = this.getDirection();
@@ -379,7 +485,7 @@ class CellRange {
   }
 
   /**
-   * Flip the direction horizontally. (e.g. `NW-SE` changes to `NE-SW`).
+   * Flips the direction of your range horizontally (e.g., `NW-SE` changes to `NE-SW`).
    */
   flipDirectionHorizontally() {
     const direction = this.getDirection();
@@ -403,151 +509,254 @@ class CellRange {
   }
 
   /**
-   * Gets the top left corner of this range. If the corner contains header coordinates
-   * (negative values), the corner coordinates will be normalized to 0.
+   * Gets the top-left (in LTR) or top-right (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
+   *
+   * @returns {CellCoords}
+   */
+  getTopStartCorner() {
+    return this._createCellCoords(Math.min(this.from.row, this.to.row),
+      Math.min(this.from.col, this.to.col)).normalize();
+  }
+
+  /**
+   * Gets the top-left corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
    *
    * @returns {CellCoords}
    */
   getTopLeftCorner() {
-    return new CellCoords(Math.min(this.from.row, this.to.row), Math.min(this.from.col, this.to.col)).normalize();
+    return this.#isRtl ? this.getTopEndCorner() : this.getTopStartCorner();
   }
 
   /**
-   * Gets the bottom right corner of this range. If the corner contains header coordinates
-   * (negative values), the corner coordinates will be normalized to 0.
+   * Gets the bottom right (in LTR) or bottom left (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
+   *
+   * @returns {CellCoords}
+   */
+  getBottomEndCorner() {
+    return this._createCellCoords(Math.max(this.from.row, this.to.row),
+      Math.max(this.from.col, this.to.col)).normalize();
+  }
+
+  /**
+   * Gets the bottom right corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
    *
    * @returns {CellCoords}
    */
   getBottomRightCorner() {
-    return new CellCoords(Math.max(this.from.row, this.to.row), Math.max(this.from.col, this.to.col)).normalize();
+    return this.#isRtl ? this.getBottomStartCorner() : this.getBottomEndCorner();
   }
 
   /**
-   * Gets the top right corner of this range. If the corner contains header coordinates
-   * (negative values), the corner coordinates will be normalized to 0.
+   * Gets the top right (in LTR) or top left (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
+   *
+   * @returns {CellCoords}
+   */
+  getTopEndCorner() {
+    return this._createCellCoords(Math.min(this.from.row, this.to.row),
+      Math.max(this.from.col, this.to.col)).normalize();
+  }
+
+  /**
+   * Gets the top right corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
    *
    * @returns {CellCoords}
    */
   getTopRightCorner() {
-    return new CellCoords(Math.min(this.from.row, this.to.row), Math.max(this.from.col, this.to.col)).normalize();
+    return this.#isRtl ? this.getTopStartCorner() : this.getTopEndCorner();
   }
 
   /**
-   * Gets the bottom left corner of this range. If the corner contains header coordinates
-   * (negative values), the corner coordinates will be normalized to 0.
+   * Gets the bottom left (in LTR) or bottom right (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
+   *
+   * @returns {CellCoords}
+   */
+  getBottomStartCorner() {
+    return this._createCellCoords(Math.max(this.from.row, this.to.row),
+      Math.min(this.from.col, this.to.col)).normalize();
+  }
+
+  /**
+   * Gets the bottom left corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the corner coordinates are normalized to `0`.
    *
    * @returns {CellCoords}
    */
   getBottomLeftCorner() {
-    return new CellCoords(Math.max(this.from.row, this.to.row), Math.min(this.from.col, this.to.col)).normalize();
+    return this.#isRtl ? this.getBottomEndCorner() : this.getBottomStartCorner();
   }
 
   /**
-   * Gets the top left corner of this range. If the corner contains header coordinates
-   * (negative values), then the top and left coordinates will be pointed to that header.
+   * Gets the top left (in LTR) or top right (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and start coordinates are pointed to that header.
+   *
+   * @returns {CellCoords}
+   */
+  getOuterTopStartCorner() {
+    return this._createCellCoords(Math.min(this.from.row, this.to.row), Math.min(this.from.col, this.to.col));
+  }
+
+  /**
+   * Gets the top left corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and left coordinates are pointed to that header.
    *
    * @returns {CellCoords}
    */
   getOuterTopLeftCorner() {
-    return new CellCoords(Math.min(this.from.row, this.to.row), Math.min(this.from.col, this.to.col));
+    return this.#isRtl ? this.getOuterTopEndCorner() : this.getOuterTopStartCorner();
   }
 
   /**
-   * Gets the bottom right corner of this range.
+   * Gets the bottom right (in LTR) or bottom left (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and start coordinates are pointed to that header.
+   *
+   * @returns {CellCoords}
+   */
+  getOuterBottomEndCorner() {
+    return this._createCellCoords(Math.max(this.from.row, this.to.row), Math.max(this.from.col, this.to.col));
+  }
+
+  /**
+   * Gets the bottom right corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and left coordinates are pointed to that header.
    *
    * @returns {CellCoords}
    */
   getOuterBottomRightCorner() {
-    return new CellCoords(Math.max(this.from.row, this.to.row), Math.max(this.from.col, this.to.col));
+    return this.#isRtl ? this.getOuterBottomStartCorner() : this.getOuterBottomEndCorner();
   }
 
   /**
-   * Gets the top right corner of this range. If the corner contains header coordinates
-   * (negative values), then the top coordinate will be pointed to that header.
+   * Gets the top right (in LTR) or top left (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and start coordinates are pointed to that header.
+   *
+   * @returns {CellCoords}
+   */
+  getOuterTopEndCorner() {
+    return this._createCellCoords(Math.min(this.from.row, this.to.row), Math.max(this.from.col, this.to.col));
+  }
+
+  /**
+   * Gets the top right corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and left coordinates are pointed to that header.
    *
    * @returns {CellCoords}
    */
   getOuterTopRightCorner() {
-    return new CellCoords(Math.min(this.from.row, this.to.row), Math.max(this.from.col, this.to.col));
+    return this.#isRtl ? this.getOuterTopStartCorner() : this.getOuterTopEndCorner();
   }
 
   /**
-   * Gets the bottom left corner of this range. If the corner contains header coordinates
-   * (negative values), then the left coordinate will be pointed to that header.
+   * Gets the bottom left (in LTR) or bottom right (in RTL) corner coordinates of your range.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and start coordinates are pointed to that header.
+   *
+   * @returns {CellCoords}
+   */
+  getOuterBottomStartCorner() {
+    return this._createCellCoords(Math.max(this.from.row, this.to.row), Math.min(this.from.col, this.to.col));
+  }
+
+  /**
+   * Gets the bottom left corner coordinates of your range,
+   * both in the LTR and RTL layout direction.
+   *
+   * If the corner contains header coordinates (negative values),
+   * the top and left coordinates are pointed to that header.
    *
    * @returns {CellCoords}
    */
   getOuterBottomLeftCorner() {
-    return new CellCoords(Math.max(this.from.row, this.to.row), Math.min(this.from.col, this.to.col));
+    return this.#isRtl ? this.getOuterBottomEndCorner() : this.getOuterBottomStartCorner();
   }
 
   /**
-   * Checks if coordinates match to one of the 4th corners of this range.
+   * Checks if a set of coordinates (`coords`) matches one of the 4 corners of your range.
    *
-   * @param {CellCoords} coords Cell coordinates to check.
-   * @param {CellRange} [expandedRange] The cells range to compare with.
+   * @param {CellCoords} coords Coordinates to check.
    * @returns {boolean}
    */
-  isCorner(coords, expandedRange) {
-    if (expandedRange && expandedRange.includes(coords) &&
-       (this.getOuterTopLeftCorner().isEqual(new CellCoords(expandedRange.from.row, expandedRange.from.col)) ||
-       this.getOuterTopRightCorner().isEqual(new CellCoords(expandedRange.from.row, expandedRange.to.col)) ||
-       this.getOuterBottomLeftCorner().isEqual(new CellCoords(expandedRange.to.row, expandedRange.from.col)) ||
-       this.getOuterBottomRightCorner().isEqual(new CellCoords(expandedRange.to.row, expandedRange.to.col)))) {
-      return true;
-    }
-
+  isCorner(coords) {
     return coords.isEqual(this.getOuterTopLeftCorner()) || coords.isEqual(this.getOuterTopRightCorner()) ||
       coords.isEqual(this.getOuterBottomLeftCorner()) || coords.isEqual(this.getOuterBottomRightCorner());
   }
 
   /**
-   * Gets coordinates of the corner which is opposite to the matched. When the passed coordinates matched to the
-   * bottom-right corner of this range then the coordinates for top-left will be returned.
+   * Gets the coordinates of a range corner opposite to the provided `coords`.
    *
-   * @param {CellCoords} coords Cell coordinates to check.
-   * @param {CellRange} [expandedRange] The cells range to compare with.
+   * For example: if the `coords` coordinates match the bottom-right corner of your range,
+   * the coordinates of the top-left corner of your range are returned.
+   *
+   * @param {CellCoords} coords Coordinates to check.
    * @returns {CellCoords}
    */
-  getOppositeCorner(coords, expandedRange) {
+  getOppositeCorner(coords) {
     if (!(coords instanceof CellCoords)) {
       return false;
     }
 
-    if (expandedRange) {
-      if (expandedRange.includes(coords)) {
-        if (this.getOuterTopLeftCorner().isEqual(new CellCoords(expandedRange.from.row, expandedRange.from.col))) {
-          return this.getOuterBottomRightCorner();
-        }
-        if (this.getOuterTopRightCorner().isEqual(new CellCoords(expandedRange.from.row, expandedRange.to.col))) {
-          return this.getOuterBottomLeftCorner();
-        }
-        if (this.getOuterBottomLeftCorner().isEqual(new CellCoords(expandedRange.to.row, expandedRange.from.col))) {
-          return this.getOuterTopRightCorner();
-        }
-        if (this.getOuterBottomRightCorner().isEqual(new CellCoords(expandedRange.to.row, expandedRange.to.col))) {
-          return this.getOuterTopLeftCorner();
-        }
-      }
-    }
+    if (coords.isEqual(this.getOuterBottomEndCorner())) {
+      return this.getOuterTopStartCorner();
 
-    if (coords.isEqual(this.getOuterBottomRightCorner())) {
-      return this.getOuterTopLeftCorner();
+    } else if (coords.isEqual(this.getOuterTopStartCorner())) {
+      return this.getOuterBottomEndCorner();
 
-    } else if (coords.isEqual(this.getOuterTopLeftCorner())) {
-      return this.getOuterBottomRightCorner();
+    } else if (coords.isEqual(this.getOuterTopEndCorner())) {
+      return this.getOuterBottomStartCorner();
 
-    } else if (coords.isEqual(this.getOuterTopRightCorner())) {
-      return this.getOuterBottomLeftCorner();
-
-    } else if (coords.isEqual(this.getOuterBottomLeftCorner())) {
-      return this.getOuterTopRightCorner();
+    } else if (coords.isEqual(this.getOuterBottomStartCorner())) {
+      return this.getOuterTopEndCorner();
     }
   }
 
   /**
-   * @param {CellRange} range The cells range to compare with.
-   * @returns {Array}
+   * Indicates which borders (top, right, bottom, left) are shared between
+   * your `CellRange`instance and another `range` that's within your range.
+   *
+   * @param {CellRange} range A range to compare with.
+   * @returns {Array<'top' | 'right' | 'bottom' | 'left'>}
    */
   getBordersSharedWith(range) {
     if (!this.includesRange(range)) {
@@ -572,32 +781,32 @@ class CellRange {
       result.push('top');
     }
     if (thisBorders.right === rangeBorders.right) {
-      result.push('right');
+      result.push(this.#isRtl ? 'left' : 'right');
     }
     if (thisBorders.bottom === rangeBorders.bottom) {
       result.push('bottom');
     }
     if (thisBorders.left === rangeBorders.left) {
-      result.push('left');
+      result.push(this.#isRtl ? 'right' : 'left');
     }
 
     return result;
   }
 
   /**
-   * Get inner selected cell coords defined by this range.
+   * Gets the coordinates of the inner cells of your range.
    *
-   * @returns {Array}
+   * @returns {CellCoords[]}
    */
   getInner() {
-    const topLeft = this.getOuterTopLeftCorner();
-    const bottomRight = this.getOuterBottomRightCorner();
+    const topStart = this.getOuterTopStartCorner();
+    const bottomEnd = this.getOuterBottomEndCorner();
     const out = [];
 
-    for (let r = topLeft.row; r <= bottomRight.row; r++) {
-      for (let c = topLeft.col; c <= bottomRight.col; c++) {
+    for (let r = topStart.row; r <= bottomEnd.row; r++) {
+      for (let c = topStart.col; c <= bottomEnd.col; c++) {
         if (!(this.from.row === r && this.from.col === c) && !(this.to.row === r && this.to.col === c)) {
-          out.push(new CellCoords(r, c));
+          out.push(this._createCellCoords(r, c));
         }
       }
     }
@@ -606,25 +815,25 @@ class CellRange {
   }
 
   /**
-   * Get all selected cell coords defined by this range.
+   * Gets the coordinates of all cells of your range.
    *
-   * @returns {Array}
+   * @returns {CellCoords[]}
    */
   getAll() {
-    const topLeft = this.getOuterTopLeftCorner();
-    const bottomRight = this.getOuterBottomRightCorner();
+    const topStart = this.getOuterTopStartCorner();
+    const bottomEnd = this.getOuterBottomEndCorner();
     const out = [];
 
-    for (let r = topLeft.row; r <= bottomRight.row; r++) {
-      for (let c = topLeft.col; c <= bottomRight.col; c++) {
-        if (topLeft.row === r && topLeft.col === c) {
-          out.push(topLeft);
+    for (let r = topStart.row; r <= bottomEnd.row; r++) {
+      for (let c = topStart.col; c <= bottomEnd.col; c++) {
+        if (topStart.row === r && topStart.col === c) {
+          out.push(topStart);
 
-        } else if (bottomRight.row === r && bottomRight.col === c) {
-          out.push(bottomRight);
+        } else if (bottomEnd.row === r && bottomEnd.col === c) {
+          out.push(bottomEnd);
 
         } else {
-          out.push(new CellCoords(r, c));
+          out.push(this._createCellCoords(r, c));
         }
       }
     }
@@ -633,17 +842,18 @@ class CellRange {
   }
 
   /**
-   * Runs a callback function against all cells in the range. You can break the iteration by returning
-   * `false` in the callback function.
+   * Runs a callback function on all cells within your range.
    *
-   * @param {Function} callback The callback function.
+   * You can break the iteration by returning `false` in the callback function.
+   *
+   * @param {function(number, number): boolean} callback A callback function.
    */
   forAll(callback) {
-    const topLeft = this.getOuterTopLeftCorner();
-    const bottomRight = this.getOuterBottomRightCorner();
+    const topStart = this.getOuterTopStartCorner();
+    const bottomEnd = this.getOuterBottomEndCorner();
 
-    for (let r = topLeft.row; r <= bottomRight.row; r++) {
-      for (let c = topLeft.col; c <= bottomRight.col; c++) {
+    for (let r = topStart.row; r <= bottomEnd.row; r++) {
+      for (let c = topStart.col; c <= bottomEnd.col; c++) {
         const breakIteration = callback(r, c);
 
         if (breakIteration === false) {
@@ -654,25 +864,46 @@ class CellRange {
   }
 
   /**
-   * Clones the range coordinates.
+   * Clones your `CellRange` instance.
    *
    * @returns {CellRange}
    */
   clone() {
-    return new CellRange(this.highlight, this.from, this.to);
+    return new CellRange(this.highlight, this.from, this.to, this.#isRtl);
   }
 
   /**
-   * Convert CellRange to literal object.
+   * Converts your `CellRange` instance into an object literal with the following properties:
    *
-   * @returns {object} Returns a literal object with `from` and `to` properties which each of that object
-   *                  contains `row` and `col` keys.
+   * - `from`
+   *    - `row`
+   *    - `col`
+   * - `to`
+   *    - `row`
+   *    - `col`
+   *
+   * @returns {{from: {row: number, col: number}, to: {row: number, col: number}}} An object literal with `from` and `to` properties.
    */
   toObject() {
     return {
       from: this.from.toObject(),
       to: this.to.toObject(),
     };
+  }
+
+  /**
+   * Creates and returns a new instance of the `CellCoords` class.
+   *
+   * The new `CellCoords` instance automatically inherits the LTR/RTL flag
+   * from your `CellRange` instance.
+   *
+   * @private
+   * @param {number} row A row index.
+   * @param {number} column A column index.
+   * @returns {CellCoords}
+   */
+  _createCellCoords(row, column) {
+    return new CellCoords(row, column, this.#isRtl);
   }
 }
 

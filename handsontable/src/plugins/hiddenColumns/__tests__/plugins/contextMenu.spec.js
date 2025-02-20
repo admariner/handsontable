@@ -750,7 +750,7 @@ describe('HiddenColumns', () => {
           expect(getCell(0, 3)).toBe(null);
           expect(getCell(0, 4)).toBe(null);
 
-          const header = $('.ht_clone_left .htCore')
+          const header = $('.ht_clone_inline_start .htCore')
             .find('tbody')
             .find('th')
             .eq(0);
@@ -774,14 +774,14 @@ describe('HiddenColumns', () => {
           expect(getSelectedRangeLast().to.row).toBe(1);
           expect(getSelectedRangeLast().to.col).toBe(4);
           expect(`
-            |   ║ * : * : * : * : * |
+            | * ║ * : * : * : * : * |
             |===:===:===:===:===:===|
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should cooperate with the `fixedColumnsLeft` option properly', () => {
+        it('should cooperate with the `fixedColumnsStart` option properly', () => {
           handsontable({
             data: Handsontable.helper.createSpreadsheetData(2, 10),
             width: 300,
@@ -792,7 +792,7 @@ describe('HiddenColumns', () => {
             hiddenColumns: {
               columns: [1]
             },
-            fixedColumnsLeft: 3,
+            fixedColumnsStart: 3,
           });
 
           selectColumns(0, 2);
@@ -869,20 +869,13 @@ describe('HiddenColumns', () => {
               },
             });
 
-            const header = $('.ht_clone_left .htCore')
+            const header = $('.ht_clone_inline_start .htCore')
               .find('tbody')
               .find('th')
               .eq(0);
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
-
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(0)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert row above
+            selectContextMenuOption('Insert row above');
 
             expect(getSelected()).toEqual([[1, -1, 1, 3]]);
             expect(getSelectedRangeLast().highlight.row).toBe(1);
@@ -913,20 +906,13 @@ describe('HiddenColumns', () => {
               },
             });
 
-            const header = $('.ht_clone_left .htCore')
+            const header = $('.ht_clone_inline_start .htCore')
               .find('tbody')
               .find('th')
               .eq(0);
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
-
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(0)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert row above
+            selectContextMenuOption('Insert row above');
 
             expect(getSelected()).toEqual([[1, -1, 1, 3]]);
             expect(getSelectedRangeLast().highlight.row).toBe(1);
@@ -959,20 +945,13 @@ describe('HiddenColumns', () => {
               },
             });
 
-            const header = $('.ht_clone_left .htCore')
+            const header = $('.ht_clone_inline_start .htCore')
               .find('tbody')
               .find('th')
               .eq(0);
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
-
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(1)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert row below
+            selectContextMenuOption('Insert row below');
 
             expect(getSelected()).toEqual([[0, -1, 0, 3]]);
             expect(getSelectedRangeLast().highlight.row).toBe(0);
@@ -1003,20 +982,13 @@ describe('HiddenColumns', () => {
               },
             });
 
-            const header = $('.ht_clone_left .htCore')
+            const header = $('.ht_clone_inline_start .htCore')
               .find('tbody')
               .find('th')
               .eq(0);
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
-
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(1)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert row below
+            selectContextMenuOption('Insert row below');
 
             expect(getSelected()).toEqual([[0, -1, 0, 3]]);
             expect(getSelectedRangeLast().highlight.row).toBe(0);

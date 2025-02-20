@@ -25,25 +25,45 @@ describe('BaseEditor', () => {
     expect(Handsontable.editors.TextEditor).toBeDefined();
   });
 
-  it('should blur activeElement while preparing the editor to open', () => {
+  it('should blur `activeElement` while preparing the editor to open', () => {
     const externalInputElement = document.createElement('input');
 
     document.body.appendChild(externalInputElement);
+    spyOn(externalInputElement, 'blur').and.callThrough();
 
     handsontable();
 
     externalInputElement.select();
     selectCell(2, 2);
 
+    expect(externalInputElement.blur).toHaveBeenCalled();
     expect(document.activeElement).not.toBe(externalInputElement);
 
     document.body.removeChild(externalInputElement);
   });
 
-  it('should blur activeElement while preparing the editor to open even when readOnly is enabled', () => {
+  it('should not blur `activeElement` when previously active element is HoT component', () => {
+    const hotInputElement = document.createElement('input');
+
+    hotInputElement.setAttribute('data-hot-input', true);
+    document.body.appendChild(hotInputElement);
+    spyOn(hotInputElement, 'blur').and.callThrough();
+
+    handsontable();
+
+    hotInputElement.select();
+    selectCell(2, 2);
+
+    expect(hotInputElement.blur).not.toHaveBeenCalled();
+
+    document.body.removeChild(hotInputElement);
+  });
+
+  it('should blur `activeElement` while preparing the editor to open even when readOnly is enabled', () => {
     const externalInputElement = document.createElement('input');
 
     document.body.appendChild(externalInputElement);
+    spyOn(externalInputElement, 'blur').and.callThrough();
 
     handsontable({
       readOnly: true,
@@ -52,68 +72,109 @@ describe('BaseEditor', () => {
     externalInputElement.select();
     selectCell(2, 2);
 
+    expect(externalInputElement.blur).toHaveBeenCalled();
     expect(document.activeElement).not.toBe(externalInputElement);
 
     document.body.removeChild(externalInputElement);
   });
 
-  describe('ctrl + enter when editor is active', () => {
-    it('should populate value from the currently active cell to every cell in the selected range', () => {
+  describe('should populate value from the currently active cell to every cell in the selected range', () => {
+    it('Ctrl/Meta + Enter when editor is active', () => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(6, 6)
+        data: createSpreadsheetData(6, 6)
       });
 
       selectCell(1, 1, 2, 2);
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'enter']);
 
-      expect(getDataAtCell(1, 1)).toEqual('B2');
-      expect(getDataAtCell(2, 2)).toEqual('C3');
+      expect(getDataAtCell(1, 1)).toBe('B2');
+      expect(getDataAtCell(1, 2)).toBe('B2');
+      expect(getDataAtCell(2, 1)).toBe('B2');
+      expect(getDataAtCell(2, 2)).toBe('B2');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,1 from: 1,1 to: 2,2']);
 
-      keyDown(Handsontable.helper.KEY_CODES.ENTER);
-      keyDown('ctrl+enter');
-
-      expect(getDataAtCell(1, 1)).toEqual('B2');
-      expect(getDataAtCell(1, 2)).toEqual('B2');
-      expect(getDataAtCell(2, 1)).toEqual('B2');
-      expect(getDataAtCell(2, 2)).toEqual('B2');
-
-      loadData(Handsontable.helper.createSpreadsheetData(6, 6));
-
+      loadData(createSpreadsheetData(6, 6));
       selectCell(1, 2, 2, 1);
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'enter']);
 
-      expect(getDataAtCell(1, 2)).toEqual('C2');
-      expect(getDataAtCell(2, 1)).toEqual('B3');
+      expect(getDataAtCell(1, 1)).toBe('C2');
+      expect(getDataAtCell(1, 2)).toBe('C2');
+      expect(getDataAtCell(2, 1)).toBe('C2');
+      expect(getDataAtCell(2, 2)).toBe('C2');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,2 from: 1,2 to: 2,1']);
 
-      keyDown(Handsontable.helper.KEY_CODES.ENTER);
-      keyDown('ctrl+enter');
-
-      expect(getDataAtCell(1, 1)).toEqual('C2');
-      expect(getDataAtCell(1, 2)).toEqual('C2');
-      expect(getDataAtCell(2, 1)).toEqual('C2');
-      expect(getDataAtCell(2, 2)).toEqual('C2');
-
-      loadData(Handsontable.helper.createSpreadsheetData(6, 6));
+      loadData(createSpreadsheetData(6, 6));
       selectCell(2, 2, 1, 1);
-      expect(getDataAtCell(2, 2)).toEqual('C3');
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'enter']);
 
-      keyDown(Handsontable.helper.KEY_CODES.ENTER);
-      keyDown('ctrl+enter');
+      expect(getDataAtCell(1, 1)).toBe('C3');
+      expect(getDataAtCell(1, 2)).toBe('C3');
+      expect(getDataAtCell(2, 1)).toBe('C3');
+      expect(getDataAtCell(2, 2)).toBe('C3');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,1 from: 2,2 to: 1,1']);
 
-      expect(getDataAtCell(1, 1)).toEqual('C3');
-      expect(getDataAtCell(1, 2)).toEqual('C3');
-      expect(getDataAtCell(2, 1)).toEqual('C3');
-      expect(getDataAtCell(2, 2)).toEqual('C3');
-
-      loadData(Handsontable.helper.createSpreadsheetData(6, 6));
+      loadData(createSpreadsheetData(6, 6));
       selectCell(2, 1, 1, 2);
-      expect(getDataAtCell(2, 1)).toEqual('B3');
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'enter']);
 
-      keyDown(Handsontable.helper.KEY_CODES.ENTER);
-      keyDown('ctrl+enter');
+      expect(getDataAtCell(1, 1)).toBe('B3');
+      expect(getDataAtCell(1, 2)).toBe('B3');
+      expect(getDataAtCell(2, 1)).toBe('B3');
+      expect(getDataAtCell(2, 2)).toBe('B3');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,2 from: 2,1 to: 1,2']);
+    });
 
-      expect(getDataAtCell(1, 1)).toEqual('B3');
-      expect(getDataAtCell(1, 2)).toEqual('B3');
-      expect(getDataAtCell(2, 1)).toEqual('B3');
-      expect(getDataAtCell(2, 2)).toEqual('B3');
+    it('Ctrl/Meta + Shift + Enter when editor is active', () => {
+      handsontable({
+        data: createSpreadsheetData(6, 6)
+      });
+
+      selectCell(1, 1, 2, 2);
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'shift', 'enter']);
+
+      expect(getDataAtCell(1, 1)).toBe('B2');
+      expect(getDataAtCell(1, 2)).toBe('B2');
+      expect(getDataAtCell(2, 1)).toBe('B2');
+      expect(getDataAtCell(2, 2)).toBe('B2');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,2 from: 1,1 to: 2,2']);
+
+      loadData(createSpreadsheetData(6, 6));
+      selectCell(1, 2, 2, 1);
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'shift', 'enter']);
+
+      expect(getDataAtCell(1, 1)).toBe('C2');
+      expect(getDataAtCell(1, 2)).toBe('C2');
+      expect(getDataAtCell(2, 1)).toBe('C2');
+      expect(getDataAtCell(2, 2)).toBe('C2');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,1 from: 1,2 to: 2,1']);
+
+      loadData(createSpreadsheetData(6, 6));
+      selectCell(2, 2, 1, 1);
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'shift', 'enter']);
+
+      expect(getDataAtCell(1, 1)).toBe('C3');
+      expect(getDataAtCell(1, 2)).toBe('C3');
+      expect(getDataAtCell(2, 1)).toBe('C3');
+      expect(getDataAtCell(2, 2)).toBe('C3');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,2 from: 2,2 to: 1,1']);
+
+      loadData(createSpreadsheetData(6, 6));
+      selectCell(2, 1, 1, 2);
+      keyDownUp('F2');
+      keyDownUp(['control/meta', 'shift', 'enter']);
+
+      expect(getDataAtCell(1, 1)).toBe('B3');
+      expect(getDataAtCell(1, 2)).toBe('B3');
+      expect(getDataAtCell(2, 1)).toBe('B3');
+      expect(getDataAtCell(2, 2)).toBe('B3');
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,1 from: 2,1 to: 1,2']);
     });
   });
 

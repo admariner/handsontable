@@ -3,43 +3,68 @@ import {
   hasClass,
   isChildOf,
   getParent,
-} from './../../../helpers/dom/element';
-import { partial } from './../../../helpers/function';
-import { isTouchSupported } from './../../../helpers/feature';
-import { isMobileBrowser, isChromeWebKit, isFirefoxWebKit, isIOS } from './../../../helpers/browser';
-import EventManager from './../../../eventManager';
+} from '../../../helpers/dom/element';
+import { partial } from '../../../helpers/function';
+import { isTouchSupported } from '../../../helpers/feature';
+import { isMobileBrowser, isChromeWebKit, isFirefoxWebKit, isIOS } from '../../../helpers/browser';
 import { isDefined } from '../../../helpers/mixed';
-
-const privatePool = new WeakMap();
 
 /**
  * @class Event
  */
 class Event {
+  #wtSettings;
+  #domBindings;
+  #wtTable;
+  #selectionManager;
+  #parent;
   /**
-   * @param {*} instance Walkontable instance.
+   * Instance of {@link EventManager}.
+   *
+   * @type {EventManager}
    */
-  constructor(instance) {
-    /**
-     * Instance of {@link Walkontable}.
-     *
-     * @private
-     * @type {Walkontable}
-     */
-    this.instance = instance;
-    /**
-     * Instance of {@link EventManager}.
-     *
-     * @private
-     * @type {EventManager}
-     */
-    this.eventManager = new EventManager(instance);
+  #eventManager;
+  /**
+   * Should be use only for passing face called external origin methods, like registered event listeners.
+   * It provides backward compatibility by getting instance facade.
+   *
+   * @todo Consider about removing this from Event class, because it make relationship into facade (implicit circular
+   *   dependency).
+   * @todo Con. Maybe passing listener caller as an ioc from faced resolves this issue. To rethink later.
+   *
+   * @type {FacadeGetter}
+   */
+  #facadeGetter;
+  /**
+   * @type {boolean}
+   */
+  #selectedCellBeforeTouchEnd;
+  /**
+   * @type {number[]}
+   */
+  #dblClickTimeout = [null, null];
+  /**
+   * @type {number[]}
+   */
+  #dblClickOrigin = [null, null];
 
-    privatePool.set(this, {
-      selectedCellBeforeTouchEnd: void 0,
-      dblClickTimeout: [null, null],
-      dblClickOrigin: [null, null],
-    });
+  /**
+   * @param {FacadeGetter} facadeGetter Gets an instance facade.
+   * @param {DomBindings} domBindings Bindings into dom.
+   * @param {Settings} wtSettings The walkontable settings.
+   * @param {EventManager} eventManager The walkontable event manager.
+   * @param {Table} wtTable The table.
+   * @param {SelectionManager} selectionManager Selections.
+   * @param {Event} [parent=null] The main Event instance.
+   */
+  constructor(facadeGetter, domBindings, wtSettings, eventManager, wtTable, selectionManager, parent = null) {
+    this.#wtSettings = wtSettings;
+    this.#domBindings = domBindings;
+    this.#wtTable = wtTable;
+    this.#selectionManager = selectionManager;
+    this.#parent = parent;
+    this.#eventManager = eventManager;
+    this.#facadeGetter = facadeGetter;
 
     this.registerEvents();
   }
@@ -50,38 +75,38 @@ class Event {
    * @private
    */
   registerEvents() {
-    this.eventManager.addEventListener(this.instance.wtTable.holder, 'contextmenu', event => this.onContextMenu(event));
-    this.eventManager.addEventListener(this.instance.wtTable.TABLE, 'mouseover', event => this.onMouseOver(event));
-    this.eventManager.addEventListener(this.instance.wtTable.TABLE, 'mouseout', event => this.onMouseOut(event));
+    this.#eventManager.addEventListener(this.#wtTable.holder, 'contextmenu', event => this.onContextMenu(event));
+    this.#eventManager.addEventListener(this.#wtTable.TABLE, 'mouseover', event => this.onMouseOver(event));
+    this.#eventManager.addEventListener(this.#wtTable.TABLE, 'mouseout', event => this.onMouseOut(event));
 
     const initTouchEvents = () => {
-      this.eventManager.addEventListener(this.instance.wtTable.holder, 'touchstart', event => this.onTouchStart(event));
-      this.eventManager.addEventListener(this.instance.wtTable.holder, 'touchend', event => this.onTouchEnd(event));
+      this.#eventManager.addEventListener(this.#wtTable.holder, 'touchstart', event => this.onTouchStart(event));
+      this.#eventManager.addEventListener(this.#wtTable.holder, 'touchend', event => this.onTouchEnd(event));
 
-      if (!this.instance.momentumScrolling) {
-        this.instance.momentumScrolling = {};
+      if (!this.momentumScrolling) {
+        this.momentumScrolling = {};
       }
-      this.eventManager.addEventListener(this.instance.wtTable.holder, 'scroll', () => {
-        clearTimeout(this.instance.momentumScrolling._timeout);
+      this.#eventManager.addEventListener(this.#wtTable.holder, 'scroll', () => {
+        clearTimeout(this.momentumScrolling._timeout);
 
-        if (!this.instance.momentumScrolling.ongoing) {
-          this.instance.getSetting('onBeforeTouchScroll');
+        if (!this.momentumScrolling.ongoing) {
+          this.#wtSettings.getSetting('onBeforeTouchScroll');
         }
-        this.instance.momentumScrolling.ongoing = true;
+        this.momentumScrolling.ongoing = true;
 
-        this.instance.momentumScrolling._timeout = setTimeout(() => {
-          if (!this.instance.touchApplied) {
-            this.instance.momentumScrolling.ongoing = false;
+        this.momentumScrolling._timeout = setTimeout(() => {
+          if (!this.touchApplied) {
+            this.momentumScrolling.ongoing = false;
 
-            this.instance.getSetting('onAfterMomentumScroll');
+            this.#wtSettings.getSetting('onAfterMomentumScroll');
           }
         }, 200);
       });
     };
 
     const initMouseEvents = () => {
-      this.eventManager.addEventListener(this.instance.wtTable.holder, 'mouseup', event => this.onMouseUp(event));
-      this.eventManager.addEventListener(this.instance.wtTable.holder, 'mousedown', event => this.onMouseDown(event));
+      this.#eventManager.addEventListener(this.#wtTable.holder, 'mouseup', event => this.onMouseUp(event));
+      this.#eventManager.addEventListener(this.#wtTable.holder, 'mousedown', event => this.onMouseDown(event));
     };
 
     if (isMobileBrowser()) {
@@ -104,13 +129,12 @@ class Event {
    * @returns {boolean}
    */
   selectedCellWasTouched(touchTarget) {
-    const priv = privatePool.get(this);
     const cellUnderFinger = this.parentCell(touchTarget);
     const coordsOfCellUnderFinger = cellUnderFinger.coords;
 
-    if (priv.selectedCellBeforeTouchEnd && coordsOfCellUnderFinger) {
-      const [rowTouched, rowSelected] = [coordsOfCellUnderFinger.row, priv.selectedCellBeforeTouchEnd.from.row];
-      const [colTouched, colSelected] = [coordsOfCellUnderFinger.col, priv.selectedCellBeforeTouchEnd.from.col];
+    if (this.#selectedCellBeforeTouchEnd && coordsOfCellUnderFinger) {
+      const [rowTouched, rowSelected] = [coordsOfCellUnderFinger.row, this.#selectedCellBeforeTouchEnd.from.row];
+      const [colTouched, colSelected] = [coordsOfCellUnderFinger.col, this.#selectedCellBeforeTouchEnd.from.col];
 
       return rowTouched === rowSelected && colTouched === colSelected;
     }
@@ -127,21 +151,21 @@ class Event {
    */
   parentCell(elem) {
     const cell = {};
-    const TABLE = this.instance.wtTable.TABLE;
+    const TABLE = this.#wtTable.TABLE;
     const TD = closestDown(elem, ['TD', 'TH'], TABLE);
 
     if (TD) {
-      cell.coords = this.instance.wtTable.getCoords(TD);
+      cell.coords = this.#wtTable.getCoords(TD);
       cell.TD = TD;
 
     } else if (hasClass(elem, 'wtBorder') && hasClass(elem, 'current')) {
-      cell.coords = this.instance.selections.getCell().cellRange.highlight;
-      cell.TD = this.instance.wtTable.getCell(cell.coords);
+      cell.coords = this.#selectionManager.getFocusSelection().cellRange.highlight;
+      cell.TD = this.#wtTable.getCell(cell.coords);
 
     } else if (hasClass(elem, 'wtBorder') && hasClass(elem, 'area')) {
-      if (this.instance.selections.createOrGetArea().cellRange) {
-        cell.coords = this.instance.selections.createOrGetArea().cellRange.to;
-        cell.TD = this.instance.wtTable.getCell(cell.coords);
+      if (this.#selectionManager.getAreaSelection().cellRange) {
+        cell.coords = this.#selectionManager.getAreaSelection().cellRange.to;
+        cell.TD = this.#wtTable.getCell(cell.coords);
       }
     }
 
@@ -155,34 +179,39 @@ class Event {
    * @param {MouseEvent} event The mouse event object.
    */
   onMouseDown(event) {
-    const priv = privatePool.get(this);
-    const activeElement = this.instance.rootDocument.activeElement;
+    const activeElement = this.#domBindings.rootDocument.activeElement;
     const getParentNode = partial(getParent, event.target);
     const realTarget = event.target;
 
-    // ignore focusable element from mouse down processing (https://github.com/handsontable/handsontable/issues/3555)
-    if (realTarget === activeElement ||
+    // ignore non-TD focusable elements from mouse down processing
+    // (https://github.com/handsontable/handsontable/issues/3555)
+    if (!['TD', 'TH'].includes(activeElement.nodeName) &&
+      (
+        realTarget === activeElement ||
         getParentNode(0) === activeElement ||
-        getParentNode(1) === activeElement) {
+        getParentNode(1) === activeElement
+      )
+    ) {
       return;
     }
 
     const cell = this.parentCell(realTarget);
 
     if (hasClass(realTarget, 'corner')) {
-      this.instance.getSetting('onCellCornerMouseDown', event, realTarget);
-    } else if (cell.TD && this.instance.hasSetting('onCellMouseDown')) {
-      this.instance.getSetting('onCellMouseDown', event, cell.coords, cell.TD, this.instance);
+      this.#wtSettings.getSetting('onCellCornerMouseDown', event, realTarget);
+
+    } else if (cell.TD && this.#wtSettings.has('onCellMouseDown')) {
+      this.callListener('onCellMouseDown', event, cell.coords, cell.TD);
     }
 
     // doubleclick reacts only for left mouse button or from touch events
-    if ((event.button === 0 || this.instance.touchApplied) && cell.TD) {
-      priv.dblClickOrigin[0] = cell.TD;
+    if ((event.button === 0 || this.touchApplied) && cell.TD) {
+      this.#dblClickOrigin[0] = cell.TD;
 
-      clearTimeout(priv.dblClickTimeout[0]);
+      clearTimeout(this.#dblClickTimeout[0]);
 
-      priv.dblClickTimeout[0] = setTimeout(() => {
-        priv.dblClickOrigin[0] = null;
+      this.#dblClickTimeout[0] = setTimeout(() => {
+        this.#dblClickOrigin[0] = null;
       }, 1000);
     }
   }
@@ -194,11 +223,11 @@ class Event {
    * @param {MouseEvent} event The mouse event object.
    */
   onContextMenu(event) {
-    if (this.instance.hasSetting('onCellContextMenu')) {
+    if (this.#wtSettings.has('onCellContextMenu')) {
       const cell = this.parentCell(event.target);
 
       if (cell.TD) {
-        this.instance.getSetting('onCellContextMenu', event, cell.coords, cell.TD, this.instance);
+        this.callListener('onCellContextMenu', event, cell.coords, cell.TD);
       }
     }
   }
@@ -210,18 +239,18 @@ class Event {
    * @param {MouseEvent} event The mouse event object.
    */
   onMouseOver(event) {
-    if (!this.instance.hasSetting('onCellMouseOver')) {
+    if (!this.#wtSettings.has('onCellMouseOver')) {
       return;
     }
 
-    const table = this.instance.wtTable.TABLE;
+    const table = this.#wtTable.TABLE;
     const td = closestDown(event.target, ['TD', 'TH'], table);
-    const mainWOT = this.instance.cloneSource || this.instance;
+    const parent = this.#parent || this;
 
-    if (td && td !== mainWOT.lastMouseOver && isChildOf(td, table)) {
-      mainWOT.lastMouseOver = td;
+    if (td && td !== parent.lastMouseOver && isChildOf(td, table)) {
+      parent.lastMouseOver = td;
 
-      this.instance.getSetting('onCellMouseOver', event, this.instance.wtTable.getCoords(td), td, this.instance);
+      this.callListener('onCellMouseOver', event, this.#wtTable.getCoords(td), td);
     }
   }
 
@@ -232,16 +261,21 @@ class Event {
    * @param {MouseEvent} event The mouse event object.
    */
   onMouseOut(event) {
-    if (!this.instance.hasSetting('onCellMouseOut')) {
+    if (!this.#wtSettings.has('onCellMouseOut')) {
       return;
     }
 
-    const table = this.instance.wtTable.TABLE;
+    const table = this.#wtTable.TABLE;
     const lastTD = closestDown(event.target, ['TD', 'TH'], table);
     const nextTD = closestDown(event.relatedTarget, ['TD', 'TH'], table);
+    const parent = this.#parent || this;
 
     if (lastTD && lastTD !== nextTD && isChildOf(lastTD, table)) {
-      this.instance.getSetting('onCellMouseOut', event, this.instance.wtTable.getCoords(lastTD), lastTD, this.instance);
+      this.callListener('onCellMouseOut', event, this.#wtTable.getCoords(lastTD), lastTD);
+
+      if (nextTD === null) {
+        parent.lastMouseOver = null;
+      }
     }
   }
 
@@ -252,35 +286,34 @@ class Event {
    * @param {MouseEvent} event The mouse event object.
    */
   onMouseUp(event) {
-    const priv = privatePool.get(this);
     const cell = this.parentCell(event.target);
 
-    if (cell.TD && this.instance.hasSetting('onCellMouseUp')) {
-      this.instance.getSetting('onCellMouseUp', event, cell.coords, cell.TD, this.instance);
+    if (cell.TD && this.#wtSettings.has('onCellMouseUp')) {
+      this.callListener('onCellMouseUp', event, cell.coords, cell.TD);
     }
 
     // if not left mouse button, and the origin event is not comes from touch
-    if (event.button !== 0 && !this.instance.touchApplied) {
+    if (event.button !== 0 && !this.touchApplied) {
       return;
     }
 
-    if (cell.TD === priv.dblClickOrigin[0] && cell.TD === priv.dblClickOrigin[1]) {
+    if (cell.TD === this.#dblClickOrigin[0] && cell.TD === this.#dblClickOrigin[1]) {
       if (hasClass(event.target, 'corner')) {
-        this.instance.getSetting('onCellCornerDblClick', event, cell.coords, cell.TD, this.instance);
+        this.callListener('onCellCornerDblClick', event, cell.coords, cell.TD);
       } else {
-        this.instance.getSetting('onCellDblClick', event, cell.coords, cell.TD, this.instance);
+        this.callListener('onCellDblClick', event, cell.coords, cell.TD);
       }
 
-      priv.dblClickOrigin[0] = null;
-      priv.dblClickOrigin[1] = null;
+      this.#dblClickOrigin[0] = null;
+      this.#dblClickOrigin[1] = null;
 
-    } else if (cell.TD === priv.dblClickOrigin[0]) {
-      priv.dblClickOrigin[1] = cell.TD;
+    } else if (cell.TD === this.#dblClickOrigin[0]) {
+      this.#dblClickOrigin[1] = cell.TD;
 
-      clearTimeout(priv.dblClickTimeout[1]);
+      clearTimeout(this.#dblClickTimeout[1]);
 
-      priv.dblClickTimeout[1] = setTimeout(() => {
-        priv.dblClickOrigin[1] = null;
+      this.#dblClickTimeout[1] = setTimeout(() => {
+        this.#dblClickOrigin[1] = null;
       }, 500);
     }
   }
@@ -292,10 +325,8 @@ class Event {
    * @param {MouseEvent} event The mouse event object.
    */
   onTouchStart(event) {
-    const priv = privatePool.get(this);
-
-    priv.selectedCellBeforeTouchEnd = this.instance.selections.getCell().cellRange;
-    this.instance.touchApplied = true;
+    this.#selectedCellBeforeTouchEnd = this.#selectionManager.getFocusSelection().cellRange;
+    this.touchApplied = true;
 
     this.onMouseDown(event);
   }
@@ -310,7 +341,7 @@ class Event {
     const target = event.target;
     const parentCellCoords = this.parentCell(target)?.coords;
     const isCellsRange = isDefined(parentCellCoords) && (parentCellCoords.row >= 0 && parentCellCoords.col >= 0);
-    const isEventCancelable = event.cancelable && isCellsRange && this.instance.getSetting('isDataViewInstance');
+    const isEventCancelable = event.cancelable && isCellsRange && this.#wtSettings.getSetting('isDataViewInstance');
 
     // To prevent accidental redirects or other actions that the interactive elements (e.q "A" link) do
     // while the cell is highlighted, all touch events that are triggered on different cells are
@@ -339,19 +370,34 @@ class Event {
 
     this.onMouseUp(event);
 
-    this.instance.touchApplied = false;
+    this.touchApplied = false;
+  }
+
+  /**
+   * Call listener with backward compatibility.
+   *
+   * @private
+   * @param {string} name Name of listener.
+   * @param {MouseEvent} event The event object.
+   * @param {CellCoords} coords Coordinates.
+   * @param {HTMLElement} target Event target.
+   */
+  callListener(name, event, coords, target) {
+    const listener = this.#wtSettings.getSettingPure(name);
+
+    if (listener) {
+      listener(event, coords, target, this.#facadeGetter());
+    }
   }
 
   /**
    * Clears double-click timeouts and destroys the internal eventManager instance.
    */
   destroy() {
-    const priv = privatePool.get(this);
+    clearTimeout(this.#dblClickTimeout[0]);
+    clearTimeout(this.#dblClickTimeout[1]);
 
-    clearTimeout(priv.dblClickTimeout[0]);
-    clearTimeout(priv.dblClickTimeout[1]);
-
-    this.eventManager.destroy();
+    this.#eventManager.destroy();
   }
 }
 

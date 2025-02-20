@@ -8,11 +8,17 @@ import {
   getRenderer,
   registerRenderer,
 } from '../../registry';
+import {
+  registerCellType,
+  TextCellType,
+} from '../../../cellTypes';
+
+registerCellType(TextCellType);
 
 describe('passwordRenderer', () => {
   describe('registering', () => {
     it('should throw an error if renderer is not registered', () => {
-      expect(getRegisteredRendererNames()).toEqual([]);
+      expect(getRegisteredRendererNames()).toEqual(['text']);
       expect(() => {
         getRenderer(RENDERER_TYPE);
       }).toThrowError();
@@ -21,7 +27,7 @@ describe('passwordRenderer', () => {
     it('should register renderer', () => {
       registerRenderer(RENDERER_TYPE, passwordRenderer);
 
-      expect(getRegisteredRendererNames()).toEqual([RENDERER_TYPE]);
+      expect(getRegisteredRendererNames()).toEqual(['text', RENDERER_TYPE]);
       expect(getRenderer(RENDERER_TYPE)).toBeInstanceOf(Function);
     });
   });
@@ -36,9 +42,9 @@ describe('passwordRenderer', () => {
       const instance = getInstance();
       const cellMeta = {};
 
-      passwordRenderer(instance, TD, void 0, void 0, void 0, 'password', cellMeta);
+      passwordRenderer(instance, TD, undefined, undefined, undefined, 'password', cellMeta);
 
-      expect(TD.outerHTML).toBe('<td>********</td>');
+      expect(TD.outerHTML).toMatchHTML('<td>********</td>');
     });
 
     it('should render custom symbols instead of value', () => {
@@ -48,9 +54,9 @@ describe('passwordRenderer', () => {
         hashSymbol: '!'
       };
 
-      passwordRenderer(instance, TD, void 0, void 0, void 0, 'password', cellMeta);
+      passwordRenderer(instance, TD, undefined, undefined, undefined, 'password', cellMeta);
 
-      expect(TD.outerHTML).toBe('<td>!!!!!!!!</td>');
+      expect(TD.outerHTML).toMatchHTML('<td>!!!!!!!!</td>');
     });
 
     it('should render hashed value on the defined length', () => {
@@ -60,9 +66,9 @@ describe('passwordRenderer', () => {
         hashLength: 10
       };
 
-      passwordRenderer(instance, TD, void 0, void 0, void 0, 'password', cellMeta);
+      passwordRenderer(instance, TD, undefined, undefined, undefined, 'password', cellMeta);
 
-      expect(TD.outerHTML).toBe('<td>**********</td>');
+      expect(TD.outerHTML).toMatchHTML('<td>**********</td>');
     });
   });
 });

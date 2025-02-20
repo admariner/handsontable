@@ -20,7 +20,9 @@
 - [ ] `handsontable`
 - [ ] `@handsontable/angular`
 - [ ] `@handsontable/react`
+- [ ] `@handsontable/react-wrapper`
 - [ ] `@handsontable/vue`
+- [ ] `@handsontable/vue3`
 
 ### Checklist:
 <!--- Go over all the following points, and put an `x` in all the boxes that apply. -->

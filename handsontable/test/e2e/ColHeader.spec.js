@@ -32,7 +32,11 @@ describe('ColHeader', () => {
       height: 'auto',
     });
 
-    expect(spec().$container.find('.handsontable.ht_clone_top').height()).toEqual(26); // THs are 25px height and have 1px border on top
+    expect(spec().$container.find('.handsontable.ht_clone_top').height())
+      .forThemes(({ classic, main }) => {
+        classic.toEqual(26); // THs are 25px height and have 1px border on top
+        main.toEqual(29);
+      });
   });
 
   it('should properly calculate colHeaders\' overlay width', () => {
@@ -50,7 +54,7 @@ describe('ColHeader', () => {
 
     expect(cloneTop.width()).toBe(masterHolder.width());
 
-    alter('insert_row', void 0, 10);
+    alter('insert_row_below', null, 10);
 
     expect(cloneTop.width()).toBeLessThan(masterHolder.width());
   });
@@ -150,7 +154,7 @@ describe('ColHeader', () => {
     let headers = getHtCore().find('thead th').length;
 
     expect(headers).toBeGreaterThan(0);
-    expect(getTopClone().find('thead th').length).toEqual(headers);
+    expect(getTopClone().find('thead th').length).toBe(headers);
 
     hot.updateSettings({
       colHeaders: false
@@ -158,8 +162,8 @@ describe('ColHeader', () => {
 
     headers = getHtCore().find('thead th').length;
 
-    expect(headers).toEqual(0);
-    expect(getTopClone().width()).toEqual(0);
+    expect(headers).toBe(0);
+    expect(getTopClone().width()).toBe(0);
   });
 
   it('should show/hide columns headers after updateSettings', () => {
@@ -370,7 +374,7 @@ describe('ColHeader', () => {
     handsontable({
       startCols: 5,
       colHeaders: ['a', 'a', 'a', 'a<BR>a', 'a'],
-      fixedColumnsLeft: 2
+      fixedColumnsStart: 2
     });
 
     const topHeaderExample = $('.ht_clone_top').find('thead tr:first-child th:nth-child(1)');
@@ -388,7 +392,10 @@ describe('ColHeader', () => {
 
     hot.render();
 
-    expect(spec().$container.find('th').eq(0).height()).toEqual(40);
+    expect(spec().$container.find('th').eq(0).height()).forThemes(({ classic, main }) => {
+      classic.toEqual(40);
+      main.toEqual(39);
+    });
   });
 
   it('should allow defining custom column header heights using the columnHeaderHeight config option, when multiple column header levels are defined', () => {
@@ -418,7 +425,12 @@ describe('ColHeader', () => {
 
     hot.render();
 
-    expect(spec().$container.find('.handsontable.ht_clone_top tr:nth-child(1) th:nth-child(1)').height()).toEqual(45);
+    expect(spec().$container.find('.handsontable.ht_clone_top tr:nth-child(1) th:nth-child(1)').height())
+      .forThemes(({ classic, main }) => {
+        classic.toEqual(45);
+        main.toEqual(43);
+      });
+
     expect(spec().$container.find('.handsontable.ht_clone_top tr:nth-child(2) th:nth-child(1)').height()).toEqual(65);
   });
 
@@ -445,7 +457,7 @@ describe('ColHeader', () => {
       rowHeaders: true,
       colHeaders: ['0', '1', '2'],
       startCols: 3,
-      startRows: 1
+      startRows: 1,
     });
     const htCore = getHtCore();
 
@@ -456,27 +468,5 @@ describe('ColHeader', () => {
     expect(htCore.find('thead th:eq(1)').text()).toEqual('2');
     expect(htCore.find('thead th:eq(2)').text()).toEqual('1');
     expect(htCore.find('thead th:eq(3)').text()).toEqual('0');
-  });
-
-  it('should trigger `afterGetColHeader` hook for all displayed columns on init', () => {
-    const afterGetColHeader = jasmine.createSpy('afterGetColHeader');
-
-    handsontable({
-      startRows: 5,
-      startCols: 5,
-      colHeaders: true,
-      afterGetColHeader,
-    });
-
-    expect(afterGetColHeader).toHaveBeenCalledWith(0,
-      spec().$container.find('.ht_clone_top thead tr th:eq(0)')[0]);
-    expect(afterGetColHeader).toHaveBeenCalledWith(1,
-      spec().$container.find('.ht_clone_top thead tr th:eq(1)')[0]);
-    expect(afterGetColHeader).toHaveBeenCalledWith(2,
-      spec().$container.find('.ht_clone_top thead tr th:eq(2)')[0]);
-    expect(afterGetColHeader).toHaveBeenCalledWith(3,
-      spec().$container.find('.ht_clone_top thead tr th:eq(3)')[0]);
-    expect(afterGetColHeader).toHaveBeenCalledWith(4,
-      spec().$container.find('.ht_clone_top thead tr th:eq(4)')[0]);
   });
 });

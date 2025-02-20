@@ -1,5 +1,5 @@
 import { extend } from '../../../helpers/object';
-import { columnFactory, expandMetaType } from '../utils';
+import { columnFactory, extendByMetaType } from '../utils';
 import LazyFactoryMap from '../lazyFactoryMap';
 
 /**
@@ -37,20 +37,23 @@ const COLUMNS_PROPS_CONFLICTS = ['data', 'width'];
  *                    +-------------+.
  */
 export default class ColumnMeta {
+  /**
+   * Reference to the GlobalMeta layer. While creating new column meta objects, all new objects
+   * inherit properties from the GlobalMeta layer.
+   *
+   * @type {GlobalMeta}
+   */
+  globalMeta;
+  /**
+   * The LazyFactoryMap structure, holder for column meta objects where each column meta is
+   * stored under the physical column index.
+   *
+   * @type {LazyFactoryMap}
+   */
+  metas = new LazyFactoryMap(() => this._createMeta());
+
   constructor(globalMeta) {
-    /**
-     * Reference to the GlobalMeta layer. While creating new column meta objects, all new objects
-     * inherit properties from the GlobalMeta layer.
-     *
-     * @type {GlobalMeta}
-     */
     this.globalMeta = globalMeta;
-    /**
-     * The LazyFactoryMap structure, holder for column meta objects where each column meta is
-     * stored under the physical column index.
-     *
-     * @type {LazyFactoryMap}
-     */
     this.metas = new LazyFactoryMap(() => this._createMeta());
   }
 
@@ -64,7 +67,7 @@ export default class ColumnMeta {
     const meta = this.getMeta(physicalColumn);
 
     extend(meta, settings);
-    extend(meta, expandMetaType(settings.type, meta));
+    extendByMetaType(meta, settings);
   }
 
   /**

@@ -1,8 +1,8 @@
 import GlobalMeta from '../globalMeta';
 import ColumnMeta from '../columnMeta';
-import { registerCellType, TextCellType } from '../../../../cellTypes';
+import { registerAllCellTypes, getCellType } from '../../../../cellTypes';
 
-registerCellType(TextCellType);
+registerAllCellTypes();
 
 describe('ColumnMeta', () => {
   it('should reflect the changes in column meta when the global meta properties were changed', () => {
@@ -37,9 +37,9 @@ describe('ColumnMeta', () => {
     meta.getMeta(1)._myCustomKey = { foo: 'bar' };
 
     expect(globalMeta.getMeta()).toHaveProperty('copyable', true);
-    expect(globalMeta.getMeta()).toHaveProperty('renderer', void 0);
-    expect(globalMeta.getMeta()).toHaveProperty('rowHeights', void 0);
-    expect(globalMeta.getMeta()).toHaveProperty('_myCustomKey', void 0);
+    expect(globalMeta.getMeta()).toHaveProperty('renderer', undefined);
+    expect(globalMeta.getMeta()).toHaveProperty('rowHeights', undefined);
+    expect(globalMeta.getMeta()).toHaveProperty('_myCustomKey', undefined);
   });
 
   describe('getMeta()', () => {
@@ -119,7 +119,7 @@ describe('ColumnMeta', () => {
       meta.createColumn(1);
 
       expect(meta.getMeta(0)._test).toBe(1);
-      expect(meta.getMeta(1)._test).toBe(void 0);
+      expect(meta.getMeta(1)._test).toBe(undefined);
       expect(meta.getMeta(2)._test).toBe(2);
       expect(meta.getMeta(3)._test).toBe(3);
       expect(meta.getMeta(4)._test).toBe(4);
@@ -140,9 +140,9 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0)._test).toBe(1);
       expect(meta.getMeta(1)._test).toBe(2);
-      expect(meta.getMeta(2)._test).toBe(void 0);
-      expect(meta.getMeta(3)._test).toBe(void 0);
-      expect(meta.getMeta(4)._test).toBe(void 0);
+      expect(meta.getMeta(2)._test).toBe(undefined);
+      expect(meta.getMeta(3)._test).toBe(undefined);
+      expect(meta.getMeta(4)._test).toBe(undefined);
       expect(meta.getMeta(5)._test).toBe(3);
       expect(meta.getMeta(6)._test).toBe(4);
       expect(meta.getMeta(7)._test).toBe(5);
@@ -177,7 +177,7 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(1)._test).toBe(3);
       expect(meta.getMeta(2)._test).toBe(4);
       expect(meta.getMeta(3)._test).toBe(5);
-      expect(meta.getMeta(4)._test).toBe(void 0);
+      expect(meta.getMeta(4)._test).toBe(undefined);
     });
 
     it('should remove columns while maintaining data consistently', () => {
@@ -194,9 +194,9 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(0)._test).toBe(1);
       expect(meta.getMeta(1)._test).toBe(2);
-      expect(meta.getMeta(2)._test).toBe(void 0);
-      expect(meta.getMeta(3)._test).toBe(void 0);
-      expect(meta.getMeta(4)._test).toBe(void 0);
+      expect(meta.getMeta(2)._test).toBe(undefined);
+      expect(meta.getMeta(3)._test).toBe(undefined);
+      expect(meta.getMeta(4)._test).toBe(undefined);
     });
   });
 
@@ -222,7 +222,7 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(2)).toHaveProperty('outsideClickDeselects', true);
     });
 
-    it('should expand "type" property as an object to "editor", "renderer" and "validator" keys', () => {
+    it('should merge "type" property as an object to meta settings', () => {
       const globalMeta = new GlobalMeta();
       const meta = new ColumnMeta(globalMeta);
       const settings = {
@@ -245,7 +245,7 @@ describe('ColumnMeta', () => {
       expect(meta.getMeta(5)).toHaveProperty('validator', 'baz');
     });
 
-    it('should expand "type" property as string to "editor", "renderer" and "validator" keys', () => {
+    it('should expand "type" property as string to meta settings', () => {
       const globalMeta = new GlobalMeta();
       const meta = new ColumnMeta(globalMeta);
       const settings = {
@@ -255,11 +255,11 @@ describe('ColumnMeta', () => {
       meta.updateMeta(7, settings);
 
       expect(meta.getMeta(7)).toHaveProperty('type', 'text');
-      expect(meta.getMeta(7).editor).toBeFunction();
-      expect(meta.getMeta(7).renderer).toBeFunction();
+      expect(meta.getMeta(7).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7).renderer).toBe(getCellType('text').renderer);
     });
 
-    it('should expand "type" property but without overwriting already defined properties', () => {
+    it('should expand "type" property as object but without overwriting already defined properties', () => {
       const globalMeta = new GlobalMeta();
       const meta = new ColumnMeta(globalMeta);
       const settings = {
@@ -282,6 +282,129 @@ describe('ColumnMeta', () => {
 
       expect(meta.getMeta(7)).toHaveProperty('copyPaste', true);
       expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+    });
+
+    it('should expand "type" property as string but without overwriting already defined properties ' +
+       '(updates from simple cell type to more complex)', () => {
+      const globalMeta = new GlobalMeta();
+      const meta = new ColumnMeta(globalMeta);
+      const myRenderer = (hot, TD) => { TD.innerText = '*'; };
+      const myRenderer2 = (hot, TD) => { TD.innerText = '*'; };
+      const myValidator = (value, callback) => callback(true);
+      const settings = {
+        type: 'text',
+        renderer: myRenderer,
+        validator: myValidator,
+      };
+
+      meta.getMeta(7).copyable = true;
+      meta.getMeta(7)._test = 'bar';
+
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7).renderer).toBe(myRenderer);
+      expect(meta.getMeta(7).validator).toBe(myValidator);
+      expect(meta.getMeta(7)).toHaveProperty('copyPaste', true);
+      expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+
+      settings.renderer = myRenderer2;
+      settings.copyPaste = false;
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7).validator).toBe(myValidator);
+      expect(meta.getMeta(7)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+
+      settings.type = 'numeric';
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7).validator).toBe(myValidator);
+      expect(meta.getMeta(7)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+    });
+
+    it('should expand "type" property as string but without overwriting already defined properties ' +
+       '(updates from complex cell type to more simple)', () => {
+      const globalMeta = new GlobalMeta();
+      const meta = new ColumnMeta(globalMeta);
+      const myRenderer = (hot, TD) => { TD.innerText = '*'; };
+      const myRenderer2 = (hot, TD) => { TD.innerText = '*'; };
+      const myValidator = (value, callback) => callback(true);
+      const settings = {
+        type: 'numeric',
+        renderer: myRenderer,
+        validator: myValidator,
+      };
+
+      meta.getMeta(7).copyable = true;
+      meta.getMeta(7)._test = 'bar';
+
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7).renderer).toBe(myRenderer);
+      expect(meta.getMeta(7).validator).toBe(myValidator);
+      expect(meta.getMeta(7)).toHaveProperty('copyPaste', true);
+      expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+
+      settings.renderer = myRenderer2;
+      settings.copyPaste = false;
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7).validator).toBe(myValidator);
+      expect(meta.getMeta(7)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+
+      settings.type = 'text';
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7).renderer).toBe(myRenderer2);
+      expect(meta.getMeta(7).validator).toBe(myValidator);
+      expect(meta.getMeta(7)).toHaveProperty('copyPaste', false);
+      expect(meta.getMeta(7)).toHaveProperty('_test', 'bar');
+    });
+
+    it('should be possible to update "type" multiple times', () => {
+      const globalMeta = new GlobalMeta();
+      const meta = new ColumnMeta(globalMeta);
+      const settings = {
+        type: 'text',
+      };
+
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7).renderer).toBe(getCellType('text').renderer);
+      expect(meta.getMeta(7).validator).toBeUndefined();
+
+      settings.type = 'autocomplete';
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('autocomplete').editor);
+      expect(meta.getMeta(7).renderer).toBe(getCellType('autocomplete').renderer);
+      expect(meta.getMeta(7).validator).toBe(getCellType('autocomplete').validator);
+
+      settings.type = 'text';
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('text').editor);
+      expect(meta.getMeta(7).renderer).toBe(getCellType('text').renderer);
+      expect(meta.getMeta(7).validator).toBe(getCellType('autocomplete').validator);
+
+      settings.type = 'numeric';
+      meta.updateMeta(7, settings);
+
+      expect(meta.getMeta(7).editor).toBe(getCellType('numeric').editor);
+      expect(meta.getMeta(7).renderer).toBe(getCellType('numeric').renderer);
+      expect(meta.getMeta(7).validator).toBe(getCellType('numeric').validator);
     });
   });
 
@@ -309,12 +432,12 @@ describe('ColumnMeta', () => {
 
       meta.clearCache();
 
-      expect(meta.getMeta(0)._test).toBe(void 0);
-      expect(meta.getMeta(1)._test).toBe(void 0);
-      expect(meta.getMeta(2)._test).toBe(void 0);
-      expect(meta.getMeta(3)._test).toBe(void 0);
-      expect(meta.getMeta(4)._test).toBe(void 0);
-      expect(meta.getMeta(5)._test).toBe(void 0);
+      expect(meta.getMeta(0)._test).toBe(undefined);
+      expect(meta.getMeta(1)._test).toBe(undefined);
+      expect(meta.getMeta(2)._test).toBe(undefined);
+      expect(meta.getMeta(3)._test).toBe(undefined);
+      expect(meta.getMeta(4)._test).toBe(undefined);
+      expect(meta.getMeta(5)._test).toBe(undefined);
     });
   });
 });

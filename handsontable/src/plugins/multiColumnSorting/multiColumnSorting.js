@@ -1,18 +1,19 @@
-import { ColumnSorting } from '../columnSorting';
+import {
+  APPEND_COLUMN_CONFIG_STRATEGY,
+  ColumnSorting
+} from '../columnSorting';
 import { registerRootComparator } from '../columnSorting/sortService';
 import { wasHeaderClickedProperly } from '../columnSorting/utils';
-import { isPressedCtrlKey } from '../../utils/keyStateObserver';
 import { addClass, removeClass } from '../../helpers/dom/element';
 import { rootComparator } from './rootComparator';
 import { warnAboutPluginsConflict } from './utils';
 import { getClassesToAdd, getClassesToRemove } from './domHelpers';
-
-import './multiColumnSorting.css';
+import { EDITOR_EDIT_GROUP as SHORTCUTS_GROUP_EDITOR } from '../../shortcutContexts';
 
 export const PLUGIN_KEY = 'multiColumnSorting';
 export const PLUGIN_PRIORITY = 170;
-const APPEND_COLUMN_CONFIG_STRATEGY = 'append';
 const CONFLICTED_PLUGIN_KEY = 'columnSorting';
+const SHORTCUTS_GROUP = PLUGIN_KEY;
 
 registerRootComparator(PLUGIN_KEY, rootComparator);
 
@@ -77,20 +78,17 @@ export class MultiColumnSorting extends ColumnSorting {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Main settings key designed for the plugin.
-     *
-     * @private
-     * @type {string}
-     */
-    this.pluginKey = PLUGIN_KEY;
-  }
+  /**
+   * Main settings key designed for the plugin.
+   *
+   * @private
+   * @type {string}
+   */
+  pluginKey = PLUGIN_KEY;
 
   /**
    * Checks if the plugin is enabled in the Handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link MultiColumnSorting#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link MultiColumnSorting#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -104,6 +102,8 @@ export class MultiColumnSorting extends ColumnSorting {
   enablePlugin() {
     if (!this.enabled && this.hot.getSettings()[this.pluginKey] && this.hot.getSettings()[CONFLICTED_PLUGIN_KEY]) {
       warnAboutPluginsConflict();
+
+      this.hot.getPlugin(CONFLICTED_PLUGIN_KEY).disablePlugin();
     }
 
     super.enablePlugin();
@@ -114,6 +114,51 @@ export class MultiColumnSorting extends ColumnSorting {
    */
   disablePlugin() {
     super.disablePlugin();
+  }
+
+  /**
+   * Register shortcuts responsible for toggling column sorting functionality.
+   *
+   * @private
+   */
+  registerShortcuts() {
+    super.registerShortcuts();
+    this.hot.getShortcutManager()
+      .getContext('grid')
+      .addShortcut({
+        keys: [['Shift', 'Enter']],
+        callback: () => {
+          const { highlight } = this.hot.getSelectedRangeLast();
+
+          if (highlight.row === -1 && highlight.col >= 0) {
+            this.sort(this.getNextSortConfig(highlight.col, APPEND_COLUMN_CONFIG_STRATEGY));
+          }
+
+          // prevent default Enter behavior (move to the next row within a selection range)
+          return false;
+        },
+        runOnlyIf: () => {
+          const highlight = this.hot.getSelectedRangeLast()?.highlight;
+
+          return highlight && this.hot.getSelectedRangeLast()?.isSingle() &&
+            this.hot.selection.isCellVisible(highlight) && highlight.isHeader();
+        },
+        relativeToGroup: SHORTCUTS_GROUP_EDITOR,
+        position: 'before',
+        group: SHORTCUTS_GROUP,
+      });
+  }
+
+  /**
+   * Unregister shortcuts responsible for toggling column sorting functionality.
+   *
+   * @private
+   */
+  unregisterShortcuts() {
+    super.unregisterShortcuts();
+    this.hot.getShortcutManager()
+      .getContext('grid')
+      .removeShortcutsByGroup(SHORTCUTS_GROUP);
   }
 
   /**
@@ -263,7 +308,7 @@ export class MultiColumnSorting extends ColumnSorting {
     }
 
     if (this.wasClickableHeaderClicked(event, coords.col)) {
-      if (isPressedCtrlKey()) {
+      if (this.hot.getShortcutManager().isCtrlPressed()) {
         this.hot.deselectCell();
         this.hot.selectColumns(coords.col);
 

@@ -1,4 +1,7 @@
-import { addClass } from '../../helpers/dom/element';
+import { addClass, outerWidth, outerHeight } from '../../helpers/dom/element';
+import { mixin } from '../../helpers/object';
+import localHooks from '../../mixins/localHooks';
+import { EditorResizeObserver } from './editorResizeObserver';
 
 /**
  * Comment editor for the Comments plugin.
@@ -23,13 +26,42 @@ class CommentEditor {
     return 'htCommentCell';
   }
 
-  constructor(rootDocument) {
-    this.container = null;
-    this.rootDocument = rootDocument;
-    this.editor = this.createEditor();
-    this.editorStyle = this.editor.style;
+  /**
+   * @type {Document}
+   */
+  #rootDocument;
+  /**
+   * @type {boolean}
+   */
+  #isRtl = false;
+  /**
+   * @type {HTMLElement}
+   */
+  #container = null;
+  /**
+   * @type {HTMLElement}
+   */
+  #editor;
+  /**
+   * @type {CSSStyleDeclaration}
+   */
+  #editorStyle;
+  /**
+   * @type {boolean}
+   */
+  #hidden = true;
+  /**
+   * @type {EditorResizeObserver}
+   */
+  #resizeObserver = new EditorResizeObserver();
 
-    this.hidden = true;
+  constructor(rootDocument, isRtl) {
+    this.#rootDocument = rootDocument;
+    this.#isRtl = isRtl;
+    this.#editor = this.createEditor();
+    this.#editorStyle = this.#editor.style;
+    this.#resizeObserver.setObservedElement(this.getInputElement());
+    this.#resizeObserver.addLocalHook('resize', (...args) => this.runLocalHooks('resize', ...args));
 
     this.hide();
   }
@@ -41,8 +73,8 @@ class CommentEditor {
    * @param {number} y Y position (in pixels).
    */
   setPosition(x, y) {
-    this.editorStyle.left = `${x}px`;
-    this.editorStyle.top = `${y}px`;
+    this.#editorStyle.left = `${x}px`;
+    this.#editorStyle.top = `${y}px`;
   }
 
   /**
@@ -58,6 +90,25 @@ class CommentEditor {
       input.style.width = `${width}px`;
       input.style.height = `${height}px`;
     }
+  }
+
+  /**
+   * Returns the size of the comments editor.
+   *
+   * @returns {{ width: number, height: number }}
+   */
+  getSize() {
+    return {
+      width: outerWidth(this.getInputElement()),
+      height: outerHeight(this.getInputElement()),
+    };
+  }
+
+  /**
+   * Starts observing the editor size.
+   */
+  observeSize() {
+    this.#resizeObserver.observe();
   }
 
   /**
@@ -85,16 +136,21 @@ class CommentEditor {
    * Show the comments editor.
    */
   show() {
-    this.editorStyle.display = 'block';
-    this.hidden = false;
+    this.#editorStyle.display = 'block';
+    this.#hidden = false;
   }
 
   /**
    * Hide the comments editor.
    */
   hide() {
-    this.editorStyle.display = 'none';
-    this.hidden = true;
+    this.#resizeObserver.unobserve();
+
+    if (!this.#hidden) {
+      this.#editorStyle.display = 'none';
+    }
+
+    this.#hidden = true;
   }
 
   /**
@@ -103,7 +159,7 @@ class CommentEditor {
    * @returns {boolean}
    */
   isVisible() {
-    return this.editorStyle.display === 'block';
+    return this.#editorStyle.display === 'block';
   }
 
   /**
@@ -132,7 +188,7 @@ class CommentEditor {
    * @returns {boolean}
    */
   isFocused() {
-    return this.rootDocument.activeElement === this.getInputElement();
+    return this.#rootDocument.activeElement === this.getInputElement();
   }
 
   /**
@@ -148,18 +204,24 @@ class CommentEditor {
    * @returns {HTMLElement}
    */
   createEditor() {
-    const editor = this.rootDocument.createElement('div');
-    const textArea = this.rootDocument.createElement('textarea');
+    const editor = this.#rootDocument.createElement('div');
+    const textarea = this.#rootDocument.createElement('textarea');
 
-    this.container = this.rootDocument.createElement('div');
-    addClass(this.container, CommentEditor.CLASS_EDITOR_CONTAINER);
-    this.rootDocument.body.appendChild(this.container);
+    editor.style.display = 'none';
+
+    this.#container = this.#rootDocument.createElement('div');
+    this.#container.setAttribute('dir', this.#isRtl ? 'rtl' : 'ltr');
+
+    addClass(this.#container, CommentEditor.CLASS_EDITOR_CONTAINER);
+
+    this.#rootDocument.body.appendChild(this.#container);
 
     addClass(editor, CommentEditor.CLASS_EDITOR);
-    addClass(textArea, CommentEditor.CLASS_INPUT);
+    addClass(textarea, CommentEditor.CLASS_INPUT);
+    textarea.setAttribute('data-hot-input', true);
 
-    editor.appendChild(textArea);
-    this.container.appendChild(editor);
+    editor.appendChild(textarea);
+    this.#container.appendChild(editor);
 
     return editor;
   }
@@ -170,23 +232,35 @@ class CommentEditor {
    * @returns {HTMLElement}
    */
   getInputElement() {
-    return this.editor.querySelector(`.${CommentEditor.CLASS_INPUT}`);
+    return this.#editor.querySelector(`.${CommentEditor.CLASS_INPUT}`);
+  }
+
+  /**
+   * Get the editor element.
+   *
+   * @returns {HTMLElement} The editor element.
+   */
+  getEditorElement() {
+    return this.#editor;
   }
 
   /**
    * Destroy the comments editor.
    */
   destroy() {
-    const containerParentElement = this.container ? this.container.parentNode : null;
+    const containerParentElement = this.#container ? this.#container.parentNode : null;
 
-    this.editor.parentNode.removeChild(this.editor);
-    this.editor = null;
-    this.editorStyle = null;
+    this.#editor.parentNode.removeChild(this.#editor);
+    this.#editor = null;
+    this.#editorStyle = null;
+    this.#resizeObserver.destroy();
 
     if (containerParentElement) {
-      containerParentElement.removeChild(this.container);
+      containerParentElement.removeChild(this.#container);
     }
   }
 }
+
+mixin(CommentEditor, localHooks);
 
 export default CommentEditor;

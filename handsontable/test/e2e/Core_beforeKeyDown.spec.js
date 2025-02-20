@@ -23,7 +23,7 @@ describe('Core_beforeKeyDown', () => {
     });
     selectCell(0, 0);
 
-    keyDown('arrow_right');
+    keyDownUp('arrowright');
 
     expect(called).toEqual(true);
   });
@@ -42,9 +42,9 @@ describe('Core_beforeKeyDown', () => {
     });
     selectCell(0, 0);
 
-    keyDown('arrow_right');
+    keyDownUp('arrowright');
 
-    expect(called).toEqual(['afterDocumentKeyDown', 'beforeKeyDown']);
+    expect(called).toEqual(['beforeKeyDown', 'afterDocumentKeyDown']);
   });
 
   it('should prevent hook from running default action', () => {
@@ -56,7 +56,7 @@ describe('Core_beforeKeyDown', () => {
     });
     selectCell(0, 0);
 
-    keyDown('arrow_right');
+    keyDownUp('arrowright');
 
     expect(getSelected()).toEqual([[0, 0, 0, 0]]);
     expect(getSelected()).not.toEqual([[0, 1, 0, 1]]);
@@ -68,15 +68,15 @@ describe('Core_beforeKeyDown', () => {
       beforeKeyDown(event) {
         if (event.keyCode === 8) {
           event.stopImmediatePropagation();
-          getInstance().alter('insert_row', 1, 1);
+          getInstance().alter('insert_row_above', 1, 1);
         }
       }
     });
 
     selectCell(0, 0);
 
-    keyDown('backspace');
-    keyDown('arrow_right');
+    keyDownUp('backspace');
+    keyDownUp('arrowright');
 
     expect(getData().length).toEqual(3);
     expect(getSelected()).toEqual([[0, 1, 0, 1]]);
@@ -93,8 +93,8 @@ describe('Core_beforeKeyDown', () => {
     });
     selectCell(0, 0);
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(called).toEqual(2);
   });

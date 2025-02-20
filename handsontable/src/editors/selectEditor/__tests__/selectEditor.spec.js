@@ -20,16 +20,20 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
+    const editor = $('.htSelectEditor').children('select');
 
+    expect(editorWrapper.length).toEqual(1);
     expect(editor.length).toEqual(1);
     expect(editor.is('select')).toBe(true);
+    expect(editorWrapper.is(':visible')).toBe(false);
     expect(editor.is(':visible')).toBe(false);
 
-    keyDown('enter');
+    keyDownUp('enter');
 
+    expect(editorWrapper.is(':visible')).toBe(true);
     expect(editor.is(':visible')).toBe(true);
-    expect(editor.offset()).toEqual($(getCell(0, 0)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(0, 0)).offset());
   });
 
   it('should render an editor in specified position at cell 0, 0 when all headers are selected', () => {
@@ -42,16 +46,20 @@ describe('SelectEditor', () => {
     selectAll();
     listen();
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
+    const editor = $('.htSelectEditor').children('select');
 
+    expect(editorWrapper.length).toEqual(1);
     expect(editor.length).toEqual(1);
     expect(editor.is('select')).toBe(true);
+    expect(editorWrapper.is(':visible')).toBe(false);
     expect(editor.is(':visible')).toBe(false);
 
-    keyDown('enter');
+    keyDownUp('F2');
 
+    expect(editorWrapper.is(':visible')).toBe(true);
     expect(editor.is(':visible')).toBe(true);
-    expect(editor.offset()).toEqual($(getCell(0, 0)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(0, 0)).offset());
   });
 
   it('should render an editor in specified position while opening an editor from top to bottom when ' +
@@ -67,51 +75,51 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    expect(editor.offset()).toEqual($(getCell(0, 0, true)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(0, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional top border.
     const editorOffset = () => ({
-      top: editor.offset().top + 1,
-      left: editor.offset().left,
+      top: editorWrapper.offset().top + 1,
+      left: editorWrapper.offset().left,
     });
 
     expect(editorOffset()).toEqual($(getCell(1, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(2, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(3, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(4, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // The first row of the bottom overlay has different position, influenced by `innerBorderTop` CSS class.
-    expect(editor.offset()).toEqual($(getCell(5, 0, true)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(5, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(6, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(7, 0, true)).offset());
   });
@@ -122,41 +130,41 @@ describe('SelectEditor', () => {
       data: Handsontable.helper.createSpreadsheetData(2, 5),
       rowHeaders: true,
       colHeaders: true,
-      fixedColumnsLeft: 3,
+      fixedColumnsStart: 3,
       editor: 'select',
     });
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    expect(editor.offset()).toEqual($(getCell(0, 0, true)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(0, 0, true)).offset());
 
     selectCell(0, 1);
-    keyDown('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional left border.
     const editorOffset = () => ({
-      top: editor.offset().top,
-      left: editor.offset().left + 1,
+      top: editorWrapper.offset().top,
+      left: editorWrapper.offset().left + 1,
     });
 
     expect(editorOffset()).toEqual($(getCell(0, 1, true)).offset());
 
     selectCell(0, 2);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 2, true)).offset());
 
     selectCell(0, 3);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 3, true)).offset());
 
     selectCell(0, 4);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 4, true)).offset());
   });
@@ -178,42 +186,42 @@ describe('SelectEditor', () => {
 
     selectCell(1, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     // First renderable row index.
-    expect(editor.offset()).toEqual($(getCell(1, 0, true)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(1, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional top border.
     const editorOffset = () => ({
-      top: editor.offset().top + 1,
-      left: editor.offset().left,
+      top: editorWrapper.offset().top + 1,
+      left: editorWrapper.offset().left,
     });
 
     expect(editorOffset()).toEqual($(getCell(2, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(3, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(4, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // The first row of the bottom overlay has different position, influenced by `innerBorderTop` CSS class.
-    expect(editor.offset()).toEqual($(getCell(6, 0, true)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(6, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(7, 0, true)).offset());
   });
@@ -224,7 +232,7 @@ describe('SelectEditor', () => {
       data: Handsontable.helper.createSpreadsheetData(2, 5),
       rowHeaders: true,
       colHeaders: true,
-      fixedColumnsLeft: 3,
+      fixedColumnsStart: 3,
       hiddenColumns: {
         indicators: true,
         columns: [0],
@@ -234,31 +242,31 @@ describe('SelectEditor', () => {
 
     selectCell(0, 1);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     // First renderable column index.
-    expect(editor.offset()).toEqual($(getCell(0, 1, true)).offset());
+    expect(editorWrapper.offset()).toEqual($(getCell(0, 1, true)).offset());
 
     selectCell(0, 2);
-    keyDown('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional left border.
     const editorOffset = () => ({
-      top: editor.offset().top,
-      left: editor.offset().left + 1,
+      top: editorWrapper.offset().top,
+      left: editorWrapper.offset().left + 1,
     });
 
     expect(editorOffset()).toEqual($(getCell(0, 2, true)).offset());
 
     selectCell(0, 3);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 3, true)).offset());
 
     selectCell(0, 4);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 4, true)).offset());
   });
@@ -274,18 +282,18 @@ describe('SelectEditor', () => {
         }, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, { editor: 'select' }
       ]
     });
-    const mainHolder = hot.view.wt.wtTable.holder;
+    const mainHolder = hot.view._wt.wtTable.holder;
 
     selectCell(0, 0);
     keyDownUp('enter');
 
     mainHolder.scrollTop = 10;
     mainHolder.scrollLeft = 20;
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
     setTimeout(() => {
-      expect(editor.css('top')).toEqual('-10px');
-      expect(editor.css('left')).toEqual('-20px');
+      expect(editorWrapper.css('top')).toEqual('-10px');
+      expect(editorWrapper.css('left')).toEqual('-20px');
       done();
     }, 200);
   });
@@ -296,11 +304,11 @@ describe('SelectEditor', () => {
     });
 
     selectCell(0, 0);
-    keyDown('enter');
+    keyDownUp('enter');
 
-    const editor = $('.htSelectEditor')[0];
+    const editorWrapper = $('.htSelectEditor')[0];
 
-    expect(window.getComputedStyle(editor, 'focus').getPropertyValue('outline-style')).toBe('none');
+    expect(window.getComputedStyle(editorWrapper, 'focus').getPropertyValue('outline-style')).toBe('none');
   });
 
   it('should populate select with given options (array)', () => {
@@ -319,11 +327,11 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    const $options = editor.find('option');
+    const $options = editorWrapper.find('option');
 
     expect($options.length).toEqual(options.length);
     expect($options.eq(0).val()).toMatch(options[0]);
@@ -352,11 +360,11 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    const $options = editor.find('option');
+    const $options = editorWrapper.find('option');
 
     expect($options.eq(0).val()).toMatch('mit');
     expect($options.eq(0).html()).toMatch(options.mit);
@@ -409,11 +417,11 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    const $options = editor.find('option');
+    const $options = editorWrapper.find('option');
 
     expect($options.length).toEqual(options().length);
     expect($options.eq(0).val()).toMatch(options()[0]);
@@ -444,11 +452,11 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    const $options = editor.find('option');
+    const $options = editorWrapper.find('option');
 
     expect($options.eq(0).val()).toMatch('mit');
     expect($options.eq(0).html()).toMatch(options().mit);
@@ -479,27 +487,27 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
-    expect(editor.find('option:selected').text()).toEqual(getDataAtCell(0, 0));
+    expect(editorWrapper.find('option:selected').text()).toEqual(getDataAtCell(0, 0));
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     selectCell(1, 0);
-    keyDown('enter');
+    keyDownUp('enter');
 
-    expect(editor.find('option:selected').text()).toEqual(getDataAtCell(1, 0));
+    expect(editorWrapper.find('option:selected').text()).toEqual(getDataAtCell(1, 0));
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     selectCell(2, 0);
-    keyDown('enter');
+    keyDownUp('enter');
 
-    expect(editor.find('option:selected').text()).toEqual(getDataAtCell(2, 0));
+    expect(editorWrapper.find('option:selected').text()).toEqual(getDataAtCell(2, 0));
 
-    keyDown('enter');
+    keyDownUp('enter');
   });
 
   it('should not prevent the default event action when select is clicked', () => {
@@ -521,15 +529,15 @@ describe('SelectEditor', () => {
 
     selectCell(0, 0);
 
-    const editor = $('.htSelectEditor');
+    const editorWrapper = $('.htSelectEditor');
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     const selectMouseDownListener = jasmine.createSpy('selectMouseDownListener');
 
     $('body').on('mousedown', selectMouseDownListener);
 
-    editor.mousedown();
+    editorWrapper.mousedown();
 
     expect(selectMouseDownListener.calls.count()).toEqual(1);
 
@@ -539,16 +547,16 @@ describe('SelectEditor', () => {
     expect(event.isDefaultPrevented()).toBe(false);
   });
 
-  describe('IME support', () => {
-    it('should focus editable element (from copyPaste plugin) after selecting the cell', async() => {
-      handsontable({
-        editor: false,
-      });
-      selectCell(0, 0, 0, 0, true, false);
-
-      await sleep(10);
-
-      expect(document.activeElement).toBe(document.querySelector('.HandsontableCopyPaste'));
+  it('should render an editable editor\'s element without messing with "dir" attribute', () => {
+    handsontable({
+      data: Handsontable.helper.createSpreadsheetData(2, 5),
+      editor: 'select',
     });
+
+    selectCell(0, 0);
+
+    const editableElement = getActiveEditor().select;
+
+    expect(editableElement.getAttribute('dir')).toBeNull();
   });
 });

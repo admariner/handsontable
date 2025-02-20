@@ -3,20 +3,14 @@ import {
   addClass,
   empty,
   fastInnerHTML,
-  getComputedStyle,
-  getCssTransform,
   hasClass,
-  offset,
-  outerHeight,
-  outerWidth,
   removeClass,
-  resetCssTransform,
 } from '../../helpers/dom/element';
-import { stopImmediatePropagation } from '../../helpers/dom/event';
 import { objectEach } from '../../helpers/object';
-import { KEY_CODES } from '../../helpers/unicode';
+import { A11Y_HIDDEN } from '../../helpers/a11y';
 
 const EDITOR_VISIBLE_CLASS_NAME = 'ht_editor_visible';
+const SHORTCUTS_GROUP = 'selectEditor';
 
 export const EDITOR_TYPE = 'select';
 
@@ -33,11 +27,28 @@ export class SelectEditor extends BaseEditor {
    * Initializes editor instance, DOM Element and mount hooks.
    */
   init() {
-    this.select = this.hot.rootDocument.createElement('SELECT');
-    addClass(this.select, 'htSelectEditor');
-    this.select.style.display = 'none';
+    this.selectWrapper = this.hot.rootDocument.createElement('div');
+    this.select = this.hot.rootDocument.createElement('select');
+    this.select.setAttribute('data-hot-input', 'true');
+    this.selectWrapper.style.display = 'none';
 
-    this.hot.rootElement.appendChild(this.select);
+    const ARROW = this.hot.rootDocument.createElement('DIV');
+    const isAriaEnabled = this.hot.getSettings().ariaTags;
+
+    ARROW.className = 'htAutocompleteArrow';
+
+    if (isAriaEnabled) {
+      ARROW.setAttribute(...A11Y_HIDDEN());
+    }
+
+    ARROW.appendChild(this.hot.rootDocument.createTextNode(String.fromCharCode(9660)));
+
+    addClass(this.selectWrapper, 'htSelectEditor');
+    this.selectWrapper.appendChild(this.select);
+
+    this.selectWrapper.insertBefore(ARROW, this.selectWrapper.firstChild);
+
+    this.hot.rootElement.appendChild(this.selectWrapper);
     this.registerHooks();
   }
 
@@ -65,8 +76,13 @@ export class SelectEditor extends BaseEditor {
   open() {
     this._opened = true;
     this.refreshDimensions();
-    this.select.style.display = '';
-    this.addHook('beforeKeyDown', () => this.onBeforeKeyDown());
+    this.selectWrapper.style.display = '';
+
+    const shortcutManager = this.hot.getShortcutManager();
+
+    shortcutManager.setActiveContextName('editor');
+
+    this.registerShortcuts();
   }
 
   /**
@@ -74,11 +90,13 @@ export class SelectEditor extends BaseEditor {
    */
   close() {
     this._opened = false;
-    this.select.style.display = 'none';
+    this.selectWrapper.style.display = 'none';
 
-    if (hasClass(this.select, EDITOR_VISIBLE_CLASS_NAME)) {
-      removeClass(this.select, EDITOR_VISIBLE_CLASS_NAME);
+    if (hasClass(this.selectWrapper, EDITOR_VISIBLE_CLASS_NAME)) {
+      removeClass(this.selectWrapper, EDITOR_VISIBLE_CLASS_NAME);
     }
+
+    this.unregisterShortcuts();
     this.clearHooks();
   }
 
@@ -109,7 +127,7 @@ export class SelectEditor extends BaseEditor {
    * @param {number|string} prop The column property (passed when datasource is an array of objects).
    * @param {HTMLTableCellElement} td The rendered cell element.
    * @param {*} value The rendered value.
-   * @param {object} cellProperties The cell meta object ({@see Core#getCellMeta}).
+   * @param {object} cellProperties The cell meta object (see {@link Core#getCellMeta}).
    */
   prepare(row, col, prop, td, value, cellProperties) {
     super.prepare(row, col, prop, td, value, cellProperties);
@@ -190,106 +208,68 @@ export class SelectEditor extends BaseEditor {
       return;
     }
 
-    const { wtOverlays } = this.hot.view.wt;
-    const currentOffset = offset(this.TD);
-    const containerOffset = offset(this.hot.rootElement);
-    const scrollableContainer = wtOverlays.scrollableElement;
-    const editorSection = this.checkEditorSection();
-    let width = outerWidth(this.TD) + 1;
-    let height = outerHeight(this.TD) + 1;
-    let editTop = currentOffset.top - containerOffset.top - 1 - (scrollableContainer.scrollTop || 0);
-    let editLeft = currentOffset.left - containerOffset.left - 1 - (scrollableContainer.scrollLeft || 0);
-    let cssTransformOffset;
-
-    switch (editorSection) {
-      case 'top':
-        cssTransformOffset = getCssTransform(wtOverlays.topOverlay.clone.wtTable.holder.parentNode);
-        break;
-      case 'left':
-        cssTransformOffset = getCssTransform(wtOverlays.leftOverlay.clone.wtTable.holder.parentNode);
-        break;
-      case 'top-left-corner':
-        cssTransformOffset = getCssTransform(wtOverlays.topLeftCornerOverlay.clone.wtTable.holder.parentNode);
-        break;
-      case 'bottom-left-corner':
-        cssTransformOffset = getCssTransform(wtOverlays.bottomLeftCornerOverlay.clone.wtTable.holder.parentNode);
-        break;
-      case 'bottom':
-        cssTransformOffset = getCssTransform(wtOverlays.bottomOverlay.clone.wtTable.holder.parentNode);
-        break;
-      default:
-        break;
-    }
-
-    const renderableRow = this.hot.rowIndexMapper.getRenderableFromVisualIndex(this.row);
-    const renderableColumn = this.hot.columnIndexMapper.getRenderableFromVisualIndex(this.col);
-    const nrOfRenderableRowIndexes = this.hot.rowIndexMapper.getRenderableIndexesLength();
-    const firstRowIndexOfTheBottomOverlay = nrOfRenderableRowIndexes - this.hot.view.wt.getSetting('fixedRowsBottom');
-
-    if (renderableRow <= 0 || renderableRow === firstRowIndexOfTheBottomOverlay) {
-      editTop += 1;
-    }
-
-    if (renderableColumn <= 0) {
-      editLeft += 1;
-    }
-
-    const selectStyle = this.select.style;
-
-    if (cssTransformOffset && cssTransformOffset !== -1) {
-      selectStyle[cssTransformOffset[0]] = cssTransformOffset[1];
-    } else {
-      resetCssTransform(this.select);
-    }
-
-    const cellComputedStyle = getComputedStyle(this.TD, this.hot.rootWindow);
-
-    if (parseInt(cellComputedStyle.borderTopWidth, 10) > 0) {
-      height -= 1;
-    }
-    if (parseInt(cellComputedStyle.borderLeftWidth, 10) > 0) {
-      width -= 1;
-    }
+    const {
+      top,
+      start,
+      width,
+      height,
+    } = this.getEditedCellRect();
+    const selectStyle = this.selectWrapper.style;
 
     selectStyle.height = `${height}px`;
-    selectStyle.minWidth = `${width}px`;
-    selectStyle.top = `${editTop}px`;
-    selectStyle.left = `${editLeft}px`;
+    selectStyle.width = `${width}px`;
+    selectStyle.top = `${top}px`;
+    selectStyle[this.hot.isRtl() ? 'right' : 'left'] = `${start}px`;
     selectStyle.margin = '0px';
 
-    addClass(this.select, EDITOR_VISIBLE_CLASS_NAME);
+    addClass(this.selectWrapper, EDITOR_VISIBLE_CLASS_NAME);
   }
 
   /**
-   * OnBeforeKeyDown callback.
+   * Register shortcuts responsible for handling editor.
    *
    * @private
    */
-  onBeforeKeyDown() {
-    const previousOptionIndex = this.select.selectedIndex - 1;
-    const nextOptionIndex = this.select.selectedIndex + 1;
+  registerShortcuts() {
+    const shortcutManager = this.hot.getShortcutManager();
+    const editorContext = shortcutManager.getContext('editor');
+    const contextConfig = {
+      group: SHORTCUTS_GROUP,
+    };
 
-    switch (event.keyCode) {
-      case KEY_CODES.ARROW_UP:
-        if (previousOptionIndex >= 0) {
-          this.select[previousOptionIndex].selected = true;
+    if (this.isInFullEditMode()) {
+      // The arrow-related shortcuts should work only in full edit mode.
+      editorContext.addShortcuts([{
+        keys: [['ArrowUp']],
+        callback: () => {
+          const previousOptionIndex = this.select.selectedIndex - 1;
+
+          if (previousOptionIndex >= 0) {
+            this.select[previousOptionIndex].selected = true;
+          }
+        },
+      }, {
+        keys: [['ArrowDown']],
+        callback: () => {
+          const nextOptionIndex = this.select.selectedIndex + 1;
+
+          if (nextOptionIndex <= this.select.length - 1) {
+            this.select[nextOptionIndex].selected = true;
+          }
         }
-
-        stopImmediatePropagation(event);
-        event.preventDefault();
-        break;
-
-      case KEY_CODES.ARROW_DOWN:
-        if (nextOptionIndex <= this.select.length - 1) {
-          this.select[nextOptionIndex].selected = true;
-        }
-
-        stopImmediatePropagation(event);
-        event.preventDefault();
-        break;
-
-      default:
-        break;
+      }], contextConfig);
     }
+  }
+
+  /**
+   * Unregister shortcuts responsible for handling editor.
+   *
+   * @private
+   */
+  unregisterShortcuts() {
+    const shortcutManager = this.hot.getShortcutManager();
+    const editorContext = shortcutManager.getContext('editor');
+
+    editorContext.removeShortcutsByGroup(SHORTCUTS_GROUP);
   }
 }

@@ -9,17 +9,27 @@ const allowedE2EModules = [
   '@babel/runtime/*',
   './htmlNormalize',
   './common',
+  './jasmine-helpers',
   './mouseEvents',
   './keyboardEvents',
   './../bootstrap',
   './helpers/custom-matchers',
+  './custom-matchers',
+  './helpers/jasmine-helpers',
+  '../helpers/it-themes-extension',
   './asciiTable',
+  '../../../../../test/helpers/asciiTable',
+  './__mocks__/*',
   './MemoryLeakTest',
   '../MemoryLeakTest',
 ];
 
 module.exports = {
   extends: '../babel.config.js',
+  assumptions: {
+    // save 21 kB (July 12, 2023) https://babeljs.io/docs/assumptions#noincompletensimportdetection
+    noIncompleteNsImportDetection: true,
+  },
   env: {
     // Environment for unit testing, source code and languages building via webpack (UMD).
     commonjs: {
@@ -37,7 +47,7 @@ module.exports = {
     commonjs_dist: {
       plugins: [
         ['@babel/plugin-transform-modules-commonjs', { loose: true }],
-        ['babel-plugin-transform-require-ignore', { extensions: ['.css'] }]
+        ['babel-plugin-transform-require-ignore', { extensions: ['.css','.scss'] }]
       ],
       ignore: [
         '**/__tests__/**',
@@ -48,7 +58,7 @@ module.exports = {
     // Environment for transpiling files to be compatible with ES Modules.
     es: {
       plugins: [
-        ['babel-plugin-transform-require-ignore', { extensions: ['.css'] }],
+        ['babel-plugin-transform-require-ignore', { extensions: ['.css','.scss'] }],
         ['./.config/plugin/babel/add-import-extension.js', { extension: 'mjs' }]
       ],
       ignore: [
@@ -63,7 +73,7 @@ module.exports = {
     // the Handsontable.
     es_languages: {
       plugins: [
-        ['babel-plugin-transform-require-ignore', { extensions: ['.css'] }],
+        ['babel-plugin-transform-require-ignore', { extensions: ['.css','.scss'] }],
         ['./.config/plugin/babel/add-import-extension.js', { extension: 'mjs' }],
         ['./.config/plugin/babel/add-language-registration.js'],
       ],

@@ -1,3 +1,4 @@
+import fs from 'fs';
 import {
   getLanguageDictionary,
   getLanguagesDictionaries,
@@ -8,7 +9,6 @@ import plPL from 'handsontable/i18n/languages/pl-PL';
 import * as allLanguages from 'handsontable/i18n/languages';
 import * as constants from 'handsontable/i18n/constants';
 import Handsontable from 'handsontable';
-import fs from 'fs';
 
 describe('i18n', () => {
   beforeAll(() => {
@@ -62,7 +62,8 @@ describe('i18n', () => {
     const languageCodes = dictionaries.map(dictionary => dictionary.languageCode);
 
     const keysGroupedByDictionary = dictionaries.map(dictionary => Object.keys(dictionary));
-    const dictionariesKeys = [].concat([], ...keysGroupedByDictionary).filter(key => key !== 'languageCode');
+    const dictionariesKeys = [].concat([], ...keysGroupedByDictionary)
+      .filter(key => key !== 'languageCode' && key !== 'languageDirection');
 
     const valuesGroupedByDictionary = dictionaries.map(dictionary => Object.values(dictionary));
     const dictionariesValuesWithArrays = [].concat([], ...valuesGroupedByDictionary);

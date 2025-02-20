@@ -1,7 +1,65 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { createRoot } from 'react-dom/client';
+import { act } from '@testing-library/react';
 import { HotTable } from '../src/hotTable';
-import { addUnsafePrefixes } from '../src/helpers';
 import { BaseEditorComponent } from '../src/baseEditorComponent';
+
+const SPEC = {
+  container: null,
+  root: null,
+};
+
+beforeEach(() => {
+  const container = document.createElement('DIV');
+
+  container.id = 'hotContainer';
+  document.body.appendChild(container);
+  SPEC.container = container;
+  SPEC.root = createRoot(SPEC.container);
+});
+
+afterEach(() => {
+  const container = document.querySelector('#hotContainer');
+
+  container.parentNode.removeChild(container);
+  SPEC.container = null;
+
+  act(() => {
+    SPEC.root.unmount();
+  });
+});
+
+export function mountComponentWithRef(Component, strictMode = true) {
+  let hotTableComponent = null;
+
+  const App = () => {
+    hotTableComponent = useRef(null);
+
+    return (
+      <Component.type {...Component.props} ref={hotTableComponent}></Component.type>
+    );
+  }
+
+  act(() => {
+    SPEC.root.render(
+      strictMode ? <React.StrictMode><App/></React.StrictMode> : <App/>
+    );
+  });
+
+  return hotTableComponent.current;
+}
+
+export function mountComponent(Component) {
+  const App = () => {
+    return (
+      <Component.type {...Component.props}></Component.type>
+    );
+  }
+
+  act(() => {
+    SPEC.root.render(<React.StrictMode><App/></React.StrictMode>);
+  });
+}
 
 export function sleep(delay = 100) {
   return Promise.resolve({
@@ -77,7 +135,15 @@ export function mockElementDimensions(element, width, height) {
 
 export function simulateKeyboardEvent(type, keyCode) {
   const newEvent = document.createEvent('KeyboardEvent');
-  // const init = (event as any).initKeyboardEvent !== void 0 ? 'initKeyboardEvent' : 'initKeyEvent';
+  const KEY_CODES = {
+    8: 'backspace',
+    9: 'tab',
+    13: 'enter',
+    16: 'shift',
+    17: 'control',
+    18: 'alt',
+    27: 'escape'
+  };
 
   // Chromium Hack
   Object.defineProperty(newEvent, 'keyCode', {
@@ -89,6 +155,11 @@ export function simulateKeyboardEvent(type, keyCode) {
       get : function() {
           return this.keyCodeVal;
       }
+  });
+  Object.defineProperty(newEvent, 'key', {
+    get : function() {
+      return KEY_CODES[this.keyCodeVal] ?? String.fromCharCode(this.keyCodeVal).toLowerCase();
+    }
   });
 
   if ((newEvent as any).initKeyboardEvent !== void 0) {
@@ -111,16 +182,7 @@ export function simulateMouseEvent(element, type) {
 
 class IndividualPropsWrapper extends React.Component<{ref?: string, id?: string}, {hotSettings?: object}> {
   hotTable: typeof HotTable;
-
-  constructor(props) {
-    super(props);
-
-    addUnsafePrefixes(this);
-  }
-
-  componentWillMount() {
-    this.setState({});
-  }
+  state = {};
 
   private setHotElementRef(component: typeof HotTable): void {
     this.hotTable = component;
@@ -145,19 +207,10 @@ export { IndividualPropsWrapper };
 
 class SingleObjectWrapper extends React.Component<{ref?: string, id?: string}, {hotSettings?: object}> {
   hotTable: typeof HotTable;
-
-  constructor(props) {
-    super(props);
-
-    addUnsafePrefixes(this);
-  }
+  state = {};
 
   private setHotElementRef(component: typeof HotTable): void {
     this.hotTable = component;
-  }
-
-  componentWillMount() {
-    this.setState({});
   }
 
   render(): React.ReactElement {

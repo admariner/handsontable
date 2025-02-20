@@ -1,4 +1,3 @@
-import { getValidSelection } from '../utils';
 import * as C from '../../../i18n/constants';
 
 export const KEY = 'col_left';
@@ -12,30 +11,24 @@ export default function columnLeftItem() {
     name() {
       return this.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_INSERT_LEFT);
     },
-    callback(key, normalizedSelection) {
-      const isSelectedByCorner = this.selection.isSelectedByCorner();
-      let columnLeft = 0;
+    callback() {
+      const latestSelection = this.getSelectedRangeLast().getTopLeftCorner();
+      const alterAction = this.isRtl() ? 'insert_col_end' : 'insert_col_start';
 
-      if (!isSelectedByCorner) {
-        const latestSelection = normalizedSelection[Math.max(normalizedSelection.length - 1, 0)];
-
-        columnLeft = latestSelection.start.col;
-      }
-
-      this.alter('insert_col', columnLeft, 1, 'ContextMenu.columnLeft');
-
-      if (isSelectedByCorner) {
-        this.selectAll();
-      }
+      this.alter(alterAction, latestSelection.col, 1, 'ContextMenu.columnLeft');
     },
     disabled() {
       if (!this.isColumnModificationAllowed()) {
         return true;
       }
 
-      const selected = getValidSelection(this);
+      const range = this.getSelectedRangeLast();
 
-      if (!selected) {
+      if (!range) {
+        return true;
+      }
+
+      if (range.isSingleHeader() && range.highlight.col < 0) {
         return true;
       }
 

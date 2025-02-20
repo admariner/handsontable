@@ -1,6 +1,6 @@
 import { BasePlugin } from '../base';
 import Storage from './storage';
-import Hooks from '../../pluginHooks';
+import { Hooks } from '../../core/hooks';
 
 Hooks.getSingleton().register('persistentStateSave');
 Hooks.getSingleton().register('persistentStateLoad');
@@ -8,6 +8,8 @@ Hooks.getSingleton().register('persistentStateReset');
 
 export const PLUGIN_KEY = 'persistentState';
 export const PLUGIN_PRIORITY = 0;
+
+/* eslint-disable jsdoc/require-description-complete-sentence */
 
 /**
  * @plugin PersistentState
@@ -43,20 +45,17 @@ export class PersistentState extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Instance of {@link Storage}.
-     *
-     * @private
-     * @type {Storage}
-     */
-    this.storage = void 0;
-  }
+  /**
+   * Instance of {@link Storage}.
+   *
+   * @private
+   * @type {Storage}
+   */
+  storage;
 
   /**
    * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link PersistentState#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link PersistentState#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -87,13 +86,16 @@ export class PersistentState extends BasePlugin {
    * Disables the plugin functionality for this Handsontable instance.
    */
   disablePlugin() {
-    this.storage = void 0;
+    this.storage = undefined;
 
     super.disablePlugin();
   }
 
   /**
-   * Updates the plugin state. This method is executed when {@link Core#updateSettings} is invoked.
+   * Updates the plugin's state.
+   *
+   * This method is executed when [`updateSettings()`](@/api/core.md#updatesettings) is invoked with any of the following configuration options:
+   *  - [`persistentState`](@/api/options.md#persistentstate)
    */
   updatePlugin() {
     this.disablePlugin();

@@ -1,30 +1,29 @@
 import {
   addClass,
+  removeClass,
   closest,
   isChildOf,
   hasClass,
-  offset,
-  outerWidth,
-  outerHeight
+  outerHeight,
 } from '../../helpers/dom/element';
-import { deepClone, deepExtend, isObject } from '../../helpers/object';
-import EventManager from '../../eventManager';
-import { CellCoords } from '../../3rdparty/walkontable/src';
+import { stopImmediatePropagation } from '../../helpers/dom/event';
+import { deepClone, deepExtend } from '../../helpers/object';
 import { BasePlugin } from '../base';
 import CommentEditor from './commentEditor';
-import { checkSelectionConsistency, markLabelAsSelected } from '../contextMenu/utils';
 import DisplaySwitch from './displaySwitch';
-import * as C from '../../i18n/constants';
-
-import './comments.css';
+import { SEPARATOR } from '../contextMenu/predefinedItems';
+import addEditCommentItem from './contextMenuItem/addEditComment';
+import removeCommentItem from './contextMenuItem/removeComment';
+import readOnlyCommentItem from './contextMenuItem/readOnlyComment';
 
 export const PLUGIN_KEY = 'comments';
 export const PLUGIN_PRIORITY = 60;
-const privatePool = new WeakMap();
-const META_COMMENT = 'comment';
-const META_COMMENT_VALUE = 'value';
-const META_STYLE = 'style';
-const META_READONLY = 'readOnly';
+export const META_COMMENT = 'comment';
+export const META_COMMENT_VALUE = 'value';
+export const META_STYLE = 'style';
+export const META_READONLY = 'readOnly';
+const SHORTCUTS_GROUP = PLUGIN_KEY;
+const SHORTCUTS_CONTEXT_NAME = `plugin:${PLUGIN_KEY}`;
 
 /* eslint-disable jsdoc/require-description-complete-sentence */
 /**
@@ -56,7 +55,7 @@ const META_READONLY = 'readOnly';
  * To add comments at the table initialization, define the `comment` property in the `cell` config array as in an example below.
  *
  * @example
- *
+ * ::: only-for javascript
  * ```js
  * const hot = new Handsontable(document.getElementById('example'), {
  *   data: getData(),
@@ -81,8 +80,41 @@ const META_READONLY = 'readOnly';
  * commentsPlugin.show();
  * commentsPlugin.removeComment();
  * ```
+ * :::
+ *
+ * ::: only-for react
+ * ```jsx
+ * const hotRef = useRef(null);
+ *
+ * ...
+ *
+ * <HotTable
+ *   ref={hotRef}
+ *   data={getData()}
+ *   comments={true}
+ *   cell={[
+ *     {row: 1, col: 1, comment: {value: 'Foo'}},
+ *     {row: 2, col: 2, comment: {value: 'Bar'}}
+ *   ]}
+ * />
+ *
+ * // Access to the Comments plugin instance:
+ * const hot = hotRef.current.hotInstance;
+ * const commentsPlugin = hot.getPlugin('comments');
+ *
+ * // Manage comments programmatically:
+ * commentsPlugin.setCommentAtCell(1, 6, 'Comment contents');
+ * commentsPlugin.showAtCell(1, 6);
+ * commentsPlugin.removeCommentAtCell(1, 6);
+ *
+ * // You can also set range once and use proper methods:
+ * commentsPlugin.setRange({from: {row: 1, col: 6}});
+ * commentsPlugin.setComment('Comment contents');
+ * commentsPlugin.show();
+ * commentsPlugin.removeComment();
+ * ```
+ * :::
  */
-/* eslint-enable jsdoc/require-description-complete-sentence */
 export class Comments extends BasePlugin {
   static get PLUGIN_KEY() {
     return PLUGIN_KEY;
@@ -92,60 +124,65 @@ export class Comments extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-    /**
-     * Instance of {@link CommentEditor}.
-     *
-     * @private
-     * @type {CommentEditor}
-     */
-    this.editor = null;
-    /**
-     * Instance of {@link DisplaySwitch}.
-     *
-     * @private
-     * @type {DisplaySwitch}
-     */
-    this.displaySwitch = null;
-    /**
-     * Instance of {@link EventManager}.
-     *
-     * @private
-     * @type {EventManager}
-     */
-    this.eventManager = null;
-    /**
-     * Current cell range, an object with `from` property, with `row` and `col` properties (e.q. `{from: {row: 1, col: 6}}`).
-     *
-     * @type {object}
-     */
-    this.range = {};
-    /**
-     * @private
-     * @type {boolean}
-     */
-    this.mouseDown = false;
-    /**
-     * @private
-     * @type {boolean}
-     */
-    this.contextMenuEvent = false;
-    /**
-     * @private
-     * @type {*}
-     */
-    this.timer = null;
-
-    privatePool.set(this, {
-      tempEditorDimensions: {},
-      cellBelowCursor: null
-    });
+  static get DEFAULT_SETTINGS() {
+    return {
+      displayDelay: 250,
+    };
   }
 
   /**
+   * Current cell range, an object with `from` property, with `row` and `col` properties (e.q. `{from: {row: 1, col: 6}}`).
+   *
+   * @type {object}
+   */
+  range = {};
+  /**
+   * Instance of {@link CommentEditor}.
+   *
+   * @private
+   * @type {CommentEditor}
+   */
+  #editor = null;
+  /**
+   * Instance of {@link DisplaySwitch}.
+   *
+   * @private
+   * @type {DisplaySwitch}
+   */
+  #displaySwitch = null;
+  /**
+   * Prevents showing/hiding editor that reacts on the logic triggered by the "mouseover" events.
+   *
+   * @private
+   * @type {boolean}
+   */
+  #preventEditorAutoSwitch = false;
+  /**
+   * Prevents hiding editor when the table viewport is scrolled and that scroll is triggered by the
+   * keyboard shortcut that insert or edits the comment.
+   *
+   * @private
+   * @type {boolean}
+   */
+  #preventEditorHiding = false;
+  /**
+   * The flag that allows processing mousedown event correctly when comments editor is triggered.
+   *
+   * @private
+   * @type {boolean}
+   */
+  #cellBelowCursor = null;
+  /**
+   * Holds the comment value before it's actually saved to the cell meta.
+   *
+   * @private
+   * @type {string}
+   */
+  #commentValueBeforeSave = '';
+
+  /**
    * Checks if the plugin is enabled in the handsontable settings. This method is executed in {@link Hooks#beforeInit}
-   * hook and if it returns `true` than the {@link Comments#enablePlugin} method is called.
+   * hook and if it returns `true` then the {@link Comments#enablePlugin} method is called.
    *
    * @returns {boolean}
    */
@@ -161,49 +198,124 @@ export class Comments extends BasePlugin {
       return;
     }
 
-    if (!this.editor) {
-      this.editor = new CommentEditor(this.hot.rootDocument);
+    if (!this.#editor) {
+      this.#editor = new CommentEditor(this.hot.rootDocument, this.hot.isRtl());
+      this.#editor.addLocalHook('resize', (...args) => this.#onEditorResize(...args));
     }
 
-    if (!this.eventManager) {
-      this.eventManager = new EventManager(this);
-    }
-
-    if (!this.displaySwitch) {
-      this.displaySwitch = new DisplaySwitch(this.getDisplayDelaySetting());
+    if (!this.#displaySwitch) {
+      this.#displaySwitch = new DisplaySwitch(this.getSetting('displayDelay'));
     }
 
     this.addHook('afterContextMenuDefaultOptions', options => this.addToContextMenu(options));
     this.addHook('afterRenderer',
-      (TD, row, col, prop, value, cellProperties) => this.onAfterRenderer(TD, cellProperties));
-    this.addHook('afterScrollHorizontally', () => this.hide());
-    this.addHook('afterScrollVertically', () => this.hide());
-    this.addHook('afterBeginEditing', () => this.onAfterBeginEditing());
+      (TD, row, col, prop, value, cellProperties) => this.#onAfterRenderer(TD, cellProperties));
+    this.addHook('afterScroll', () => this.#onAfterScroll());
+    this.addHook('afterBeginEditing', () => this.hide());
+    this.addHook('afterDocumentKeyDown', event => this.#onAfterDocumentKeyDown(event));
+    this.addHook('afterSetTheme', (...args) => this.#updateEditorThemeClassName(...args));
 
-    this.displaySwitch.addLocalHook('hide', () => this.hide());
-    this.displaySwitch.addLocalHook('show', (row, col) => this.showAtCell(row, col));
+    this.#displaySwitch.addLocalHook('hide', () => this.hide());
+    this.#displaySwitch.addLocalHook('show', (row, col) => this.showAtCell(row, col));
 
+    this.registerShortcuts();
     this.registerListeners();
-
     super.enablePlugin();
   }
 
   /**
-   * Updates the plugin state. This method is executed when {@link Core#updateSettings} is invoked.
+   * Updates the plugin's state.
+   *
+   * This method is executed when [`updateSettings()`](@/api/core.md#updatesettings) is invoked with any of the following configuration options:
+   *   - [`comments`](@/api/options.md#comments)
    */
   updatePlugin() {
-    this.disablePlugin();
-    this.enablePlugin();
+    this.#displaySwitch.updateDelay(this.getSetting('displayDelay'));
     super.updatePlugin();
-
-    this.displaySwitch.updateDelay(this.getDisplayDelaySetting());
   }
 
   /**
    * Disables the plugin functionality for this Handsontable instance.
    */
   disablePlugin() {
+    this.unregisterShortcuts();
     super.disablePlugin();
+  }
+
+  /**
+   * Register shortcuts responsible for toggling context menu.
+   *
+   * @private
+   */
+  registerShortcuts() {
+    const manager = this.hot.getShortcutManager();
+    const gridContext = manager.getContext('grid');
+    const pluginContext = manager.addContext(SHORTCUTS_CONTEXT_NAME);
+
+    gridContext.addShortcut({
+      keys: [['Control', 'Alt', 'M']],
+      callback: () => {
+        const range = this.hot.getSelectedRangeLast();
+
+        this.#preventEditorHiding = true;
+        this.hot.scrollToFocusedCell(() => {
+          this.setRange(range);
+          this.show();
+          this.focusEditor();
+          manager.setActiveContextName(SHORTCUTS_CONTEXT_NAME);
+
+          this.hot._registerTimeout(() => {
+            this.#preventEditorHiding = false;
+          });
+        });
+      },
+      stopPropagation: true,
+      runOnlyIf: () => this.hot.getSelectedRangeLast()?.highlight.isCell(),
+      group: SHORTCUTS_GROUP,
+    });
+
+    pluginContext.addShortcut({
+      keys: [['Escape']],
+      callback: () => {
+        this.#editor.setValue(this.#commentValueBeforeSave);
+        this.hide();
+        manager.setActiveContextName('grid');
+      },
+      runOnlyIf: () => this.#editor.isVisible() && this.#editor.isFocused(),
+      group: SHORTCUTS_GROUP,
+    });
+
+    pluginContext.addShortcut({
+      keys: [['Control/Meta', 'Enter']],
+      callback: () => {
+        this.hide();
+        manager.setActiveContextName('grid');
+      },
+      runOnlyIf: () => this.#editor.isVisible() && this.#editor.isFocused(),
+      group: SHORTCUTS_GROUP,
+    });
+
+    pluginContext.addShortcut({
+      keys: [['Shift', 'Tab'], ['Tab']],
+      forwardToContext: manager.getContext('grid'),
+      callback: () => {
+        this.#editor.setValue(this.#editor.getValue());
+        this.hide();
+        manager.setActiveContextName('grid');
+      },
+      group: SHORTCUTS_GROUP,
+    });
+  }
+
+  /**
+   * Unregister shortcuts responsible for toggling context menu.
+   *
+   * @private
+   */
+  unregisterShortcuts() {
+    this.hot.getShortcutManager()
+      .getContext('grid')
+      .removeShortcutsByGroup(SHORTCUTS_GROUP);
   }
 
   /**
@@ -213,15 +325,19 @@ export class Comments extends BasePlugin {
    */
   registerListeners() {
     const { rootDocument } = this.hot;
+    const editorElement = this.getEditorInputElement();
 
-    this.eventManager.addEventListener(rootDocument, 'mouseover', event => this.onMouseOver(event));
-    this.eventManager.addEventListener(rootDocument, 'mousedown', event => this.onMouseDown(event));
-    this.eventManager.addEventListener(rootDocument, 'mouseup', () => this.onMouseUp());
-    this.eventManager.addEventListener(this.editor.getInputElement(), 'blur', () => this.onEditorBlur());
-    this.eventManager
-      .addEventListener(this.editor.getInputElement(), 'mousedown', event => this.onEditorMouseDown(event));
-    this.eventManager
-      .addEventListener(this.editor.getInputElement(), 'mouseup', event => this.onEditorMouseUp(event));
+    this.eventManager.addEventListener(rootDocument, 'mouseover', event => this.#onMouseOver(event));
+    this.eventManager.addEventListener(rootDocument, 'mousedown', event => this.#onMouseDown(event));
+    this.eventManager.addEventListener(rootDocument, 'mouseup', () => this.#onMouseUp());
+    this.eventManager.addEventListener(editorElement, 'focus', () => this.#onEditorFocus());
+    this.eventManager.addEventListener(editorElement, 'blur', () => this.#onEditorBlur());
+
+    this.eventManager.addEventListener(
+      this.getEditorInputElement(),
+      'mousedown',
+      event => this.#onInputElementMouseDown(event)
+    );
   }
 
   /**
@@ -261,7 +377,7 @@ export class Comments extends BasePlugin {
    * @returns {boolean}
    */
   targetIsCommentTextArea(event) {
-    return this.editor.getInputElement() === event.target;
+    return this.getEditorInputElement() === event.target;
   }
 
   /**
@@ -273,12 +389,12 @@ export class Comments extends BasePlugin {
     if (!this.range.from) {
       throw new Error('Before using this method, first set cell range (hot.getPlugin("comment").setRange())');
     }
-    const editorValue = this.editor.getValue();
+    const editorValue = this.#editor.getValue();
     let comment = '';
 
-    if (value !== null && value !== void 0) {
+    if (value !== null && value !== undefined) {
       comment = value;
-    } else if (editorValue !== null && editorValue !== void 0) {
+    } else if (editorValue !== null && editorValue !== undefined) {
       comment = editorValue;
     }
 
@@ -298,7 +414,7 @@ export class Comments extends BasePlugin {
    */
   setCommentAtCell(row, column, value) {
     this.setRange({
-      from: new CellCoords(row, column)
+      from: this.hot._createCellCoords(row, column)
     });
     this.setComment(value);
   }
@@ -331,7 +447,7 @@ export class Comments extends BasePlugin {
    */
   removeCommentAtCell(row, column, forceRender = true) {
     this.setRange({
-      from: new CellCoords(row, column)
+      from: this.hot._createCellCoords(row, column)
     });
     this.removeComment(forceRender);
   }
@@ -367,7 +483,6 @@ export class Comments extends BasePlugin {
   show() {
     if (!this.range.from) {
       throw new Error('Before using this method, first set cell range (hot.getPlugin("comment").setRange())');
-
     }
 
     const { from: { row, col } } = this.range;
@@ -378,12 +493,10 @@ export class Comments extends BasePlugin {
 
     const meta = this.hot.getCellMeta(this.range.from.row, this.range.from.col);
 
+    this.#displaySwitch.cancelHiding();
+    this.#editor.setValue((meta[META_COMMENT] ? meta[META_COMMENT][META_COMMENT_VALUE] : null) ?? '');
+    this.#editor.show();
     this.refreshEditor(true);
-    this.editor.setValue(meta[META_COMMENT] ? meta[META_COMMENT][META_COMMENT_VALUE] : null || '');
-
-    if (this.editor.hidden) {
-      this.editor.show();
-    }
 
     return true;
   }
@@ -397,7 +510,7 @@ export class Comments extends BasePlugin {
    */
   showAtCell(row, column) {
     this.setRange({
-      from: new CellCoords(row, column)
+      from: this.hot._createCellCoords(row, column)
     });
 
     return this.show();
@@ -407,9 +520,7 @@ export class Comments extends BasePlugin {
    * Hides the comment editor.
    */
   hide() {
-    if (!this.editor.hidden) {
-      this.editor.hide();
-    }
+    this.#editor.hide();
   }
 
   /**
@@ -418,7 +529,7 @@ export class Comments extends BasePlugin {
    * @param {boolean} [force=false] If `true` then recalculation will be forced.
    */
   refreshEditor(force = false) {
-    if (!force && (!this.range.from || !this.editor.isVisible())) {
+    if (!force && (!this.range.from || !this.#editor.isVisible())) {
       return;
     }
 
@@ -430,14 +541,18 @@ export class Comments extends BasePlugin {
     // Used when the requested row is hidden, and the editor needs to be positioned on the previous row's coords.
     const targetingPreviousRow = renderableRow === null;
 
+    // Reset the editor position to (0, 0) so the opening direction calculation wouldn't be influenced by its
+    // previous position
+    this.#editor.setPosition(0, 0);
+
     if (renderableRow === null) {
       renderableRow = rowIndexMapper
-        .getRenderableFromVisualIndex(rowIndexMapper.getFirstNotHiddenIndex(visualRow, -1));
+        .getRenderableFromVisualIndex(rowIndexMapper.getNearestNotHiddenIndex(visualRow, -1));
     }
 
     if (renderableColumn === null) {
       renderableColumn = columnIndexMapper
-        .getRenderableFromVisualIndex(columnIndexMapper.getFirstNotHiddenIndex(visualColumn, -1));
+        .getRenderableFromVisualIndex(columnIndexMapper.getNearestNotHiddenIndex(visualColumn, -1));
     }
 
     const isBeforeRenderedRows = renderableRow === null;
@@ -446,68 +561,65 @@ export class Comments extends BasePlugin {
     renderableRow = renderableRow ?? 0;
     renderableColumn = renderableColumn ?? 0;
 
-    const { rootWindow, view: { wt } } = this.hot;
-    const { wtTable, wtOverlays, wtViewport } = wt;
-    const scrollableElement = wtOverlays.scrollableElement;
-
-    const TD = wtTable.getCell({
-      row: renderableRow,
-      col: renderableColumn,
-    });
-
-    const cellOffset = offset(TD);
-    const lastColWidth = isBeforeRenderedColumns ? 0 : wtTable.getStretchedColumnWidth(renderableColumn);
-    const lastRowHeight = targetingPreviousRow && !isBeforeRenderedRows ? outerHeight(TD) : 0;
-    let cellTopOffset = cellOffset.top;
-    let cellLeftOffset = cellOffset.left;
-
-    if (wtViewport.hasVerticalScroll() && scrollableElement !== rootWindow) {
-      cellTopOffset -= wtOverlays.topOverlay.getScrollPosition();
-    }
-
-    if (wtViewport.hasHorizontalScroll() && scrollableElement !== rootWindow) {
-      cellLeftOffset -= wtOverlays.leftOverlay.getScrollPosition();
-    }
-
-    const x = cellLeftOffset + lastColWidth;
-    const y = cellTopOffset + lastRowHeight;
-
+    const { rootWindow, view: { _wt: wt } } = this.hot;
+    const { wtTable } = wt;
+    // TODO: Probably using `hot.getCell` would be the best. However, case for showing comment editor for hidden cell
+    // potentially should be removed with that change (currently a test for it is passing).
+    const TD = wt.getCell({ row: renderableRow, col: renderableColumn }, true);
     const commentStyle = this.getCommentMeta(visualRow, visualColumn, META_STYLE);
-    const readOnly = this.getCommentMeta(visualRow, visualColumn, META_READONLY);
 
     if (commentStyle) {
-      this.editor.setSize(commentStyle.width, commentStyle.height);
+      this.#editor.setSize(commentStyle.width, commentStyle.height);
 
     } else {
-      this.editor.resetSize();
+      this.#editor.resetSize();
     }
 
-    this.editor.setReadOnlyState(readOnly);
+    const lastColWidth = isBeforeRenderedColumns ? 0 : wtTable.getColumnWidth(renderableColumn);
+    const lastRowHeight = targetingPreviousRow && !isBeforeRenderedRows ? outerHeight(TD) : 0;
 
-    this.editor.setPosition(x, y);
+    const {
+      left,
+      top,
+      width: cellWidth,
+      height: cellHeight,
+    } = TD.getBoundingClientRect();
+    const {
+      width: editorWidth,
+      height: editorHeight,
+    } = this.#editor.getSize();
+
+    const { innerWidth, innerHeight } = this.hot.rootWindow;
+    const documentElement = this.hot.rootDocument.documentElement;
+    let x = left + rootWindow.scrollX + lastColWidth;
+    let y = top + rootWindow.scrollY + lastRowHeight;
+
+    if (this.hot.isRtl()) {
+      x -= (editorWidth + lastColWidth);
+    }
+
+    // flip to the right or left the comments editor position when it goes out of browser viewport
+    if (this.hot.isLtr() && left + cellWidth + editorWidth > innerWidth) {
+      x = left + rootWindow.scrollX - editorWidth - 1;
+
+    } else if (this.hot.isRtl() && x < -(documentElement.scrollWidth - documentElement.clientWidth)) {
+      x = left + rootWindow.scrollX + lastColWidth + 1;
+    }
+
+    if (top + editorHeight > innerHeight) {
+      y -= (editorHeight - cellHeight + 1);
+    }
+
+    this.#editor.setPosition(x, y);
+    this.#editor.setReadOnlyState(this.getCommentMeta(visualRow, visualColumn, META_READONLY));
+    this.#editor.observeSize();
   }
 
   /**
-   * Checks if there is a comment for selected range.
-   *
-   * @private
-   * @returns {boolean}
+   * Focuses the comments editor element.
    */
-  checkSelectionCommentsConsistency() {
-    const selected = this.hot.getSelectedRangeLast();
-
-    if (!selected) {
-      return false;
-    }
-
-    let hasComment = false;
-    const cell = selected.getTopLeftCorner(); // IN EXCEL THERE IS COMMENT ONLY FOR TOP LEFT CELL IN SELECTION
-
-    if (this.getCommentMeta(cell.row, cell.col, META_COMMENT_VALUE)) {
-      hasComment = true;
-    }
-
-    return hasComment;
+  focusEditor() {
+    this.#editor.focus();
   }
 
   /**
@@ -543,7 +655,7 @@ export class Comments extends BasePlugin {
     const cellMeta = this.hot.getCellMeta(row, column);
 
     if (!cellMeta[META_COMMENT]) {
-      return void 0;
+      return undefined;
     }
 
     return cellMeta[META_COMMENT][property];
@@ -552,26 +664,19 @@ export class Comments extends BasePlugin {
   /**
    * `mousedown` event callback.
    *
-   * @private
    * @param {MouseEvent} event The `mousedown` event.
    */
-  onMouseDown(event) {
-    this.mouseDown = true;
-
-    if (!this.hot.view || !this.hot.view.wt) {
+  #onMouseDown(event) {
+    if (!this.hot.view || !this.hot.view._wt) {
       return;
     }
 
-    if (!this.contextMenuEvent && !this.targetIsCommentTextArea(event)) {
+    if (!this.#preventEditorAutoSwitch && !this.targetIsCommentTextArea(event)) {
       const eventCell = closest(event.target, 'TD', 'TBODY');
       let coordinates = null;
 
       if (eventCell) {
-        coordinates = this.hot.view.wt.wtTable.getCoords(eventCell);
-        coordinates = {
-          row: this.hot.rowIndexMapper.getVisualFromRenderableIndex(coordinates.row),
-          col: this.hot.columnIndexMapper.getVisualFromRenderableIndex(coordinates.col)
-        };
+        coordinates = this.hot.getCoords(eventCell);
       }
 
       if (!eventCell || ((this.range.from && coordinates) &&
@@ -579,291 +684,155 @@ export class Comments extends BasePlugin {
         this.hide();
       }
     }
-    this.contextMenuEvent = false;
+  }
+
+  /**
+   * Prevent recognizing clicking on the comment editor as clicking outside of table.
+   *
+   * @param {MouseEvent} event The `mousedown` event.
+   */
+  #onInputElementMouseDown(event) {
+    event.stopPropagation();
   }
 
   /**
    * `mouseover` event callback.
    *
-   * @private
    * @param {MouseEvent} event The `mouseover` event.
    */
-  onMouseOver(event) {
-    const priv = privatePool.get(this);
+  #onMouseOver(event) {
     const { rootDocument } = this.hot;
 
-    priv.cellBelowCursor = rootDocument.elementFromPoint(event.clientX, event.clientY);
-
-    if (this.mouseDown || this.editor.isFocused() || hasClass(event.target, 'wtBorder')
-        || priv.cellBelowCursor !== event.target || !this.editor) {
+    if (this.#preventEditorAutoSwitch || this.#editor.isFocused() || hasClass(event.target, 'wtBorder')
+        || this.#cellBelowCursor === event.target || !this.#editor) {
       return;
     }
 
-    if (this.targetIsCellWithComment(event)) {
-      const coordinates = this.hot.view.wt.wtTable.getCoords(event.target);
-      const range = {
-        from: new CellCoords(
-          this.hot.rowIndexMapper.getVisualFromRenderableIndex(coordinates.row),
-          this.hot.columnIndexMapper.getVisualFromRenderableIndex(coordinates.col)
-        )
-      };
+    this.#cellBelowCursor = rootDocument.elementFromPoint(event.clientX, event.clientY);
 
-      this.displaySwitch.show(range);
+    if (this.targetIsCellWithComment(event)) {
+      const range = this.hot._createCellRange(this.hot.getCoords(event.target));
+
+      this.#displaySwitch.show(range);
 
     } else if (isChildOf(event.target, rootDocument) && !this.targetIsCommentTextArea(event)) {
-      this.displaySwitch.hide();
+      this.#displaySwitch.hide();
     }
   }
 
   /**
    * `mouseup` event callback.
-   *
-   * @private
    */
-  onMouseUp() {
-    this.mouseDown = false;
+  #onMouseUp() {
+    this.#preventEditorAutoSwitch = false;
   }
 
   /**
    * The `afterRenderer` hook callback.
    *
-   * @private
    * @param {HTMLTableCellElement} TD The rendered `TD` element.
    * @param {object} cellProperties The rendered cell's property object.
    */
-  onAfterRenderer(TD, cellProperties) {
+  #onAfterRenderer(TD, cellProperties) {
     if (cellProperties[META_COMMENT] && cellProperties[META_COMMENT][META_COMMENT_VALUE]) {
       addClass(TD, cellProperties.commentedCellClassName);
     }
   }
 
   /**
-   * `blur` event callback for the comment editor.
-   *
-   * @private
+   * Hook observer the "blur" event from the comments editor element. The hook clears the
+   * editor content and gives back the keyboard shortcuts control by switching to the "grid" context.
    */
-  onEditorBlur() {
+  #onEditorBlur() {
+    this.#commentValueBeforeSave = '';
+    this.hot.getShortcutManager().setActiveContextName('grid');
     this.setComment();
   }
 
   /**
-   * `mousedown` hook. Along with `onEditorMouseUp` used to simulate the textarea resizing event.
-   *
-   * @private
-   * @param {MouseEvent} event The `mousedown` event.
+   * Hook observer the "focus" event from the comments editor element. The hook takes the control of
+   * the keyboard shortcuts by switching the context to plugins one.
    */
-  onEditorMouseDown(event) {
-    const priv = privatePool.get(this);
-
-    priv.tempEditorDimensions = {
-      width: outerWidth(event.target),
-      height: outerHeight(event.target)
-    };
+  #onEditorFocus() {
+    this.#commentValueBeforeSave = this.getComment();
+    this.hot.listen();
+    this.hot.getShortcutManager().setActiveContextName(SHORTCUTS_CONTEXT_NAME);
   }
 
   /**
-   * `mouseup` hook. Along with `onEditorMouseDown` used to simulate the textarea resizing event.
+   * Saves the comments editor size to the cell meta.
    *
-   * @private
-   * @param {MouseEvent} event The `mouseup` event.
+   * @param {number} width The new width of the editor.
+   * @param {number} height The new height of the editor.
    */
-  onEditorMouseUp(event) {
-    const priv = privatePool.get(this);
-    const currentWidth = outerWidth(event.target);
-    const currentHeight = outerHeight(event.target);
+  #onEditorResize(width, height) {
+    this.updateCommentMeta(this.range.from.row, this.range.from.col, {
+      [META_STYLE]: { width, height }
+    });
+  }
 
-    if (currentWidth !== priv.tempEditorDimensions.width + 1 ||
-        currentHeight !== priv.tempEditorDimensions.height + 2) {
-      this.updateCommentMeta(this.range.from.row, this.range.from.col, {
-        [META_STYLE]: {
-          width: currentWidth,
-          height: currentHeight
-        }
-      });
+  /**
+   * Observes the pressed keys and if there is already opened the comment editor prevents open
+   * the table editor into the fast edit mode.
+   *
+   * @param {Event} event The keydown event.
+   */
+  #onAfterDocumentKeyDown(event) {
+    if (this.#editor.isFocused()) {
+      stopImmediatePropagation(event);
     }
   }
 
   /**
-   * Context Menu's "Add comment" callback. Results in showing the comment editor.
-   *
-   * @private
+   * Observes the changes in the scroll position if triggered it hides the comment editor.
    */
-  onContextMenuAddComment() {
-    this.displaySwitch.cancelHiding();
-
-    const coords = this.hot.getSelectedRangeLast();
-
-    this.contextMenuEvent = true;
-    this.setRange({
-      from: coords.highlight,
-    });
-    this.show();
-
-    setTimeout(() => {
-      if (this.hot) {
-        this.hot.deselectCell();
-        this.editor.focus();
-      }
-    }, 10);
+  #onAfterScroll() {
+    if (!this.#preventEditorHiding) {
+      this.hide();
+    }
   }
 
   /**
-   * Context Menu's "remove comment" callback.
-   *
-   * @private
+   * Updates the editor theme class name.
    */
-  onContextMenuRemoveComment() {
-    const coords = this.hot.getSelectedRangeLast();
+  #updateEditorThemeClassName() {
+    const editorElement = this.#editor.getEditorElement();
 
-    this.contextMenuEvent = true;
-
-    coords.forAll((row, column) => {
-      if (row >= 0 && column >= 0) {
-        this.removeCommentAtCell(row, column, false);
-      }
-    });
-
-    this.hot.render();
-  }
-
-  /**
-   * Context Menu's "make comment read-only" callback.
-   *
-   * @private
-   */
-  onContextMenuMakeReadOnly() {
-    const coords = this.hot.getSelectedRangeLast();
-
-    this.contextMenuEvent = true;
-
-    coords.forAll((row, column) => {
-      if (row >= 0 && column >= 0) {
-        const currentState = !!this.getCommentMeta(row, column, META_READONLY);
-
-        this.updateCommentMeta(row, column, { [META_READONLY]: !currentState });
-      }
-    });
+    removeClass(editorElement, /ht-theme-.*/g);
+    addClass(editorElement, this.hot.getCurrentThemeName());
   }
 
   /**
    * Add Comments plugin options to the Context Menu.
    *
    * @private
-   * @param {object} defaultOptions The menu options.
+   * @param {object} options The menu options.
    */
-  addToContextMenu(defaultOptions) {
-    const isThereAnyCellRendered = () => {
-      return this.hot.rowIndexMapper.getRenderableIndexesLength() > 0 &&
-             this.hot.columnIndexMapper.getRenderableIndexesLength() > 0;
-    };
-
-    defaultOptions.items.push(
-      {
-        name: '---------',
-      },
-      {
-        key: 'commentsAddEdit',
-        name: () => {
-          if (this.checkSelectionCommentsConsistency()) {
-            return this.hot.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_EDIT_COMMENT);
-          }
-
-          return this.hot.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_ADD_COMMENT);
-        },
-        callback: () => this.onContextMenuAddComment(),
-        disabled: () => {
-          if (!isThereAnyCellRendered()) {
-            return true;
-          }
-
-          return !(this.hot.getSelectedLast() && !this.hot.selection.isSelectedByCorner());
-        }
-      },
-      {
-        key: 'commentsRemove',
-        name() {
-          return this.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_REMOVE_COMMENT);
-        },
-        callback: () => this.onContextMenuRemoveComment(),
-        disabled: () => {
-          if (!isThereAnyCellRendered()) {
-            return true;
-          }
-
-          return !(this.hot.getSelectedLast() && !this.hot.selection.isSelectedByCorner());
-        }
-      },
-      {
-        key: 'commentsReadOnly',
-        name() {
-          let label = this.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_READ_ONLY_COMMENT);
-          const hasProperty = checkSelectionConsistency(this.getSelectedRangeLast(), (row, col) => {
-            let readOnlyProperty = this.getCellMeta(row, col)[META_COMMENT];
-
-            if (readOnlyProperty) {
-              readOnlyProperty = readOnlyProperty[META_READONLY];
-            }
-
-            if (readOnlyProperty) {
-              return true;
-            }
-          });
-
-          if (hasProperty) {
-            label = markLabelAsSelected(label);
-          }
-
-          return label;
-        },
-        callback: () => this.onContextMenuMakeReadOnly(),
-        disabled: () => {
-          if (!isThereAnyCellRendered()) {
-            return true;
-          }
-
-          return !(this.hot.getSelectedLast() && !this.hot.selection.isSelectedByCorner()) ||
-                 !this.checkSelectionCommentsConsistency();
-        }
-      }
+  addToContextMenu(options) {
+    options.items.push(
+      { name: SEPARATOR },
+      addEditCommentItem(this),
+      removeCommentItem(this),
+      readOnlyCommentItem(this),
     );
   }
 
   /**
-   * Get `displayDelay` setting of comment plugin.
+   * Gets the editors input element.
    *
    * @private
-   * @returns {number|undefined}
+   * @returns {HTMLTextAreaElement}
    */
-  getDisplayDelaySetting() {
-    const commentSetting = this.hot.getSettings()[PLUGIN_KEY];
-
-    if (isObject(commentSetting)) {
-      return commentSetting.displayDelay;
-    }
-
-    return void 0;
-  }
-
-  /**
-   * `afterBeginEditing` hook callback.
-   *
-   * @private
-   */
-  onAfterBeginEditing() {
-    this.hide();
+  getEditorInputElement() {
+    return this.#editor.getInputElement();
   }
 
   /**
    * Destroys the plugin instance.
    */
   destroy() {
-    if (this.editor) {
-      this.editor.destroy();
-    }
-
-    if (this.displaySwitch) {
-      this.displaySwitch.destroy();
-    }
+    this.#editor?.destroy();
+    this.#displaySwitch?.destroy();
 
     super.destroy();
   }

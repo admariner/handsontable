@@ -1,7 +1,14 @@
-import { CellCoords } from '../../3rdparty/walkontable/src';
 import { stringify } from '../../helpers/mixed';
 import { mixin } from '../../helpers/object';
 import hooksRefRegisterer from '../../mixins/hooksRefRegisterer';
+import {
+  getScrollbarWidth,
+  offset,
+  hasVerticalScrollbar,
+  hasHorizontalScrollbar,
+  outerWidth,
+  outerHeight,
+} from '../../helpers/dom/element';
 
 export const EDITOR_TYPE = 'base';
 export const EDITOR_STATE = Object.freeze({
@@ -20,88 +27,81 @@ export class BaseEditor {
   }
 
   /**
-   * @param {Handsontable} instance A reference to the source instance of the Handsontable.
+   * A reference to the source instance of the Handsontable.
+   *
+   * @type {Handsontable}
    */
-  constructor(instance) {
-    /**
-     * A reference to the source instance of the Handsontable.
-     *
-     * @type {Handsontable}
-     */
-    this.hot = instance;
-    /**
-     * A reference to the source instance of the Handsontable.
-     *
-     * @deprecated
-     *
-     * @type {Handsontable}
-     */
-    this.instance = instance;
-    /**
-     * Editor's state.
-     *
-     * @type {string}
-     */
-    this.state = EDITOR_STATE.VIRGIN;
-    /**
-     * Flag to store information about editor's opening status.
-     *
-     * @private
-     *
-     * @type {boolean}
-     */
-    this._opened = false;
-    /**
-     * Defines the editor's editing mode. When false, then an editor works in fast editing mode.
-     *
-     * @private
-     *
-     * @type {boolean}
-     */
-    this._fullEditMode = false;
-    /**
-     * Callback to call after closing editor.
-     *
-     * @type {Function}
-     */
-    this._closeCallback = null;
-    /**
-     * Currently rendered cell's TD element.
-     *
-     * @type {HTMLTableCellElement}
-     */
-    this.TD = null;
-    /**
-     * Visual row index.
-     *
-     * @type {number}
-     */
-    this.row = null;
-    /**
-     * Visual column index.
-     *
-     * @type {number}
-     */
-    this.col = null;
-    /**
-     * Column property name or a column index, if datasource is an array of arrays.
-     *
-     * @type {number|string}
-     */
-    this.prop = null;
-    /**
-     * Original cell's value.
-     *
-     * @type {*}
-     */
-    this.originalValue = null;
-    /**
-     * Object containing the cell's properties.
-     *
-     * @type {object}
-     */
-    this.cellProperties = null;
+  hot;
+  /**
+   * Editor's state.
+   *
+   * @type {string}
+   */
+  state = EDITOR_STATE.VIRGIN;
+  /**
+   * Flag to store information about editor's opening status.
+   *
+   * @private
+   *
+   * @type {boolean}
+   */
+  _opened = false;
+  /**
+   * Defines the editor's editing mode. When false, then an editor works in fast editing mode.
+   *
+   * @private
+   *
+   * @type {boolean}
+   */
+  _fullEditMode = false;
+  /**
+   * Callback to call after closing editor.
+   *
+   * @type {Function}
+   */
+  _closeCallback = null;
+  /**
+   * Currently rendered cell's TD element.
+   *
+   * @type {HTMLTableCellElement}
+   */
+  TD = null;
+  /**
+   * Visual row index.
+   *
+   * @type {number}
+   */
+  row = null;
+  /**
+   * Visual column index.
+   *
+   * @type {number}
+   */
+  col = null;
+  /**
+   * Column property name or a column index, if datasource is an array of arrays.
+   *
+   * @type {number|string}
+   */
+  prop = null;
+  /**
+   * Original cell's value.
+   *
+   * @type {*}
+   */
+  originalValue = null;
+  /**
+   * Object containing the cell's properties.
+   *
+   * @type {object}
+   */
+  cellProperties = null;
 
+  /**
+   * @param {Handsontable} hotInstance A reference to the source instance of the Handsontable.
+   */
+  constructor(hotInstance) {
+    this.hot = hotInstance;
     this.init();
   }
 
@@ -159,7 +159,7 @@ export class BaseEditor {
    * @param {number|string} prop The column property (passed when datasource is an array of objects).
    * @param {HTMLTableCellElement} td The rendered cell element.
    * @param {*} value The rendered value.
-   * @param {object} cellProperties The cell meta object ({@see Core#getCellMeta}).
+   * @param {object} cellProperties The cell meta object (see {@link Core#getCellMeta}).
    */
   prepare(row, col, prop, td, value, cellProperties) {
     this.TD = td;
@@ -168,7 +168,7 @@ export class BaseEditor {
     this.prop = prop;
     this.originalValue = value;
     this.cellProperties = cellProperties;
-    this.state = EDITOR_STATE.VIRGIN;
+    this.state = this.isOpened() ? this.state : EDITOR_STATE.VIRGIN;
   }
 
   /**
@@ -205,7 +205,8 @@ export class BaseEditor {
       [visualRowFrom, visualColumnFrom, visualRowTo, visualColumnTo] = [this.row, this.col, null, null];
     }
 
-    const modifiedCellCoords = this.hot.runHooks('modifyGetCellCoords', visualRowFrom, visualColumnFrom);
+    const modifiedCellCoords = this.hot
+      .runHooks('modifyGetCellCoords', visualRowFrom, visualColumnFrom, false, 'meta');
 
     if (Array.isArray(modifiedCellCoords)) {
       [visualRowFrom, visualColumnFrom] = modifiedCellCoords;
@@ -232,26 +233,36 @@ export class BaseEditor {
     const renderableRowIndex = hotInstance.rowIndexMapper.getRenderableFromVisualIndex(this.row);
     const renderableColumnIndex = hotInstance.columnIndexMapper.getRenderableFromVisualIndex(this.col);
 
-    hotInstance.view.scrollViewport(new CellCoords(renderableRowIndex, renderableColumnIndex));
-    this.state = EDITOR_STATE.EDITING;
+    const openEditor = () => {
+      this.state = EDITOR_STATE.EDITING;
 
-    // Set the editor value only in the full edit mode. In other mode the focusable element has to be empty,
-    // otherwise IME (editor for Asia users) doesn't work.
-    if (this.isInFullEditMode()) {
-      const stringifiedInitialValue = typeof newInitialValue === 'string' ?
-        newInitialValue : stringify(this.originalValue);
+      // Set the editor value only in the full edit mode. In other mode the focusable element has to be empty,
+      // otherwise IME (editor for Asia users) doesn't work.
+      if (this.isInFullEditMode()) {
+        const stringifiedInitialValue = typeof newInitialValue === 'string' ?
+          newInitialValue : stringify(this.originalValue);
 
-      this.setValue(stringifiedInitialValue);
+        this.setValue(stringifiedInitialValue);
+      }
+
+      this.open(event);
+      this._opened = true;
+      this.focus();
+
+      // only rerender the selections (FillHandle should disappear when beginEditing is triggered)
+      hotInstance.view.render();
+      hotInstance.runHooks('afterBeginEditing', this.row, this.col);
+    };
+
+    this.hot.addHookOnce('afterScroll', openEditor);
+
+    const wasScroll = hotInstance.view
+      .scrollViewport(hotInstance._createCellCoords(renderableRowIndex, renderableColumnIndex));
+
+    if (!wasScroll) {
+      this.hot.removeHook('afterScroll', openEditor);
+      openEditor();
     }
-
-    this.open(event);
-    this._opened = true;
-    this.focus();
-
-    // only rerender the selections (FillHandle should disappear when beginEditing is triggered)
-    hotInstance.view.render();
-
-    hotInstance.runHooks('afterBeginEditing', this.row, this.col);
   }
 
   /**
@@ -299,7 +310,7 @@ export class BaseEditor {
 
       const value = this.getValue();
 
-      if (this.hot.getSettings().trimWhitespace) {
+      if (this.cellProperties.trimWhitespace) {
         // We trim only string values
         val = [
           [typeof value === 'string' ? String.prototype.trim.call(value || '') : value]
@@ -357,6 +368,10 @@ export class BaseEditor {
       this._fullEditMode = false;
       this.state = EDITOR_STATE.VIRGIN;
       this._fireCallbacks(true);
+
+      const shortcutManager = this.hot.getShortcutManager();
+
+      shortcutManager.setActiveContextName('grid');
     }
   }
 
@@ -395,6 +410,147 @@ export class BaseEditor {
     return this.state === EDITOR_STATE.WAITING;
   }
 
+  /* eslint-disable jsdoc/require-description-complete-sentence */
+  /**
+   * Gets the object that provides information about the edited cell size and its position
+   * relative to the table viewport.
+   *
+   * The rectangle has six integer properties:
+   *  - `top` The top position relative to the table viewport
+   *  - `start` The left (or right in RTL) position relative to the table viewport
+   *  - `width` The cell's current width;
+   *  - `maxWidth` The maximum cell's width after which the editor goes out of the table viewport
+   *  - `height` The cell's current height;
+   *  - `maxHeight` The maximum cell's height after which the editor goes out of the table viewport
+   *
+   * @returns {{top: number, start: number, width: number, maxWidth: number, height: number, maxHeight: number} | undefined}
+   */
+  getEditedCellRect() {
+    const TD = this.getEditedCell();
+
+    // TD is outside of the viewport.
+    if (!TD) {
+      return;
+    }
+
+    const { wtOverlays, wtViewport } = this.hot.view._wt;
+    const rootWindow = this.hot.rootWindow;
+    const currentOffset = offset(TD);
+    const cellWidth = outerWidth(TD);
+    const containerOffset = offset(this.hot.rootElement);
+    const containerWidth = outerWidth(this.hot.rootElement);
+    const scrollableContainerTop = wtOverlays.topOverlay.holder;
+    const scrollableContainerLeft = wtOverlays.inlineStartOverlay.holder;
+    const containerScrollTop = scrollableContainerTop !== rootWindow ?
+      scrollableContainerTop.scrollTop : 0;
+    const containerScrollLeft = scrollableContainerLeft !== rootWindow ?
+      scrollableContainerLeft.scrollLeft : 0;
+    const gridMostRightPos = rootWindow.innerWidth - containerOffset.left - containerWidth;
+    const { wtTable: overlayTable } = wtOverlays.getParentOverlay(TD) ?? this.hot.view._wt;
+    const overlayName = overlayTable.name;
+
+    const scrollTop = ['master', 'inline_start'].includes(overlayName) ? containerScrollTop : 0;
+    const scrollLeft = ['master', 'top', 'bottom'].includes(overlayName) ? containerScrollLeft : 0;
+
+    // If colHeaders is disabled, cells in the first row have border-top
+    const editTopModifier = currentOffset.top === containerOffset.top ? 0 : 1;
+
+    let topPos = currentOffset.top - containerOffset.top - editTopModifier - scrollTop;
+    let inlineStartPos = 0;
+
+    if (this.hot.isRtl()) {
+      inlineStartPos = rootWindow.innerWidth - currentOffset.left - cellWidth - gridMostRightPos - 1 + scrollLeft;
+    } else {
+      inlineStartPos = currentOffset.left - containerOffset.left - 1 - scrollLeft;
+    }
+
+    // When the scrollable element is Window object then the editor position needs to be compensated
+    // by the overlays' position (position relative to the table viewport). In other cases, the overlay's
+    // position always returns 0.
+    if (['top', 'top_inline_start_corner'].includes(overlayName)) {
+      topPos += wtOverlays.topOverlay.getOverlayOffset();
+    }
+
+    if (['inline_start', 'top_inline_start_corner'].includes(overlayName)) {
+      inlineStartPos += Math.abs(wtOverlays.inlineStartOverlay.getOverlayOffset());
+    }
+
+    const hasColumnHeaders = this.hot.hasColHeaders();
+    const renderableRow = this.hot.rowIndexMapper.getRenderableFromVisualIndex(this.row);
+    const renderableColumn = this.hot.columnIndexMapper.getRenderableFromVisualIndex(this.col);
+    const nrOfRenderableRowIndexes = this.hot.rowIndexMapper.getRenderableIndexesLength();
+    const firstRowIndexOfTheBottomOverlay = nrOfRenderableRowIndexes - this.hot.view._wt.getSetting('fixedRowsBottom');
+
+    if (hasColumnHeaders && renderableRow <= 0 || renderableRow === firstRowIndexOfTheBottomOverlay) {
+      topPos += 1;
+    }
+
+    if (renderableColumn <= 0) {
+      inlineStartPos += 1;
+    }
+
+    const firstRowOffset = wtViewport.rowsRenderCalculator.startPosition;
+    const firstColumnOffset = wtViewport.columnsRenderCalculator.startPosition;
+    const horizontalScrollPosition = Math.abs(wtOverlays.inlineStartOverlay.getScrollPosition());
+    const verticalScrollPosition = wtOverlays.topOverlay.getScrollPosition();
+    const scrollbarWidth = getScrollbarWidth(this.hot.rootDocument);
+    let cellTopOffset = TD.offsetTop;
+
+    if (['inline_start', 'master'].includes(overlayName)) {
+      cellTopOffset += firstRowOffset - verticalScrollPosition;
+    }
+
+    if (['bottom', 'bottom_inline_start_corner'].includes(overlayName)) {
+      const {
+        wtViewport: bottomWtViewport,
+        wtTable: bottomWtTable,
+      } = wtOverlays.bottomOverlay.clone;
+
+      cellTopOffset += bottomWtViewport.getWorkspaceHeight() - bottomWtTable.getHeight() - scrollbarWidth;
+    }
+
+    let cellStartOffset = TD.offsetLeft;
+
+    if (this.hot.isRtl()) {
+      if (cellStartOffset >= 0) {
+        cellStartOffset = overlayTable.getWidth() - TD.offsetLeft;
+      } else {
+        // The `offsetLeft` returns negative values when the parent offset element has position relative
+        // (it happens when on the cell the selection is applied - the `area` CSS class).
+        // When it happens the `offsetLeft` value is calculated from the right edge of the parent element.
+        cellStartOffset = Math.abs(cellStartOffset);
+      }
+
+      cellStartOffset += firstColumnOffset - horizontalScrollPosition - cellWidth;
+
+    } else if (['top', 'master', 'bottom'].includes(overlayName)) {
+      cellStartOffset += firstColumnOffset - horizontalScrollPosition;
+    }
+
+    const cellComputedStyle = rootWindow.getComputedStyle(this.TD);
+    const borderPhysicalWidthProp = this.hot.isRtl() ? 'borderRightWidth' : 'borderLeftWidth';
+    const inlineStartBorderCompensation = parseInt(cellComputedStyle[borderPhysicalWidthProp], 10) > 0 ? 0 : 1;
+    const topBorderCompensation = parseInt(cellComputedStyle.borderTopWidth, 10) > 0 ? 0 : 1;
+    const width = outerWidth(TD) + inlineStartBorderCompensation;
+    const height = outerHeight(TD) + topBorderCompensation;
+    const actualVerticalScrollbarWidth = hasVerticalScrollbar(scrollableContainerTop) ? scrollbarWidth : 0;
+    const actualHorizontalScrollbarWidth = hasHorizontalScrollbar(scrollableContainerLeft) ? scrollbarWidth : 0;
+    const maxWidth = this.hot.view.maximumVisibleElementWidth(cellStartOffset) -
+      actualVerticalScrollbarWidth + inlineStartBorderCompensation;
+    const maxHeight = Math.max(this.hot.view.maximumVisibleElementHeight(cellTopOffset) -
+      actualHorizontalScrollbarWidth + topBorderCompensation, this.hot.view.getDefaultRowHeight());
+
+    return {
+      top: topPos,
+      start: inlineStartPos,
+      height,
+      maxHeight,
+      width,
+      maxWidth,
+    };
+  }
+  /* eslint-enable jsdoc/require-description-complete-sentence */
+
   /**
    * Gets className of the edited cell if exist.
    *
@@ -404,22 +560,16 @@ export class BaseEditor {
     const editorSection = this.checkEditorSection();
 
     switch (editorSection) {
-      case 'right':
-        return 'ht_clone_right';
-      case 'left':
-        return 'ht_clone_left';
+      case 'inline-start':
+        return 'ht_clone_left ht_clone_inline_start';
       case 'bottom':
         return 'ht_clone_bottom';
-      case 'bottom-right-corner':
-        return 'ht_clone_bottom_right_corner';
-      case 'bottom-left-corner':
-        return 'ht_clone_bottom_left_corner';
+      case 'bottom-inline-start-corner':
+        return 'ht_clone_bottom_left_corner ht_clone_bottom_inline_start_corner';
       case 'top':
         return 'ht_clone_top';
-      case 'top-right-corner':
-        return 'ht_clone_top_right_corner';
-      case 'top-left-corner':
-        return 'ht_clone_top_left_corner';
+      case 'top-inline-start-corner':
+        return 'ht_clone_top_left_corner ht_clone_top_inline_start_corner';
       default:
         return 'ht_clone_master';
     }
@@ -445,20 +595,20 @@ export class BaseEditor {
     let section = '';
 
     if (this.row < this.hot.getSettings().fixedRowsTop) {
-      if (this.col < this.hot.getSettings().fixedColumnsLeft) {
-        section = 'top-left-corner';
+      if (this.col < this.hot.getSettings().fixedColumnsStart) {
+        section = 'top-inline-start-corner';
       } else {
         section = 'top';
       }
     } else if (this.hot.getSettings().fixedRowsBottom &&
                this.row >= totalRows - this.hot.getSettings().fixedRowsBottom) {
-      if (this.col < this.hot.getSettings().fixedColumnsLeft) {
-        section = 'bottom-left-corner';
+      if (this.col < this.hot.getSettings().fixedColumnsStart) {
+        section = 'bottom-inline-start-corner';
       } else {
         section = 'bottom';
       }
-    } else if (this.col < this.hot.getSettings().fixedColumnsLeft) {
-      section = 'left';
+    } else if (this.col < this.hot.getSettings().fixedColumnsStart) {
+      section = 'inline-start';
     }
 
     return section;

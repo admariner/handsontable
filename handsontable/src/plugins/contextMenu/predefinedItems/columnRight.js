@@ -1,6 +1,4 @@
-import { getValidSelection } from '../utils';
 import * as C from '../../../i18n/constants';
-import { isDefined } from '../../../helpers/mixed';
 
 export const KEY = 'col_right';
 
@@ -13,35 +11,24 @@ export default function columnRightItem() {
     name() {
       return this.getTranslatedPhrase(C.CONTEXTMENU_ITEMS_INSERT_RIGHT);
     },
-    callback(key, normalizedSelection) {
-      const isSelectedByCorner = this.selection.isSelectedByCorner();
-      let columnRight = 0;
+    callback() {
+      const latestSelection = this.getSelectedRangeLast().getTopRightCorner();
+      const alterAction = this.isRtl() ? 'insert_col_start' : 'insert_col_end';
 
-      if (isSelectedByCorner) {
-        columnRight = this.countCols();
-
-      } else {
-        const latestSelection = normalizedSelection[Math.max(normalizedSelection.length - 1, 0)];
-        const selectedColumn = latestSelection?.end?.col;
-
-        // If there is no selection we have clicked on the corner and there is no data.
-        columnRight = isDefined(selectedColumn) ? selectedColumn + 1 : 0;
-      }
-
-      this.alter('insert_col', columnRight, 1, 'ContextMenu.columnRight');
-
-      if (isSelectedByCorner) {
-        this.selectAll();
-      }
+      this.alter(alterAction, latestSelection.col, 1, 'ContextMenu.columnRight');
     },
     disabled() {
       if (!this.isColumnModificationAllowed()) {
         return true;
       }
 
-      const selected = getValidSelection(this);
+      const range = this.getSelectedRangeLast();
 
-      if (!selected) {
+      if (!range) {
+        return true;
+      }
+
+      if (range.isSingleHeader() && range.highlight.col < 0) {
         return true;
       }
 

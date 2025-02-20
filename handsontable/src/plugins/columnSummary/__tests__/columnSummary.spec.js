@@ -118,7 +118,7 @@ describe('ColumnSummarySpec', () => {
   });
 
   describe('calculateSum', () => {
-    it('should calculate sum  of values from the provided range', () => {
+    it('should calculate sum of values from the provided range', () => {
       handsontable({
         data: createNumericData(15, 15),
         height: 200,
@@ -142,8 +142,13 @@ describe('ColumnSummarySpec', () => {
 
   describe('calculateMinMax', () => {
     it('should calculate the minimum from the provided range', () => {
+      const dataset = createNumericData(15, 15);
+
+      dataset[0][1] = 0;
+      dataset[0][2] = 0;
+
       handsontable({
-        data: createNumericData(15, 15),
+        data: dataset,
         height: 200,
         width: 200,
         columnSummary: [
@@ -155,16 +160,55 @@ describe('ColumnSummarySpec', () => {
               [5, 6], [8], [10, 13]
             ],
             type: 'min'
+          },
+          {
+            destinationColumn: 1,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 13]
+            ],
+            type: 'min'
           }
         ]
       });
 
       expect(getDataAtCell(14, 0)).toEqual(6);
+      expect(getDataAtCell(14, 1)).toEqual(0);
     });
 
-    it('should calculate the minimum from the provided range', () => {
+    it('should calculate the minimum from the column when the destination row is empty and `forceNumeric` is enabled', () => {
       handsontable({
-        data: createNumericData(15, 15),
+        data: [
+          [0],
+          [1],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'min'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(0);
+    });
+
+    it('should calculate the maximum from the provided range', () => {
+      const dataset = createNumericData(15, 15);
+
+      dataset.forEach((rowArr) => {
+        rowArr[1] = 0;
+      });
+
+      handsontable({
+        data: dataset,
         height: 200,
         width: 200,
         columnSummary: [
@@ -176,19 +220,57 @@ describe('ColumnSummarySpec', () => {
               [5, 6], [8], [10, 13]
             ],
             type: 'max'
+          },
+          {
+            destinationColumn: 1,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 13]
+            ],
+            type: 'max'
           }
         ]
       });
 
       expect(getDataAtCell(14, 0)).toEqual(14);
+      expect(getDataAtCell(14, 1)).toEqual(0);
     });
 
+    it('should calculate the maximum from the column when the destination row is empty and `forceNumeric` is enabled', () => {
+      handsontable({
+        data: [
+          [0],
+          [1],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'max'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(5);
+    });
   });
 
   describe('countEntries', () => {
     it('should count non-empty entries from the provided range', () => {
+      const dataset = createNumericData(15, 15);
+
+      dataset.forEach((rowArr) => {
+        rowArr[1] = 0;
+      });
+
       handsontable({
-        data: createNumericData(15, 15),
+        data: dataset,
         height: 200,
         width: 200,
         columnSummary: [
@@ -200,11 +282,44 @@ describe('ColumnSummarySpec', () => {
               [0, 3], [5, 6], [8], [10, 13]
             ],
             type: 'count'
+          },
+          {
+            destinationColumn: 1,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 13]
+            ],
+            type: 'count'
           }
         ]
       });
 
       expect(getDataAtCell(14, 0)).toEqual(11);
+      expect(getDataAtCell(14, 1)).toEqual(14);
+    });
+
+    it('should count non-empty entries from the column when the destination row is empty and `forceNumeric` is enabled', () => {
+      handsontable({
+        data: [
+          [4],
+          [1],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'count'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(3);
     });
   });
 
@@ -228,6 +343,29 @@ describe('ColumnSummarySpec', () => {
       });
 
       expect(getDataAtCell(14, 0).toFixed(4)).toEqual((7.45454545454545).toFixed(4));
+    });
+
+    it('should count average value from the column when the destination row is empty and `forceNumeric` is enabled', () => {
+      handsontable({
+        data: [
+          [4],
+          [2],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'average'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(3.6666666666666665);
     });
   });
 
@@ -392,9 +530,9 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      hot.alter('insert_row', 0, 1);
+      hot.alter('insert_row_above', 0, 1);
       expect(getDataAtCell(0, 0)).toEqual(null);
-      expect(getCellMeta(0, 0).className).toEqual(void 0);
+      expect(getCellMeta(0, 0).className).toEqual(undefined);
       expect(getCellMeta(0, 0).readOnly).toEqual(false);
       expect(getDataAtCell(1, 0)).toEqual(14);
       expect(getCellMeta(1, 0).className).toEqual('columnSummaryResult');
@@ -417,9 +555,9 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      hot.alter('insert_col', 0, 1);
+      hot.alter('insert_col_start', 0, 1);
       expect(getDataAtCell(0, 0)).toEqual(null);
-      expect(getCellMeta(0, 0).className).toEqual(void 0);
+      expect(getCellMeta(0, 0).className).toEqual(undefined);
       expect(getCellMeta(0, 0).readOnly).toEqual(false);
       expect(getDataAtCell(0, 1)).toEqual(14);
       expect(getCellMeta(0, 1).className).toEqual('columnSummaryResult');
@@ -445,7 +583,7 @@ describe('ColumnSummarySpec', () => {
 
       hot.alter('remove_row', 0, 1);
       expect(getDataAtCell(14, 0)).toEqual(16);
-      expect(getCellMeta(14, 0).className).toEqual(void 0);
+      expect(getCellMeta(14, 0).className).toEqual(undefined);
       expect(getCellMeta(14, 0).readOnly).toEqual(false);
       expect(getDataAtCell(13, 0)).toEqual(14);
       expect(getCellMeta(13, 0).className).toEqual('columnSummaryResult');
@@ -470,7 +608,7 @@ describe('ColumnSummarySpec', () => {
 
       hot.alter('remove_col', 0, 1);
       expect(getDataAtCell(0, 3)).toEqual(1);
-      expect(getCellMeta(0, 3).className).toEqual(void 0);
+      expect(getCellMeta(0, 3).className).toEqual(undefined);
       expect(getCellMeta(0, 3).readOnly).toEqual(false);
       expect(getDataAtCell(0, 2)).toEqual(14);
       expect(getCellMeta(0, 2).className).toEqual('columnSummaryResult');
@@ -694,6 +832,7 @@ describe('ColumnSummarySpec', () => {
       expect(this.$container.find('.htDimmed').size()).toEqual(3);
     });
   });
+
   describe('maxRows options set', () => {
     it('should apply summary operation only on rows which are < maxRows', () => {
       const rows = 9;
@@ -731,6 +870,109 @@ describe('ColumnSummarySpec', () => {
     });
   });
 
+  describe('`roundFloat` option', () => {
+    it('should not round the resultif `roundFloat` is set to `false`', () => {
+      handsontable({
+        data: createNumericData(15, 15),
+        height: 200,
+        width: 200,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: false,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual(7.454545454545454);
+    });
+
+    it('should round the result to the provided number of decimal places', () => {
+      handsontable({
+        data: createNumericData(15, 15),
+        height: 200,
+        width: 200,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: 2,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7.45');
+
+      updateSettings({
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: 0,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7');
+    });
+
+    it('should round the `roundFloat` value to range <0, 100> if its value is an integer outside of that range', () => {
+      handsontable({
+        data: createNumericData(15, 15),
+        height: 200,
+        width: 200,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: -50,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7');
+
+      updateSettings({
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: 150,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7.45454545454545414173708195448853075504302978515625' +
+      '00000000000000000000000000000000000000000000000000');
+    });
+  });
+
   it('should warn user that provided destination points are beyond the table boundaries', () => {
     const warnSpy = spyOn(console, 'warn');
 
@@ -765,7 +1007,7 @@ describe('ColumnSummarySpec', () => {
 
     expect(warnFirstArgs.filter(arg => arg === warnMessage).length).toBe(1);
 
-    alter('insert_row', 0);
+    alter('insert_row_above', 0);
 
     warnFirstArgs = warnSpy.calls.allArgs().map(args => args[0]);
 
@@ -776,5 +1018,34 @@ describe('ColumnSummarySpec', () => {
       [null, null, null],
       [null, null, null],
     ]);
+  });
+
+  it('should not reset the cell meta information after `updateSettings` call', () => {
+    handsontable({
+      data: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+        [null, null, null],
+      ],
+      columnSummary: [{
+        destinationRow: 3,
+        destinationColumn: 1,
+        type: 'sum'
+      }]
+    });
+
+    expect(getCellMeta(3, 1).readOnly).toBe(true);
+    expect(getCellMeta(3, 1).className).toBe('columnSummaryResult');
+
+    updateSettings({});
+
+    expect(getCellMeta(3, 1).readOnly).toBe(true);
+    expect(getCellMeta(3, 1).className).toBe('columnSummaryResult');
+
+    updateSettings({ columns: [{}, {}, {}, {}] });
+
+    expect(getCellMeta(3, 1).readOnly).toBe(true);
+    expect(getCellMeta(3, 1).className).toBe('columnSummaryResult');
   });
 });

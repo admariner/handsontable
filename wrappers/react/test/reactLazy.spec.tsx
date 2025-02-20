@@ -1,22 +1,14 @@
 import React, { Suspense, lazy } from 'react';
-import {
-  mount,
-  ReactWrapper
-} from 'enzyme';
+import { act } from '@testing-library/react';
 import {
   HotTable
 } from '../src/hotTable';
 import {
   createSpreadsheetData,
   mockElementDimensions,
+  mountComponentWithRef,
   sleep,
 } from './_helpers';
-
-beforeEach(() => {
-  let container = document.createElement('DIV');
-  container.id = 'hotContainer';
-  document.body.appendChild(container);
-});
 
 describe('React.lazy', () => {
   it('should be possible to lazy-load components and utilize Suspend', async () => {
@@ -45,7 +37,7 @@ describe('React.lazy', () => {
       )
     }
 
-    const wrapper: ReactWrapper<{}, {}, any> = mount(
+    const hotInstance = mountComponentWithRef((
       <HotTable licenseKey="non-commercial-and-evaluation"
                 id="test-hot"
                 data={createSpreadsheetData(1, 1)}
@@ -59,25 +51,20 @@ describe('React.lazy', () => {
                   mockElementDimensions(this.rootElement, 300, 300);
                 }}>
         <SuspendedRenderer hot-renderer/>
-      </HotTable>, {attachTo: document.body.querySelector('#hotContainer')}
-    );
-
-    await sleep(100);
-
-    const hotTableInstance = wrapper.instance();
-    const hotInstance = hotTableInstance.hotInstance;
+      </HotTable>
+    )).hotInstance;
 
     expect(hotInstance.getCell(0, 0).innerHTML).toEqual('<div>loading-message</div>');
 
-    promiseResolve({
-      default: RendererComponent2,
-      __esModule: true
+    await act(async () => {
+      promiseResolve({
+        default: RendererComponent2,
+        __esModule: true
+      });
     });
 
     await sleep(40);
 
     expect(hotInstance.getCell(0, 0).innerHTML).toEqual('<div>lazy value: A1</div>');
-
-    wrapper.detach();
   });
 });

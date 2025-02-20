@@ -29,9 +29,8 @@ describe('settings', () => {
           fixedRowsBottom: 2
         });
 
-        expect(getBottomClone().find('thead tr').length).toEqual(1);
-        expect(getBottomClone().find('thead tr').height()).toEqual(0); // header is always invisible
-        expect(getBottomClone().find('tbody tr').length).toEqual(2);
+        expect(getBottomClone().find('thead tr').length).toBe(0);
+        expect(getBottomClone().find('tbody tr').length).toBe(2);
       });
     });
 
@@ -60,7 +59,7 @@ describe('settings', () => {
         expect(getBottomClone().find('tbody tr').length).toEqual(2);
       });
 
-      it('should create fixed rows when they are disabled eariler', () => {
+      it('should create fixed rows when they are disabled earlier', () => {
         handsontable({
           fixedRowsBottom: 0
         });
@@ -81,8 +80,8 @@ describe('settings', () => {
           fixedRowsBottom: 0
         });
 
-        expect(getBottomClone().find('tbody tr').length).toEqual(2);
-        expect(getLeftClone().height()).toBe(0);
+        expect(getBottomClone().find('tbody tr').length).toBe(0);
+        expect(getInlineStartClone().height()).toBe(0);
       });
 
       it('should not throw errors while scrolling vertically when fixed rows was set', async() => {
@@ -92,7 +91,7 @@ describe('settings', () => {
         window.onerror = function() {
           spy.test();
         };
-        const hot = handsontable({
+        handsontable({
           data: Handsontable.helper.createSpreadsheetData(50, 50),
           width: 200,
           height: 200,
@@ -105,7 +104,12 @@ describe('settings', () => {
 
         await sleep(100);
 
-        hot.scrollViewportTo(30, 30);
+        scrollViewportTo({
+          row: 30,
+          col: 30,
+          verticalSnap: 'top',
+          horizontalSnap: 'start',
+        });
 
         await sleep(100);
 
@@ -204,23 +208,59 @@ describe('settings', () => {
         fixedRowsBottom: 3,
       });
 
-      alter('insert_row', 0);
+      alter('insert_row_above', 0);
 
-      expect(getMaster().height()).toBe(50); // 25px corner + 25px added row
-      expect(getTopClone().height()).toBe(26); // 26px as rowHeaders is enabled
-      expect(getTopLeftClone().height()).toBe(26); // 26px as rowHeaders is enabled
-      expect(getLeftClone().height()).toBe(50);
-      expect(getBottomClone().height()).toBe(24);
-      expect(getBottomLeftClone().height()).toBe(24);
+      expect(getMaster().height()).forThemes(({ classic, main }) => {
+        classic.toBe(50); // 25px corner + 25px added row
+        main.toBe(59);
+      });
+      expect(getTopClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26); // 26px as rowHeaders is enabled
+        main.toBe(29);
+      });
+      expect(getTopInlineStartClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26); // 26px as rowHeaders is enabled
+        main.toBe(29);
+      });
+      expect(getInlineStartClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(50);
+        main.toBe(59);
+      });
+      expect(getBottomClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(24);
+        main.toBe(30);
+      });
+      expect(getBottomInlineStartClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(24);
+        main.toBe(30);
+      });
 
-      alter('insert_row', 0);
+      alter('insert_row_above', 0);
 
-      expect(getMaster().height()).toBe(73);
-      expect(getTopClone().height()).toBe(26);
-      expect(getTopLeftClone().height()).toBe(26);
-      expect(getLeftClone().height()).toBe(73);
-      expect(getBottomClone().height()).toBe(47);
-      expect(getBottomLeftClone().height()).toBe(47);
+      expect(getMaster().height()).forThemes(({ classic, main }) => {
+        classic.toBe(73);
+        main.toBe(88);
+      });
+      expect(getTopClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26);
+        main.toBe(29);
+      });
+      expect(getTopInlineStartClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26);
+        main.toBe(29);
+      });
+      expect(getInlineStartClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(73);
+        main.toBe(88);
+      });
+      expect(getBottomClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(47);
+        main.toBe(59);
+      });
+      expect(getBottomInlineStartClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(47);
+        main.toBe(59);
+      });
     });
 
     it('should not display double border when `window` is a scrollable container', () => {
@@ -231,20 +271,32 @@ describe('settings', () => {
         columns: [{}]
       });
 
-      expect(getTopClone().height()).toBe(26);
+      expect(getTopClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26);
+        main.toBe(29);
+      });
 
       updateSettings({ fixedRowsBottom: 0 });
 
-      expect(getTopClone().height()).toBe(26);
+      expect(getTopClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26);
+        main.toBe(29);
+      });
 
       updateSettings({ fixedRowsBottom: 1 });
 
-      expect(getTopClone().height()).toBe(26);
+      expect(getTopClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(26);
+        main.toBe(29);
+      });
 
       updateSettings({ data: [] });
 
       // The only header (when there is no cells - even when the `fixedRowsBottom` isn't defined) has such height.
-      expect(getTopClone().height()).toBe(27);
+      expect(getTopClone().height()).forThemes(({ classic, main }) => {
+        classic.toBe(27);
+        main.toBe(30);
+      });
     });
   });
 });

@@ -1,4 +1,59 @@
-import { normalize, pretty } from './htmlNormalize';
+/**
+ * Test context object.
+ *
+ * @type {object}
+ */
+const specContext = {};
+
+beforeEach(function() {
+  specContext.spec = this;
+});
+
+afterEach(() => {
+  specContext.spec = null;
+  window.scrollTo(0, 0);
+});
+
+beforeAll(() => {
+  // Make the test more predictable by hiding the test suite dots
+  $('.jasmine_html-reporter').hide();
+});
+afterAll(() => {
+  // After the test are finished show the test suite dots
+  $('.jasmine_html-reporter').show();
+});
+
+/* eslint-disable jsdoc/require-description-complete-sentence */
+/**
+ * The function allows you to run the test suites based on different parameters (object configuration, datasets etc).
+ *
+ * For example:
+ * ```
+ * describe('TextEditor', () => {
+ *   using('input value', [1, '1', true], (value) => {
+ *     it('should correctly display the value in the textarea element', {
+ *        // expect()
+ *     });
+ *   })
+ * })
+ * // The jasmine will generate following test cases:
+ * //   * "TextEditor using input value: `1` should correctly display the value in the textarea element";
+ * //   * "TextEditor using input value: `'1'` should correctly display the value in the textarea element"
+ * //   * "TextEditor using input value: `true` should correctly display the value in the textarea element"
+ * ```
+ *
+ * @param {string} name The parameter name to be used within the tests.
+ * @param {Array<*>} parameters An array of parameters.
+ * @param {Function} func Function to execute where the test suite
+ */
+export function using(name, parameters, func) {
+  parameters.forEach((param) => {
+    describe(`using ${name}: \`${JSON.stringify(param)}\``, function() {
+      func.call(this, param);
+    });
+  });
+}
+/* eslint-enable jsdoc/require-description-complete-sentence */
 
 /**
  * @param {number} [delay=100] The delay in ms after which the Promise is resolved.
@@ -15,13 +70,6 @@ export function sleep(delay = 100) {
     }
   });
 }
-
-/**
- * Test context object.
- *
- * @type {object}
- */
-const specContext = {};
 
 /**
  * Get the test case context.
@@ -57,7 +105,46 @@ export function walkontable(options, table) {
 
   currentSpec.wotInstance = new Walkontable.Core(options);
 
+  // Walkontable needs to have a theme initialized to properly render the table.
+  // (running `useTheme` without a theme name will use the classic theme)
+  currentSpec.wotInstance.stylesHandler.useTheme();
+
   return currentSpec.wotInstance;
+}
+
+/**
+ * @returns {Overlay} Returns the table's overlay instance.
+ */
+export function topOverlay() {
+  return wot().wtOverlays.topOverlay;
+}
+
+/**
+ * @returns {Overlay} Returns the table's overlay instance.
+ */
+export function bottomOverlay() {
+  return wot().wtOverlays.bottomOverlay;
+}
+
+/**
+ * @returns {Overlay} Returns the table's overlay instance.
+ */
+export function topInlineStartCornerOverlay() {
+  return wot().wtOverlays.topInlineStartCornerOverlay;
+}
+
+/**
+ * @returns {Overlay} Returns the table's overlay instance.
+ */
+export function inlineStartOverlay() {
+  return wot().wtOverlays.inlineStartOverlay;
+}
+
+/**
+ * @returns {Overlay} Returns the table's overlay instance.
+ */
+export function bottomInlineStartCornerOverlay() {
+  return wot().wtOverlays.bottomInlineStartCornerOverlay;
 }
 
 /**
@@ -125,73 +212,6 @@ export function wheelOnElement(elem, deltaX = 0, deltaY = 0) {
   elem.dispatchEvent(new WheelEvent('wheel', { deltaX, deltaY }));
 }
 
-beforeEach(function() {
-  specContext.spec = this;
-
-  const matchers = {
-    toBeInArray() {
-      return {
-        compare(actual, expected) {
-          return {
-            pass: Array.isArray(expected) && expected.indexOf(actual) > -1
-          };
-        }
-      };
-    },
-    toBeFunction() {
-      return {
-        compare(actual) {
-          return {
-            pass: typeof actual === 'function'
-          };
-        }
-      };
-    },
-    toMatchHTML() {
-      return {
-        compare(actual, expected) {
-          const actualHTML = pretty(normalize(actual));
-          const expectedHTML = pretty(normalize(expected));
-
-          const result = {
-            pass: actualHTML === expectedHTML,
-          };
-
-          result.message = `Expected ${actualHTML} NOT to be ${expectedHTML}`;
-
-          return result;
-        }
-      };
-    },
-    toBeAroundValue() {
-      return {
-        compare(actual, expected, diff = 1) {
-          const pass = actual >= expected - diff && actual <= expected + diff;
-          let message = `Expected ${actual} to be around ${expected}
- (between ${expected - diff} and ${expected + diff})`;
-
-          if (!pass) {
-            message = `Expected ${actual} NOT to be around ${expected}
- (between ${expected - diff} and ${expected + diff})`;
-          }
-
-          return {
-            pass,
-            message
-          };
-        }
-      };
-    }
-  };
-
-  jasmine.addMatchers(matchers);
-});
-
-afterEach(() => {
-  specContext.spec = null;
-  window.scrollTo(0, 0);
-});
-
 /**
  * Returns the table width.
  *
@@ -240,75 +260,133 @@ export function range(start, end) {
  * Creates the selection controller necessary for the Walkontable to make selections typical for Handsontable such as
  * current selection, area selection, selection for autofill and custom borders.
  *
- * @param {object} selections An object with custom selection instances.
- * @param {Selection} [selections.current] An optional instance of the current selection.
- * @param {Selection} [selections.area] An optional instance of the area selection.
- * @param {Selection} [selections.fill] An optional instance of the fill selection.
- * @param {Selection} [selections.custom] An optional instance of the custom selection.
- * @param {Selection} [selections.activeHeader] An optional instance of the active header selection.
- * @param {Selection} [selections.header] An optional instance of the header selection.
+ * @param {object} options An object with custom selection instances.
  * @returns {object} Selection controller.
  */
-export function createSelectionController({ current, area, fill, custom, activeHeader, header } = {}) {
-  const currentCtrl = current || new Walkontable.Selection({
+export function createSelectionController(options = {}) {
+  const focusCtrl = createSelection({
+    selectionType: 'focus',
     className: 'current',
     border: {
       width: 2,
       color: '#4b89ff',
     },
+    ...options,
   });
-  const areaCtrl = area || new Walkontable.Selection({
-    className: 'area',
-    border: {
-      width: 1,
-      color: '#4b89ff',
-    },
-  });
-  const fillCtrl = fill || new Walkontable.Selection({
+  const fillCtrl = createSelection({
+    selectionType: 'fill',
     className: 'fill',
     border: {
       width: 1,
       color: '#ff0000',
     },
   });
-  const activeHeaderCtrl = activeHeader || new Walkontable.Selection({
-    highlightHeaderClassName: 'active_highlight',
-  });
-  const headerCtrl = header || new Walkontable.Selection({
-    highlightHeaderClassName: 'highlight',
-  });
-  const customCtrl = custom || [];
+
+  const areaCtrl = [];
+  const headerCtrl = [];
+  const activeHeaderCtrl = [];
+  const rowHighlightCtrl = [];
+  const columnHighlightCtrl = [];
+  const customHighlightCtrl = [];
 
   return {
-    getCell() {
-      return currentCtrl;
-    },
-    getHeader() {
-      return headerCtrl;
-    },
-    getActiveHeader() {
-      return activeHeaderCtrl;
-    },
-    createOrGetArea() {
-      return areaCtrl;
-    },
-    getAreas() {
-      return [areaCtrl];
+    getFocus() {
+      return focusCtrl;
     },
     getFill() {
       return fillCtrl;
     },
+    createLayeredArea() {
+      return areaCtrl.at(-1) ?? { cellRange: null };
+    },
+    getArea(selectionOptions = {}) {
+      return addSelectionToCollection(areaCtrl, {
+        selectionType: 'area',
+        className: 'area',
+        createLayers: true,
+        border: {
+          width: 1,
+          color: '#4b89ff',
+        },
+        ...selectionOptions,
+      });
+    },
+    getHeader() {
+      return addSelectionToCollection(headerCtrl, {
+        selectionType: 'header',
+        className: 'ht__highlight'
+      });
+    },
+    getActiveHeader() {
+      return addSelectionToCollection(activeHeaderCtrl, {
+        selectionType: 'active-header',
+        className: 'ht__active_highlight'
+      });
+    },
+    getRowHighlight() {
+      return addSelectionToCollection(rowHighlightCtrl, {
+        selectionType: 'row',
+        className: 'row'
+      });
+    },
+    getColumnHighlight() {
+      return addSelectionToCollection(columnHighlightCtrl, {
+        selectionType: 'column',
+        className: 'column'
+      });
+    },
+    getCustomHighlight() {
+      return addSelectionToCollection(customHighlightCtrl, {
+        selectionType: 'custom',
+        className: 'custom'
+      });
+    },
     [Symbol.iterator]() {
       return [
-        currentCtrl,
+        focusCtrl,
         fillCtrl,
-        areaCtrl,
-        headerCtrl,
-        activeHeaderCtrl,
-        ...customCtrl,
+        ...areaCtrl,
+        ...headerCtrl,
+        ...activeHeaderCtrl,
+        ...rowHighlightCtrl,
+        ...columnHighlightCtrl,
+        ...customHighlightCtrl,
       ][Symbol.iterator]();
     },
   };
+}
+
+/**
+ * Internally creates, adds to the collection and returns the Selection instance.
+ *
+ * @param {Selection[]} collection The collection to update.
+ * @param {object} options Additional options passed to the Selection constructor.
+ * @returns {Selection}
+ */
+function addSelectionToCollection(collection, options) {
+  const selection = createSelection({ ...options });
+
+  collection.push(selection);
+
+  return selection;
+}
+
+/**
+ * Creates the individual selection for current selection, area selection, selection for autofill or custom borders.
+ *
+ * @param {object} options An object with custom selection options.
+ * @returns {Walkontable.Selection} The selection instance.
+ */
+export function createSelection(options) {
+  return new Walkontable.Selection({
+    createCellRange(highlight, from, to) {
+      return new Walkontable.CellRange(highlight, from, to);
+    },
+    createCellCoords(row, column) {
+      return new Walkontable.CellCoords(row, column);
+    },
+    ...options,
+  });
 }
 
 /**
@@ -321,15 +399,22 @@ export function getTableTopClone() {
 /**
  * @returns {jQuery}
  */
-export function getTableLeftClone() {
-  return $('.ht_clone_left');
+export function getTableInlineStartClone() {
+  return $('.ht_clone_inline_start');
 }
 
 /**
  * @returns {jQuery}
  */
-export function getTableCornerClone() {
-  return $('.ht_clone_top_left_corner');
+export function getTableTopInlineStartCornerClone() {
+  return $('.ht_clone_top_inline_start_corner');
+}
+
+/**
+ * @returns {jQuery}
+ */
+export function getTableMaster() {
+  return $('.ht_master');
 }
 
 /**
@@ -425,7 +510,7 @@ let cachedScrollbarWidth;
  * @returns {number}
  */
 export function getScrollbarWidth() {
-  if (cachedScrollbarWidth === void 0) {
+  if (cachedScrollbarWidth === undefined) {
     cachedScrollbarWidth = walkontableCalculateScrollbarWidth();
   }
 
@@ -448,4 +533,30 @@ export function expectWtTable(wt, callb, name) {
   }
 
   return expect(callb(wt.wtOverlays[`${name}Overlay`].clone.wtTable)).withContext(`${name}: ${callbAsString}`);
+}
+
+/**
+ * Moves the table's viewport to the specified y scroll position.
+ *
+ * @param {number} y The scroll position.
+ */
+export function setScrollTop(y) {
+  if (wot().wtOverlays.scrollableElement === window) {
+    window.scrollTo(window.scrollX, y);
+  } else {
+    getTableMaster().find('.wtHolder')[0].scrollTop = y;
+  }
+}
+
+/**
+ * Moves the table's viewport to the specified x scroll position.
+ *
+ * @param {number} x The scroll position.
+ */
+export function setScrollLeft(x) {
+  if (wot().wtOverlays.scrollableElement === window) {
+    window.scrollTo(x, window.scrollY);
+  } else {
+    getTableMaster().find('.wtHolder')[0].scrollLeft = x;
+  }
 }

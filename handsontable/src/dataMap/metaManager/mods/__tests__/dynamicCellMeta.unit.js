@@ -1,7 +1,10 @@
 import Handsontable from 'handsontable';
 import { DynamicCellMetaMod } from '../dynamicCellMeta';
 import MetaManager from '../../';
-import Hooks from '../../../../pluginHooks';
+import { Hooks } from '../../../../core/hooks';
+import { registerAllCellTypes } from '../../../../cellTypes';
+
+registerAllCellTypes();
 
 jest.mock('handsontable');
 

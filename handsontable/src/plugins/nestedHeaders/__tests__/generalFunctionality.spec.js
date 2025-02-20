@@ -3,6 +3,13 @@ describe('NestedHeaders', () => {
 
   beforeEach(function() {
     this.$container = $(`<div id="${id}"></div>`).appendTo('body');
+
+    // Matchers configuration.
+    this.matchersConfig = {
+      toMatchHTML: {
+        keepAttributes: ['class', 'colspan']
+      }
+    };
   });
 
   afterEach(function() {
@@ -23,7 +30,7 @@ describe('NestedHeaders', () => {
         ]
       });
 
-      expect(hot.view.wt.wtTable.THEAD.querySelectorAll('tr').length).toEqual(2);
+      expect(hot.view._wt.wtTable.THEAD.querySelectorAll('tr').length).toEqual(2);
     });
 
     it('should adjust headers widths', () => {
@@ -36,7 +43,7 @@ describe('NestedHeaders', () => {
         ]
       });
 
-      const headers = hot.view.wt.wtTable.THEAD.querySelectorAll('tr:first-of-type th');
+      const headers = hot.view._wt.wtTable.THEAD.querySelectorAll('tr:first-of-type th');
 
       expect(hot.getColWidth(1)).toBeGreaterThan(50);
       expect(headers[1].offsetWidth).toBeGreaterThan(100);
@@ -103,7 +110,7 @@ describe('NestedHeaders', () => {
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr class="ht__row_odd">
             <td class="">A1</td>
             <td class="">B1</td>
             <td class="">C1</td>
@@ -152,7 +159,7 @@ describe('NestedHeaders', () => {
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr class="ht__row_odd">
             <td class="">A1</td>
             <td class="">B1</td>
             <td class="">C1</td>
@@ -184,7 +191,7 @@ describe('NestedHeaders', () => {
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr class="ht__row_odd">
             <td class="">A1</td>
             <td class="">B1</td>
           </tr>
@@ -229,7 +236,7 @@ describe('NestedHeaders', () => {
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr class="ht__row_odd">
             <td class="">A1</td>
             <td class="">B1</td>
             <td class="">C1</td>
@@ -241,11 +248,142 @@ describe('NestedHeaders', () => {
         `);
     });
 
-    it('should allow creating a more complex nested setup when fixedColumnsLeft option is enabled', () => {
+    it('should render headers till the virtual dataset limit ("columns" array defines more columns than dataset)', () => {
+      handsontable({
+        data: Handsontable.helper.createSpreadsheetData(3, 3),
+        // "columns" extends virtually the dataset to 8th columns.
+        columns: [{}, {}, {}, {}, {}, {}, {}, {}],
+        colHeaders: true,
+        nestedHeaders: [
+          ['A1', { label: 'B1', colspan: 3 }, 'E1', 'F1', 'G1'],
+          ['A2', 'B2', 'C2', 'D2', 'E2', 'F2', 'G2']
+        ],
+      });
+
+      expect(extractDOMStructure(getTopClone(), getMaster())).toMatchHTML(`
+        <thead>
+          <tr>
+            <th class="">A1</th>
+            <th class="" colspan="3">B1</th>
+            <th class="hiddenHeader"></th>
+            <th class="hiddenHeader"></th>
+            <th class="">E1</th>
+            <th class="">F1</th>
+            <th class="">G1</th>
+            <th class=""></th>
+          </tr>
+          <tr>
+            <th class="">A2</th>
+            <th class="">B2</th>
+            <th class="">C2</th>
+            <th class="">D2</th>
+            <th class="">E2</th>
+            <th class="">F2</th>
+            <th class="">G2</th>
+            <th class=""></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ht__row_odd">
+            <td class="">A1</td>
+            <td class="">B1</td>
+            <td class="">C1</td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+          </tr>
+        </tbody>
+        `);
+    });
+
+    it('should render headers till the virtual dataset limit (only "columns" array is defined)', () => {
+      handsontable({
+        columns: [{}, {}, {}, {}, {}, {}, {}, {}],
+        colHeaders: true,
+        nestedHeaders: [
+          ['A1', { label: 'B1', colspan: 3 }, 'E1', 'F1', 'G1'],
+          ['A2', 'B2', 'C2', 'D2', 'E2', 'F2', 'G2']
+        ],
+      });
+
+      expect(extractDOMStructure(getTopClone(), getMaster())).toMatchHTML(`
+        <thead>
+          <tr>
+            <th class="">A1</th>
+            <th class="" colspan="3">B1</th>
+            <th class="hiddenHeader"></th>
+            <th class="hiddenHeader"></th>
+            <th class="">E1</th>
+            <th class="">F1</th>
+            <th class="">G1</th>
+            <th class=""></th>
+          </tr>
+          <tr>
+            <th class="">A2</th>
+            <th class="">B2</th>
+            <th class="">C2</th>
+            <th class="">D2</th>
+            <th class="">E2</th>
+            <th class="">F2</th>
+            <th class="">G2</th>
+            <th class=""></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ht__row_odd">
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+          </tr>
+        </tbody>
+        `);
+    });
+
+    it('should render headers till the virtual dataset limit (limit defined by the "startCols" option)', () => {
+      handsontable({
+        startCols: 3,
+        colHeaders: true,
+        nestedHeaders: [
+          ['A1', { label: 'B1', colspan: 3 }, 'E1', 'F1', 'G1'],
+          ['A2', 'B2', 'C2', 'D2', 'E2', 'F2', 'G2']
+        ],
+      });
+
+      expect(extractDOMStructure(getTopClone(), getMaster())).toMatchHTML(`
+        <thead>
+          <tr>
+            <th class="">A1</th>
+            <th class="" colspan="2">B1</th>
+            <th class="hiddenHeader"></th>
+          </tr>
+          <tr>
+            <th class="">A2</th>
+            <th class="">B2</th>
+            <th class="">C2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="ht__row_odd">
+            <td class=""></td>
+            <td class=""></td>
+            <td class=""></td>
+          </tr>
+        </tbody>
+        `);
+    });
+
+    it('should allow creating a more complex nested setup when fixedColumnsStart option is enabled', () => {
       handsontable({
         data: Handsontable.helper.createSpreadsheetData(10, 10),
         colHeaders: true,
-        fixedColumnsLeft: 2,
+        fixedColumnsStart: 2,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 4 }, 'F1', 'G1'],
           ['A2', { label: 'B2', colspan: 2 }, { label: 'D2', colspan: 2 }, 'F2', 'G2']
@@ -265,18 +403,18 @@ describe('NestedHeaders', () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr class="ht__row_odd">
               <td class="">A1</td>
               <td class="">B1</td>
             </tr>
           </tbody>
           `;
 
-        expect(extractDOMStructure(getTopLeftClone(), getLeftClone())).toMatchHTML(htmlPattern);
-        expect(extractDOMStructure(getLeftClone(), getLeftClone())).toMatchHTML(htmlPattern);
+        expect(extractDOMStructure(getTopInlineStartClone(), getInlineStartClone())).toMatchHTML(htmlPattern);
+        expect(extractDOMStructure(getInlineStartClone(), getInlineStartClone())).toMatchHTML(htmlPattern);
       }
 
-      updateSettings({ fixedColumnsLeft: 3 });
+      updateSettings({ fixedColumnsStart: 3 });
 
       {
         const htmlPattern = `
@@ -293,7 +431,7 @@ describe('NestedHeaders', () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr class="ht__row_odd">
               <td class="">A1</td>
               <td class="">B1</td>
               <td class="">C1</td>
@@ -301,11 +439,11 @@ describe('NestedHeaders', () => {
           </tbody>
           `;
 
-        expect(extractDOMStructure(getTopLeftClone(), getLeftClone())).toMatchHTML(htmlPattern);
-        expect(extractDOMStructure(getLeftClone(), getLeftClone())).toMatchHTML(htmlPattern);
+        expect(extractDOMStructure(getTopInlineStartClone(), getInlineStartClone())).toMatchHTML(htmlPattern);
+        expect(extractDOMStructure(getInlineStartClone(), getInlineStartClone())).toMatchHTML(htmlPattern);
       }
 
-      updateSettings({ fixedColumnsLeft: 6 });
+      updateSettings({ fixedColumnsStart: 6 });
 
       {
         const htmlPattern = `
@@ -328,7 +466,7 @@ describe('NestedHeaders', () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr class="ht__row_odd">
               <td class="">A1</td>
               <td class="">B1</td>
               <td class="">C1</td>
@@ -339,8 +477,8 @@ describe('NestedHeaders', () => {
           </tbody>
           `;
 
-        expect(extractDOMStructure(getTopLeftClone(), getLeftClone())).toMatchHTML(htmlPattern);
-        expect(extractDOMStructure(getLeftClone(), getLeftClone())).toMatchHTML(htmlPattern);
+        expect(extractDOMStructure(getTopInlineStartClone(), getInlineStartClone())).toMatchHTML(htmlPattern);
+        expect(extractDOMStructure(getInlineStartClone(), getInlineStartClone())).toMatchHTML(htmlPattern);
       }
     });
 
@@ -355,7 +493,7 @@ describe('NestedHeaders', () => {
       });
 
       const allTHs = function allTHs(row) {
-        const headerRows = hot.view.wt.wtTable.THEAD.querySelectorAll('tr');
+        const headerRows = hot.view._wt.wtTable.THEAD.querySelectorAll('tr');
 
         return headerRows[row].querySelectorAll('th');
       };
@@ -386,14 +524,13 @@ describe('NestedHeaders', () => {
       expect(levels[3][3]).toEqual(getCell(-1, 3));
     });
 
-    it('should render the setup properly after the table being scrolled', () => {
-      const hot = handsontable({
+    it('should render the setup properly after the table being scrolled', async() => {
+      handsontable({
         data: Handsontable.helper.createSpreadsheetData(10, 90),
         colHeaders: true,
         nestedHeaders: generateComplexSetup(4, 70, true),
         width: 400,
         height: 300,
-        viewportColumnRenderingOffset: 15
       });
 
       // not scrolled
@@ -409,20 +546,6 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
-            <th class="">J1</th>
-            <th class="" colspan="8">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">S1</th>
-            <th class="" colspan="8">T1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
           </tr>
           <tr>
             <th class="">A2</th>
@@ -431,20 +554,6 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
             <th class="" colspan="4">F2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J2</th>
-            <th class="" colspan="4">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">O2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">S2</th>
-            <th class="" colspan="4">T2</th>
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
@@ -459,20 +568,6 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="" colspan="2">H3</th>
             <th class="hiddenHeader"></th>
-            <th class="">J3</th>
-            <th class="" colspan="2">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">M3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">O3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">Q3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">S3</th>
-            <th class="" colspan="2">T3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">V3</th>
-            <th class="hiddenHeader"></th>
           </tr>
           <tr>
             <th class="">A4</th>
@@ -484,24 +579,10 @@ describe('NestedHeaders', () => {
             <th class="">G4</th>
             <th class="">H4</th>
             <th class="">I4</th>
-            <th class="">J4</th>
-            <th class="">K4</th>
-            <th class="">L4</th>
-            <th class="">M4</th>
-            <th class="">N4</th>
-            <th class="">O4</th>
-            <th class="">P4</th>
-            <th class="">Q4</th>
-            <th class="">R4</th>
-            <th class="">S4</th>
-            <th class="">T4</th>
-            <th class="">U4</th>
-            <th class="">V4</th>
-            <th class="">W4</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr class="ht__row_odd">
             <td class="">A1</td>
             <td class="">B1</td>
             <td class="">C1</td>
@@ -511,48 +592,21 @@ describe('NestedHeaders', () => {
             <td class="">G1</td>
             <td class="">H1</td>
             <td class="">I1</td>
-            <td class="">J1</td>
-            <td class="">K1</td>
-            <td class="">L1</td>
-            <td class="">M1</td>
-            <td class="">N1</td>
-            <td class="">O1</td>
-            <td class="">P1</td>
-            <td class="">Q1</td>
-            <td class="">R1</td>
-            <td class="">S1</td>
-            <td class="">T1</td>
-            <td class="">U1</td>
-            <td class="">V1</td>
-            <td class="">W1</td>
           </tr>
         </tbody>
         `);
 
-      hot.scrollViewportTo(void 0, 40);
-      hot.render();
+      scrollViewportTo({
+        col: 40,
+        verticalSnap: 'top',
+        horizontalSnap: 'start',
+      });
+      render();
 
       // scrolled
       expect(extractDOMStructure(getTopClone(), getMaster())).toMatchHTML(`
         <thead>
           <tr>
-            <th class="" colspan="8">T1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">AB1</th>
-            <th class="" colspan="8">AC1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
             <th class="">AK1</th>
             <th class="" colspan="8">AL1</th>
             <th class="hiddenHeader"></th>
@@ -569,40 +623,8 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">BC1</th>
-            <th class="" colspan="8">BD1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">BL1</th>
-            <th class="" colspan="8">BM1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
           </tr>
           <tr>
-            <th class="" colspan="4">T2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">X2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">AB2</th>
-            <th class="" colspan="4">AC2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">AG2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
             <th class="">AK2</th>
             <th class="" colspan="4">AL2</th>
             <th class="hiddenHeader"></th>
@@ -619,40 +641,8 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="" colspan="4">AY2</th>
             <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">BC2</th>
-            <th class="" colspan="4">BD2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">BH2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">BL2</th>
-            <th class="" colspan="4">BM2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
           </tr>
           <tr>
-            <th class="" colspan="2">T3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">V3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">X3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">Z3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">AB3</th>
-            <th class="" colspan="2">AC3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">AE3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">AG3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">AI3</th>
-            <th class="hiddenHeader"></th>
             <th class="">AK3</th>
             <th class="" colspan="2">AL3</th>
             <th class="hiddenHeader"></th>
@@ -669,40 +659,8 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="" colspan="2">AY3</th>
             <th class="hiddenHeader"></th>
-            <th class="" colspan="2">BA3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">BC3</th>
-            <th class="" colspan="2">BD3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">BF3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">BH3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">BJ3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">BL3</th>
-            <th class="" colspan="2">BM3</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">BO3</th>
           </tr>
           <tr>
-            <th class="">T4</th>
-            <th class="">U4</th>
-            <th class="">V4</th>
-            <th class="">W4</th>
-            <th class="">X4</th>
-            <th class="">Y4</th>
-            <th class="">Z4</th>
-            <th class="">AA4</th>
-            <th class="">AB4</th>
-            <th class="">AC4</th>
-            <th class="">AD4</th>
-            <th class="">AE4</th>
-            <th class="">AF4</th>
-            <th class="">AG4</th>
-            <th class="">AH4</th>
-            <th class="">AI4</th>
-            <th class="">AJ4</th>
             <th class="">AK4</th>
             <th class="">AL4</th>
             <th class="">AM4</th>
@@ -719,42 +677,10 @@ describe('NestedHeaders', () => {
             <th class="">AX4</th>
             <th class="">AY4</th>
             <th class="">AZ4</th>
-            <th class="">BA4</th>
-            <th class="">BB4</th>
-            <th class="">BC4</th>
-            <th class="">BD4</th>
-            <th class="">BE4</th>
-            <th class="">BF4</th>
-            <th class="">BG4</th>
-            <th class="">BH4</th>
-            <th class="">BI4</th>
-            <th class="">BJ4</th>
-            <th class="">BK4</th>
-            <th class="">BL4</th>
-            <th class="">BM4</th>
-            <th class="">BN4</th>
-            <th class="">BO4</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td class="">T1</td>
-            <td class="">U1</td>
-            <td class="">V1</td>
-            <td class="">W1</td>
-            <td class="">X1</td>
-            <td class="">Y1</td>
-            <td class="">Z1</td>
-            <td class="">AA1</td>
-            <td class="">AB1</td>
-            <td class="">AC1</td>
-            <td class="">AD1</td>
-            <td class="">AE1</td>
-            <td class="">AF1</td>
-            <td class="">AG1</td>
-            <td class="">AH1</td>
-            <td class="">AI1</td>
-            <td class="">AJ1</td>
+          <tr class="ht__row_odd">
             <td class="">AK1</td>
             <td class="">AL1</td>
             <td class="">AM1</td>
@@ -771,21 +697,6 @@ describe('NestedHeaders', () => {
             <td class="">AX1</td>
             <td class="">AY1</td>
             <td class="">AZ1</td>
-            <td class="">BA1</td>
-            <td class="">BB1</td>
-            <td class="">BC1</td>
-            <td class="">BD1</td>
-            <td class="">BE1</td>
-            <td class="">BF1</td>
-            <td class="">BG1</td>
-            <td class="">BH1</td>
-            <td class="">BI1</td>
-            <td class="">BJ1</td>
-            <td class="">BK1</td>
-            <td class="">BL1</td>
-            <td class="">BM1</td>
-            <td class="">BN1</td>
-            <td class="">BO1</td>
           </tr>
         </tbody>
         `);
@@ -814,6 +725,58 @@ describe('NestedHeaders', () => {
       expect(afterOnCellMouseDown.calls.argsFor(0)[0]).toBeInstanceOf(MouseEvent);
       expect(afterOnCellMouseDown.calls.argsFor(0)[1]).toEqual(jasmine.objectContaining({ row: -4, col: -1 }));
       expect(afterOnCellMouseDown.calls.argsFor(0)[2]).toBe(corner);
+    });
+
+    describe('`afterGetColHeader` hook', () => {
+      it('should be fired for all displayed columns on init', () => {
+        const afterGetColHeader = jasmine.createSpy('afterGetColHeader');
+
+        handsontable({
+          startRows: 2,
+          startCols: 4,
+          colHeaders: true,
+          autoRowSize: false,
+          autoColumnSize: false,
+          nestedHeaders: [
+            ['a', { label: 'b', colspan: 3 }],
+            ['a', { label: 'b', colspan: 2 }, 'c'],
+            ['a', 'Long column header', 'c', 'd']
+          ],
+          afterGetColHeader,
+        });
+
+        expect(afterGetColHeader.calls.count()).toBe(24);
+
+        const calls = afterGetColHeader.calls;
+
+        // initial render
+        expect(calls.argsFor(0)).toEqual([0, getCell(-3, 0), 0]);
+        expect(calls.argsFor(1)).toEqual([1, getCell(-3, 1), 0]);
+        expect(calls.argsFor(2)).toEqual([2, getCell(-3, 2), 0]);
+        expect(calls.argsFor(3)).toEqual([3, getCell(-3, 3), 0]);
+        expect(calls.argsFor(4)).toEqual([0, getCell(-2, 0), 1]);
+        expect(calls.argsFor(5)).toEqual([1, getCell(-2, 1), 1]);
+        expect(calls.argsFor(6)).toEqual([2, getCell(-2, 2), 1]);
+        expect(calls.argsFor(7)).toEqual([3, getCell(-2, 3), 1]);
+        expect(calls.argsFor(8)).toEqual([0, getCell(-1, 0), 2]);
+        expect(calls.argsFor(9)).toEqual([1, getCell(-1, 1), 2]);
+        expect(calls.argsFor(10)).toEqual([2, getCell(-1, 2), 2]);
+        expect(calls.argsFor(11)).toEqual([3, getCell(-1, 3), 2]);
+
+        // the second render triggered by some other module
+        expect(calls.argsFor(12)).toEqual([0, getCell(-3, 0), 0]);
+        expect(calls.argsFor(13)).toEqual([1, getCell(-3, 1), 0]);
+        expect(calls.argsFor(14)).toEqual([2, getCell(-3, 2), 0]);
+        expect(calls.argsFor(15)).toEqual([3, getCell(-3, 3), 0]);
+        expect(calls.argsFor(16)).toEqual([0, getCell(-2, 0), 1]);
+        expect(calls.argsFor(17)).toEqual([1, getCell(-2, 1), 1]);
+        expect(calls.argsFor(18)).toEqual([2, getCell(-2, 2), 1]);
+        expect(calls.argsFor(19)).toEqual([3, getCell(-2, 3), 1]);
+        expect(calls.argsFor(20)).toEqual([0, getCell(-1, 0), 2]);
+        expect(calls.argsFor(21)).toEqual([1, getCell(-1, 1), 2]);
+        expect(calls.argsFor(22)).toEqual([2, getCell(-1, 2), 2]);
+        expect(calls.argsFor(23)).toEqual([3, getCell(-1, 3), 2]);
+      });
     });
   });
 });

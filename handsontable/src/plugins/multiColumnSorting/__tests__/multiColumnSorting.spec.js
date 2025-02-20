@@ -6,16 +6,14 @@ describe('MultiColumnSorting', () => {
 
     this.sortByClickOnColumnHeader = (columnIndex) => {
       const hot = this.$container.data('handsontable');
-      const $columnHeader = $(hot.view.wt.wtTable.getColumnHeader(columnIndex));
+      const $columnHeader = $(hot.view._wt.wtTable.getColumnHeader(columnIndex));
       const $spanInsideHeader = $columnHeader.find('.columnSorting');
 
       if ($spanInsideHeader.length === 0) {
         throw Error('Please check the test scenario. The header doesn\'t exist.');
       }
 
-      $spanInsideHeader.simulate('mousedown');
-      $spanInsideHeader.simulate('mouseup');
-      $spanInsideHeader.simulate('click');
+      simulateClick($spanInsideHeader);
     };
   });
 
@@ -71,6 +69,22 @@ describe('MultiColumnSorting', () => {
     expect(htCore.find('tbody tr:eq(0) td:eq(1)').text()).toEqual('3');
     expect(htCore.find('tbody tr:eq(0) td:eq(2)').text()).toEqual('0');
     expect(htCore.find('tbody tr:eq(0) td:eq(3)').text()).toEqual('5');
+  });
+
+  it('should disable the `columnSorting` plugin and throw a warning when both `columnSorting` and `multiColumnSorting` are enabled', () => {
+    const warnSpy = spyOn(console, 'warn');
+
+    handsontable({
+      data: arrayOfObjects(),
+      colHeaders: true,
+      columnSorting: true,
+      multiColumnSorting: true
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith('Plugins `columnSorting` and `multiColumnSorting` should not be enabled ' +
+      'simultaneously. Only `multiColumnSorting` will work. The `columnSorting` plugin will be disabled.');
+
+    expect(getPlugin('columnSorting').enabled).toBe(false);
   });
 
   it('should not change row indexes in the sorted table after using `disablePlugin` until next render is called', () => {
@@ -190,7 +204,7 @@ describe('MultiColumnSorting', () => {
     expect(getPlugin('multiColumnSorting').getSortConfig(1)).toEqual({ column: 1, sortOrder: 'asc' });
   });
 
-  it('should display indicator properly after changing sorted column sequence', () => {
+  it.forTheme('classic')('should display indicator properly after changing sorted column sequence', () => {
     const hot = handsontable({
       data: [
         [1, 9, 3, 4, 5, 6, 7, 8, 9],
@@ -213,6 +227,33 @@ describe('MultiColumnSorting', () => {
     const sortedColumn = spec().$container.find('th span.columnSorting')[1];
 
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).toMatch(/url/);
+  });
+
+  it.forTheme('main')('should display indicator properly after changing sorted column sequence', () => {
+    const hot = handsontable({
+      data: [
+        [1, 9, 3, 4, 5, 6, 7, 8, 9],
+        [9, 8, 7, 6, 5, 4, 3, 2, 1],
+        [8, 7, 6, 5, 4, 3, 3, 1, 9],
+        [0, 3, 0, 5, 6, 7, 8, 9, 1]
+      ],
+      colHeaders: true,
+      multiColumnSorting: {
+        indicator: true
+      }
+    });
+
+    getPlugin('multiColumnSorting').sort({ column: 0, sortOrder: 'asc' });
+
+    // changing column sequence: 0 <-> 1
+    hot.columnIndexMapper.moveIndexes([1], 0);
+    hot.render();
+
+    const sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('right')).toEqual('2px');
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('top')).toEqual('10px');
   });
 
   it('should clear indicator after disabling plugin', () => {
@@ -276,7 +317,7 @@ describe('MultiColumnSorting', () => {
         {},
         {
           type: 'date',
-          dateFormat: 'mm/dd/yy'
+          dateFormat: 'MM/DD/YY'
         },
         {
           type: 'numeric'
@@ -314,9 +355,9 @@ describe('MultiColumnSorting', () => {
       multiColumnSorting: true
     });
 
-    $('.ht_clone_top_left_corner .htCore span').simulate('mousedown');
-    $('.ht_clone_top_left_corner .htCore span').simulate('click');
-    $('.ht_clone_top_left_corner .htCore span').simulate('mouseup');
+    $('.ht_clone_top_inline_start_corner .htCore span').simulate('mousedown');
+    $('.ht_clone_top_inline_start_corner .htCore span').simulate('click');
+    $('.ht_clone_top_inline_start_corner .htCore span').simulate('mouseup');
 
     expect(onErrorSpy).not.toHaveBeenCalled();
   });
@@ -973,7 +1014,7 @@ describe('MultiColumnSorting', () => {
           {},
           {
             type: 'date',
-            dateFormat: 'mm/dd/yy'
+            dateFormat: 'MM/DD/YYYY'
           },
           {
             type: 'numeric'
@@ -985,19 +1026,19 @@ describe('MultiColumnSorting', () => {
 
       getPlugin('multiColumnSorting').sort({ column: 2, sortOrder: 'asc' }); // ASC
 
-      expect(getDataAtRow(0)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
-      expect(getDataAtRow(1)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', '07/24/2011', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Audi', 'A4 Avant', '11/19/2011', 33900]);
-      expect(getDataAtRow(4)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
+      expect(getDataAtRow(0)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
+      expect(getDataAtRow(1)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
+      expect(getDataAtRow(2)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
+      expect(getDataAtRow(3)).toEqual(['BMW', '320i Coupe', '07/24/2011', 30500]);
+      expect(getDataAtRow(4)).toEqual(['Audi', 'A4 Avant', '11/19/2011', 33900]);
 
       getPlugin('multiColumnSorting').sort({ column: 2, sortOrder: 'desc' }); // DESC
 
-      expect(getDataAtRow(0)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
-      expect(getDataAtRow(1)).toEqual(['Audi', 'A4 Avant', '11/19/2011', 33900]);
-      expect(getDataAtRow(2)).toEqual(['BMW', '320i Coupe', '07/24/2011', 30500]);
-      expect(getDataAtRow(3)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
-      expect(getDataAtRow(4)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
+      expect(getDataAtRow(0)).toEqual(['Audi', 'A4 Avant', '11/19/2011', 33900]);
+      expect(getDataAtRow(1)).toEqual(['BMW', '320i Coupe', '07/24/2011', 30500]);
+      expect(getDataAtRow(2)).toEqual(['Citroen', 'C4 Coupe', '12/01/2008', 8330]);
+      expect(getDataAtRow(3)).toEqual(['Mercedes', 'A 160', '01/14/2006', 6999.9999]);
+      expect(getDataAtRow(4)).toEqual(['Opel', 'Astra', '02/02/2004', 7000]);
     });
   });
 
@@ -1452,7 +1493,7 @@ describe('MultiColumnSorting', () => {
         {},
         {
           type: 'date',
-          dateFormat: 'mm/dd/yy'
+          dateFormat: 'MM/DD/YY'
         },
         {
           type: 'numeric'
@@ -1699,7 +1740,7 @@ describe('MultiColumnSorting', () => {
     expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('0');
 
     updateSettings({
-      multiColumnSorting: void 0
+      multiColumnSorting: undefined
     });
 
     expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('1');
@@ -1873,7 +1914,7 @@ describe('MultiColumnSorting', () => {
 
     expect(countRows()).toEqual(4);
 
-    alter('insert_row');
+    alter('insert_row_above');
 
     expect(countRows()).toEqual(5);
   });
@@ -1898,7 +1939,7 @@ describe('MultiColumnSorting', () => {
     spec().$container2.handsontable();
 
     selectCell(0, 1);
-    keyDown('enter');
+    keyDownUp('enter');
     expect($('.handsontableInput').val()).toEqual('A');
 
     spec().$container2.handsontable('destroy');
@@ -2103,7 +2144,8 @@ describe('MultiColumnSorting', () => {
 
   });
 
-  it('should add a sorting indicator to the column header after it\'s been sorted, if `indicator` property is set to `true` (by default)', () => {
+  it.forTheme('classic')('should add a sorting indicator to the column header after it\'s been ' +
+    'sorted, if `indicator` property is set to `true` (by default)', () => {
     handsontable({
       data: [
         [1, 'Ted', 'Right'],
@@ -2160,7 +2202,66 @@ describe('MultiColumnSorting', () => {
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).not.toMatch(/url/);
   });
 
-  it('should change sorting indicator state on every plugin API method (calling for different columns)', () => {
+  it.forTheme('main')('should add a sorting indicator to the column header after it\'s been ' +
+    'sorted, if `indicator` property is set to `true` (by default)', () => {
+    handsontable({
+      data: [
+        [1, 'Ted', 'Right'],
+        [2, '', 'Honest'],
+        [3, '', 'Well'],
+        [4, 'Sid', 'Strong'],
+        [5, 'Jane', 'Neat'],
+      ],
+      colHeaders: true,
+      columns(column) {
+        if (column === 2) {
+          return {
+            multiColumnSorting: {
+              indicator: false,
+              headerAction: false,
+            }
+          };
+        }
+
+        return {};
+      },
+      multiColumnSorting: true,
+    });
+
+    spec().sortByClickOnColumnHeader(2);
+
+    let sortedColumn = spec().$container.find('th span.columnSorting')[2];
+
+    // not sorted
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(2);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    // not sorted
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(1);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    // ascending
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(1);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    // descending
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    spec().sortByClickOnColumnHeader(1);
+
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    // not sorted
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+  });
+
+  it.forTheme('classic')('should change sorting indicator state on every plugin API method ' +
+    '(calling for different columns)', () => {
     handsontable({
       data: [
         [1, 'Ted', 'Right'],
@@ -2213,7 +2314,61 @@ describe('MultiColumnSorting', () => {
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).toMatch(/url/);
   });
 
-  it('should change sorting indicator state when initial column sorting was provided', () => {
+  it.forTheme('main')('should change sorting indicator state on every plugin API method ' +
+    '(calling for different columns)', () => {
+    handsontable({
+      data: [
+        [1, 'Ted', 'Right'],
+        [2, '', 'Honest'],
+        [3, '', 'Well'],
+        [4, 'Sid', 'Strong'],
+        [5, 'Jane', 'Neat'],
+      ],
+      colHeaders: true,
+      multiColumnSorting: {
+        indicator: true
+      },
+    });
+
+    getPlugin('multiColumnSorting').sort({ column: 1, sortOrder: 'asc' });
+
+    // ascending
+    let sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 2, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 1, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 2, sortOrder: 'desc' });
+
+    // descending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 2, sortOrder: 'desc' });
+
+    // descending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 2, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[2];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+  });
+
+  it.forTheme('classic')('should change sorting indicator state when initial column sorting was provided', () => {
     handsontable({
       data: [
         [1, 'Ted', 'Right'],
@@ -2262,6 +2417,55 @@ describe('MultiColumnSorting', () => {
     expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('background-image')).not.toMatch(/url/);
   });
 
+  it.forTheme('main')('should change sorting indicator state when initial column sorting was provided', () => {
+    handsontable({
+      data: [
+        [1, 'Ted', 'Right'],
+        [2, '', 'Honest'],
+        [3, '', 'Well'],
+        [4, 'Sid', 'Strong'],
+        [5, 'Jane', 'Neat'],
+      ],
+      colHeaders: true,
+      multiColumnSorting: {
+        indicator: true,
+        initialConfig: {
+          column: 1,
+          sortOrder: 'desc'
+        }
+      },
+    });
+
+    // descending
+    let sortedColumn = spec().$container.find('th span.columnSorting')[1];
+
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort();
+
+    // default
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 1, sortOrder: 'asc' });
+
+    // ascending
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort({ column: 1, sortOrder: 'desc' });
+
+    // descending
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    getPlugin('multiColumnSorting').sort();
+
+    // default
+    sortedColumn = spec().$container.find('th span.columnSorting')[1];
+    expect(window.getComputedStyle(sortedColumn, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+  });
+
   it('should properly sort the table, when it\'s scrolled to the far right', () => {
     const data = [
       ['Jasmine Ferguson', 'Britney Carey', 'Kelly Decker', 'Lacey Mcleod', 'Leona Shaffer', 'Kelli Ochoa',
@@ -2288,7 +2492,7 @@ describe('MultiColumnSorting', () => {
       multiColumnSorting: true
     });
 
-    hot.view.wt.wtOverlays.leftOverlay.scrollTo(15);
+    hot.view._wt.wtOverlays.inlineStartOverlay.scrollTo(15);
     render();
     getPlugin('multiColumnSorting').sort({ column: 15, sortOrder: 'asc' });
 
@@ -2745,96 +2949,248 @@ describe('MultiColumnSorting', () => {
   });
 
   describe('Numbers presenting sorting sequence', () => {
-    it('should be properly presented on the UI when more than 7 columns are sorted', () => {
-      spec().$container[0].style.width = 'auto';
-      spec().$container[0].style.height = 'auto';
+    using('configuration object', [
+      { htmlDir: 'ltr', layoutDirection: 'inherit' },
+      { htmlDir: 'rtl', layoutDirection: 'ltr' },
+    ], ({ htmlDir, layoutDirection }) => {
+      beforeEach(() => {
+        $('html').attr('dir', htmlDir);
+      });
 
-      handsontable({
-        data: createSpreadsheetData(10, 10),
-        colHeaders: true,
-        multiColumnSorting: {
-          indicator: true,
-          initialConfig: [{
-            column: 1,
-            sortOrder: 'asc'
-          }, {
-            column: 0,
-            sortOrder: 'asc'
-          }, {
-            column: 2,
-            sortOrder: 'asc'
-          }, {
-            column: 3,
-            sortOrder: 'asc'
-          }, {
-            column: 4,
-            sortOrder: 'asc'
-          }, {
-            column: 5,
-            sortOrder: 'asc'
-          }, {
-            column: 6,
-            sortOrder: 'asc'
-          }, {
-            column: 7,
-            sortOrder: 'asc'
-          }, {
-            column: 8,
-            sortOrder: 'asc'
-          }, {
-            column: 9,
-            sortOrder: 'asc'
-          }]
+      afterEach(() => {
+        $('html').attr('dir', 'ltr');
+      });
+
+      it.forTheme('classic')('should be properly position the number when multi columns are sorted', () => {
+        spec().$container[0].style.width = 'auto';
+        spec().$container[0].style.height = 'auto';
+
+        handsontable({
+          layoutDirection,
+          data: createSpreadsheetData(10, 10),
+          colHeaders: true,
+          multiColumnSorting: {
+            indicator: true,
+            initialConfig: [{
+              column: 1,
+              sortOrder: 'asc'
+            }, {
+              column: 0,
+              sortOrder: 'asc'
+            }, {
+              column: 2,
+              sortOrder: 'asc'
+            }, {
+              column: 3,
+              sortOrder: 'asc'
+            }, {
+              column: 4,
+              sortOrder: 'asc'
+            }, {
+              column: 5,
+              sortOrder: 'asc'
+            }, {
+              column: 6,
+              sortOrder: 'asc'
+            }, {
+              column: 7,
+              sortOrder: 'asc'
+            }, {
+              column: 8,
+              sortOrder: 'asc'
+            }, {
+              column: 9,
+              sortOrder: 'asc'
+            }]
+          }
+        });
+
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('right')).toEqual('-15px');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('padding-left')).toEqual('5px');
+      });
+
+      it.forTheme('main')('should be properly position the number when multi columns are sorted', () => {
+        spec().$container[0].style.width = 'auto';
+        spec().$container[0].style.height = 'auto';
+
+        handsontable({
+          layoutDirection,
+          data: createSpreadsheetData(10, 10),
+          colHeaders: true,
+          multiColumnSorting: {
+            indicator: true,
+            initialConfig: [{
+              column: 1,
+              sortOrder: 'asc'
+            }, {
+              column: 0,
+              sortOrder: 'asc'
+            }, {
+              column: 2,
+              sortOrder: 'asc'
+            }, {
+              column: 3,
+              sortOrder: 'asc'
+            }, {
+              column: 4,
+              sortOrder: 'asc'
+            }, {
+              column: 5,
+              sortOrder: 'asc'
+            }, {
+              column: 6,
+              sortOrder: 'asc'
+            }, {
+              column: 7,
+              sortOrder: 'asc'
+            }, {
+              column: 8,
+              sortOrder: 'asc'
+            }, {
+              column: 9,
+              sortOrder: 'asc'
+            }]
+          }
+        });
+
+        const computedStyle = window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after');
+
+        expect(computedStyle.getPropertyValue('margin-top')).toEqual('4px');
+        expect(computedStyle.getPropertyValue('top')).toEqual('10px');
+
+        if (htmlDir === 'rtl' || layoutDirection === 'rtl') {
+          expect(computedStyle.getPropertyValue('left')).toEqual('0px');
+
+        } else {
+          expect(computedStyle.getPropertyValue('right')).toEqual('0px');
         }
       });
 
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
-        .getPropertyValue('content')).toEqual('"2"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
-        .getPropertyValue('content')).toEqual('"1"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[2], ':after')
-        .getPropertyValue('content')).toEqual('"3"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[3], ':after')
-        .getPropertyValue('content')).toEqual('"4"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[4], ':after')
-        .getPropertyValue('content')).toEqual('"5"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[5], ':after')
-        .getPropertyValue('content')).toEqual('"6"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[6], ':after')
-        .getPropertyValue('content')).toEqual('"7"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[7], ':after')
-        .getPropertyValue('content')).toEqual('"+"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[8], ':after')
-        .getPropertyValue('content')).toEqual('"+"');
-    });
+      it('should be properly presented on the UI when more than 7 columns are sorted', () => {
+        spec().$container[0].style.width = 'auto';
+        spec().$container[0].style.height = 'auto';
 
-    it('should be properly hided when just one column is sorted', async() => {
-      handsontable({
-        data: createSpreadsheetData(10, 10),
-        colHeaders: true,
-        multiColumnSorting: {
-          indicator: true,
-          initialConfig: [{
-            column: 1,
-            sortOrder: 'asc'
-          }, {
-            column: 0,
-            sortOrder: 'asc'
-          }]
-        }
+        handsontable({
+          layoutDirection,
+          data: createSpreadsheetData(10, 10),
+          colHeaders: true,
+          multiColumnSorting: {
+            indicator: true,
+            initialConfig: [{
+              column: 1,
+              sortOrder: 'asc'
+            }, {
+              column: 0,
+              sortOrder: 'asc'
+            }, {
+              column: 2,
+              sortOrder: 'asc'
+            }, {
+              column: 3,
+              sortOrder: 'asc'
+            }, {
+              column: 4,
+              sortOrder: 'asc'
+            }, {
+              column: 5,
+              sortOrder: 'asc'
+            }, {
+              column: 6,
+              sortOrder: 'asc'
+            }, {
+              column: 7,
+              sortOrder: 'asc'
+            }, {
+              column: 8,
+              sortOrder: 'asc'
+            }, {
+              column: 9,
+              sortOrder: 'asc'
+            }]
+          }
+        });
+
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('content')).toEqual('"2"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
+          .getPropertyValue('content')).toEqual('"1"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[2], ':after')
+          .getPropertyValue('content')).toEqual('"3"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[3], ':after')
+          .getPropertyValue('content')).toEqual('"4"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[4], ':after')
+          .getPropertyValue('content')).toEqual('"5"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[5], ':after')
+          .getPropertyValue('content')).toEqual('"6"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[6], ':after')
+          .getPropertyValue('content')).toEqual('"7"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[7], ':after')
+          .getPropertyValue('content')).toEqual('"+"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[8], ':after')
+          .getPropertyValue('content')).toEqual('"+"');
       });
 
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
-        .getPropertyValue('content')).toEqual('"2"');
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
-        .getPropertyValue('content')).toEqual('"1"');
+      it.forTheme('classic')('should be properly hided when just one column is sorted', async() => {
+        handsontable({
+          layoutDirection,
+          data: createSpreadsheetData(10, 10),
+          colHeaders: true,
+          multiColumnSorting: {
+            indicator: true,
+            initialConfig: [{
+              column: 1,
+              sortOrder: 'asc'
+            }, {
+              column: 0,
+              sortOrder: 'asc'
+            }]
+          }
+        });
 
-      getPlugin('multiColumnSorting').sort({ column: 0, sortOrder: 'asc' });
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('content')).toEqual('"2"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
+          .getPropertyValue('content')).toEqual('"1"');
 
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
-        .getPropertyValue('content')).toMatch(/^(none|)$/);
-      expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
-        .getPropertyValue('content')).toMatch(/^(none|)$/);
+        getPlugin('multiColumnSorting').sort({ column: 0, sortOrder: 'asc' });
+
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('content')).toMatch(/^(none|)$/);
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
+          .getPropertyValue('content')).toMatch(/^(none|)$/);
+      });
+
+      it.forTheme('main')('should be properly hided when just one column is sorted', async() => {
+        handsontable({
+          layoutDirection,
+          data: createSpreadsheetData(10, 10),
+          colHeaders: true,
+          multiColumnSorting: {
+            indicator: true,
+            initialConfig: [{
+              column: 1,
+              sortOrder: 'asc'
+            }, {
+              column: 0,
+              sortOrder: 'asc'
+            }]
+          }
+        });
+
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('content')).toEqual('"2"');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
+          .getPropertyValue('content')).toEqual('"1"');
+
+        getPlugin('multiColumnSorting').sort({ column: 0, sortOrder: 'asc' });
+
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[0], ':after')
+          .getPropertyValue('content')).toEqual('""');
+        expect(window.getComputedStyle(spec().$container.find('th span.columnSorting')[1], ':after')
+          .getPropertyValue('content')).toEqual('""');
+      });
     });
   });
 
@@ -2971,9 +3327,11 @@ describe('MultiColumnSorting', () => {
 
       spec().sortByClickOnColumnHeader(2);
 
-      keyDown('ctrl');
+      keyDown('control/meta');
 
       spec().sortByClickOnColumnHeader(3);
+
+      keyUp('control/meta');
 
       expect(getDataAtCol(0)).toEqual(['Ann', 'Mary', 'Mary', 'Henry', 'Robert', 'David', 'John', 'Robert', 'Ann']);
     });
@@ -2995,13 +3353,15 @@ describe('MultiColumnSorting', () => {
       // ASC
       spec().sortByClickOnColumnHeader(0);
 
-      keyDown('ctrl');
+      keyDown('control/meta');
 
       // ASC as 2nd
       spec().sortByClickOnColumnHeader(1);
 
       // DESC as 2nd
       spec().sortByClickOnColumnHeader(0);
+
+      keyUp('control/meta');
 
       expect(getDataAtCol(0)).toEqual(['Mary', 'Mary', 'John', 'Robert', 'Robert', 'Ann', 'Henry', 'David', 'Ann']);
     });
@@ -3042,7 +3402,7 @@ describe('MultiColumnSorting', () => {
         columnSorting: true
       });
 
-      const $columnHeader = $(hot.view.wt.wtTable.getColumnHeader(0));
+      const $columnHeader = $(hot.view._wt.wtTable.getColumnHeader(0));
       const $spanInsideHeader = $columnHeader.find('.columnSorting');
 
       $spanInsideHeader.simulate('mousedown', { button: 2 });
@@ -3278,7 +3638,7 @@ describe('MultiColumnSorting', () => {
         },
       });
 
-      alter('insert_col', 1);
+      alter('insert_col_start', 1);
 
       expect(getData()).toEqual([
         ['A3', null, 'B3', 'C3'],
@@ -3328,7 +3688,7 @@ describe('MultiColumnSorting', () => {
         multiColumnSorting: true
       });
 
-      alter('insert_row', 2);
+      alter('insert_row_above', 2);
 
       expect(getData()).toEqual([
         ['A1', 'B1', 'C1'],
@@ -3348,7 +3708,7 @@ describe('MultiColumnSorting', () => {
         multiColumnSorting: true
       });
 
-      alter('insert_col', 2, 5);
+      alter('insert_col_start', 2, 5);
 
       expect(getHtCore().find('tbody tr:eq(0) td').length).toEqual(7);
     });
@@ -3368,7 +3728,7 @@ describe('MultiColumnSorting', () => {
     });
   });
 
-  it('cooperation with the ColumnSorting plugin (extra warn and just one plugin works)', () => {
+  it.forTheme('classic')('cooperation with the ColumnSorting plugin (extra warn and just one plugin works)', () => {
     const warnSpy = spyOn(console, 'warn');
 
     handsontable({
@@ -3379,7 +3739,7 @@ describe('MultiColumnSorting', () => {
 
     spec().sortByClickOnColumnHeader(2);
 
-    keyDown('ctrl');
+    keyDown('control/meta');
 
     spec().sortByClickOnColumnHeader(3);
 
@@ -3396,7 +3756,36 @@ describe('MultiColumnSorting', () => {
     ]);
   });
 
-  it('cooperation with the ColumnSorting plugin (updateSettings enable and disable plugins properly)', () => {
+  it.forTheme('main')('cooperation with the ColumnSorting plugin (extra warn and just one plugin works)', () => {
+    const warnSpy = spyOn(console, 'warn');
+
+    handsontable({
+      columnSorting: true,
+      multiColumnSorting: true,
+      colHeaders: true
+    });
+
+    spec().sortByClickOnColumnHeader(2);
+
+    keyDown('control/meta');
+
+    spec().sortByClickOnColumnHeader(3);
+
+    expect(warnSpy).toHaveBeenCalled();
+
+    const sortedColumn1 = spec().$container.find('th span.columnSorting')[2];
+    const sortedColumn2 = spec().$container.find('th span.columnSorting')[3];
+
+    expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+    expect(getPlugin('multiColumnSorting').getSortConfig()).toEqual([
+      { column: 2, sortOrder: 'asc' },
+      { column: 3, sortOrder: 'asc' },
+    ]);
+  });
+
+  it.forTheme('classic')('cooperation with the ColumnSorting plugin (updateSettings enable and ' +
+    'disable plugins properly)', () => {
     handsontable({
       columnSorting: true,
       colHeaders: true
@@ -3404,9 +3793,11 @@ describe('MultiColumnSorting', () => {
 
     spec().sortByClickOnColumnHeader(2);
 
-    keyDown('ctrl');
+    keyDown('control/meta');
 
     spec().sortByClickOnColumnHeader(3);
+
+    keyUp('control/meta');
 
     let sortedColumn1 = spec().$container.find('th span.columnSorting')[2];
     let sortedColumn2 = spec().$container.find('th span.columnSorting')[3];
@@ -3423,9 +3814,11 @@ describe('MultiColumnSorting', () => {
 
     spec().sortByClickOnColumnHeader(0);
 
-    keyDown('ctrl');
+    keyDown('control/meta');
 
     spec().sortByClickOnColumnHeader(1);
+
+    keyUp('control/meta');
 
     sortedColumn1 = spec().$container.find('th span.columnSorting')[0];
     sortedColumn2 = spec().$container.find('th span.columnSorting')[1];
@@ -3442,14 +3835,205 @@ describe('MultiColumnSorting', () => {
 
     spec().sortByClickOnColumnHeader(2);
 
-    keyDown('ctrl');
+    keyDown('control/meta');
 
     spec().sortByClickOnColumnHeader(3);
+
+    keyUp('control/meta');
 
     sortedColumn1 = spec().$container.find('th span.columnSorting')[2];
     sortedColumn2 = spec().$container.find('th span.columnSorting')[3];
 
     expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('background-image')).not.toMatch(/url/);
     expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('background-image')).toMatch(/url/);
+  });
+
+  it.forTheme('main')('cooperation with the ColumnSorting plugin (updateSettings enable and ' +
+    'disable plugins properly)', () => {
+    handsontable({
+      columnSorting: true,
+      colHeaders: true
+    });
+
+    spec().sortByClickOnColumnHeader(2);
+
+    keyDown('control/meta');
+
+    spec().sortByClickOnColumnHeader(3);
+
+    keyUp('control/meta');
+
+    let sortedColumn1 = spec().$container.find('th span.columnSorting')[2];
+    let sortedColumn2 = spec().$container.find('th span.columnSorting')[3];
+
+    expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    updateSettings({ columnSorting: true, multiColumnSorting: false });
+
+    expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    updateSettings({ columnSorting: false, multiColumnSorting: true });
+
+    spec().sortByClickOnColumnHeader(0);
+
+    keyDown('control/meta');
+
+    spec().sortByClickOnColumnHeader(1);
+
+    keyUp('control/meta');
+
+    sortedColumn1 = spec().$container.find('th span.columnSorting')[0];
+    sortedColumn2 = spec().$container.find('th span.columnSorting')[1];
+
+    expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    updateSettings({ columnSorting: false, multiColumnSorting: true });
+
+    expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+
+    updateSettings({ columnSorting: true, multiColumnSorting: false });
+
+    spec().sortByClickOnColumnHeader(2);
+
+    keyDown('control/meta');
+
+    spec().sortByClickOnColumnHeader(3);
+
+    keyUp('control/meta');
+
+    sortedColumn1 = spec().$container.find('th span.columnSorting')[2];
+    sortedColumn2 = spec().$container.find('th span.columnSorting')[3];
+
+    expect(window.getComputedStyle(sortedColumn1, ':before').getPropertyValue('-webkit-mask-image')).not.toMatch(/url/);
+    expect(window.getComputedStyle(sortedColumn2, ':before').getPropertyValue('-webkit-mask-image')).toMatch(/url/);
+  });
+
+  describe('undo/redo', () => {
+    it('should be able to undo the sorting action', () => {
+      const hot = handsontable({
+        data: [
+          ['Alice', 'Smith', 'Eve'],
+          ['Bob', 'Johnson', 'Grace'],
+          ['Alice', 'Brown', 'Liam'],
+          ['Alice', 'Miller', 'Olivia'],
+          ['David', 'Lee', 'Sophia']
+        ],
+        multiColumnSorting: true,
+        colHeaders: true,
+      });
+
+      hot.getPlugin('multiColumnSorting').sort([{
+        column: 0,
+        sortOrder: 'desc'
+      }]);
+
+      expect(getData()).toEqual([
+        ['David', 'Lee', 'Sophia'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Smith', 'Eve'],
+        ['Alice', 'Brown', 'Liam'],
+        ['Alice', 'Miller', 'Olivia']
+      ]);
+
+      hot.getPlugin('multiColumnSorting').sort([{
+        column: 0,
+        sortOrder: 'desc'
+      }, {
+        column: 1,
+        sortOrder: 'desc'
+      }]);
+
+      expect(getData()).toEqual([
+        ['David', 'Lee', 'Sophia'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Smith', 'Eve'],
+        ['Alice', 'Miller', 'Olivia'],
+        ['Alice', 'Brown', 'Liam']
+      ]);
+
+      getPlugin('undoRedo').undo();
+
+      expect(getData()).toEqual([
+        ['David', 'Lee', 'Sophia'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Smith', 'Eve'],
+        ['Alice', 'Brown', 'Liam'],
+        ['Alice', 'Miller', 'Olivia']
+      ]);
+
+      getPlugin('undoRedo').undo();
+
+      expect(getData()).toEqual([
+        ['Alice', 'Smith', 'Eve'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Brown', 'Liam'],
+        ['Alice', 'Miller', 'Olivia'],
+        ['David', 'Lee', 'Sophia']
+      ]);
+    });
+
+    it('should be able to redo the sorting action', () => {
+      const hot = handsontable({
+        data: [
+          ['Alice', 'Smith', 'Eve'],
+          ['Bob', 'Johnson', 'Grace'],
+          ['Alice', 'Brown', 'Liam'],
+          ['Alice', 'Miller', 'Olivia'],
+          ['David', 'Lee', 'Sophia']
+        ],
+        multiColumnSorting: true,
+        colHeaders: true,
+      });
+
+      hot.getPlugin('multiColumnSorting').sort([
+        {
+          column: 0,
+          sortOrder: 'desc'
+        }]);
+
+      hot.getPlugin('multiColumnSorting').sort([
+        {
+          column: 0,
+          sortOrder: 'desc'
+        }, {
+          column: 1,
+          sortOrder: 'desc'
+        }]);
+
+      getPlugin('undoRedo').undo();
+      getPlugin('undoRedo').undo();
+
+      expect(getData()).toEqual([
+        ['Alice', 'Smith', 'Eve'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Brown', 'Liam'],
+        ['Alice', 'Miller', 'Olivia'],
+        ['David', 'Lee', 'Sophia']
+      ]);
+
+      hot.getPlugin('undoRedo').redo();
+
+      expect(getData()).toEqual([
+        ['David', 'Lee', 'Sophia'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Smith', 'Eve'],
+        ['Alice', 'Brown', 'Liam'],
+        ['Alice', 'Miller', 'Olivia']
+      ]);
+
+      hot.getPlugin('undoRedo').redo();
+
+      expect(getData()).toEqual([
+        ['David', 'Lee', 'Sophia'],
+        ['Bob', 'Johnson', 'Grace'],
+        ['Alice', 'Smith', 'Eve'],
+        ['Alice', 'Miller', 'Olivia'],
+        ['Alice', 'Brown', 'Liam']
+      ]);
+    });
   });
 });

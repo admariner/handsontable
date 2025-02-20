@@ -1,5 +1,5 @@
-const { SiteChecker } = require('broken-link-checker'); // eslint-disable-line import/no-unresolved
 const path = require('path');
+const { SiteChecker } = require('broken-link-checker'); // eslint-disable-line import/no-unresolved
 const { Renderer } = require('xlsx-renderer');
 const { logger, spawnProcess } = require('./utils');
 
@@ -116,7 +116,7 @@ const siteChecker = new SiteChecker(
   }
 );
 
-const ARGUMENT_URL_DEFAULT = `http://127.0.0.1:${PORT}/docs/next/api`;
+const ARGUMENT_URL_DEFAULT = `http://127.0.0.1:${PORT}/docs/api`;
 
 let [urlArg] = process.argv.slice(2);
 

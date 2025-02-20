@@ -8,11 +8,19 @@ import {
   getRenderer,
   registerRenderer,
 } from '../../registry';
+import {
+  registerCellType,
+  TextCellType,
+} from '../../../cellTypes';
+
+registerCellType(TextCellType);
 
 describe('autocompleteRenderer', () => {
+  const toMatchHTMLConfig = ['class'];
+
   describe('registering', () => {
     it('should throw an error if renderer is not registered', () => {
-      expect(getRegisteredRendererNames()).toEqual([]);
+      expect(getRegisteredRendererNames()).toEqual(['text']);
       expect(() => {
         getRenderer(RENDERER_TYPE);
       }).toThrowError();
@@ -21,7 +29,7 @@ describe('autocompleteRenderer', () => {
     it('should register renderer', () => {
       registerRenderer(RENDERER_TYPE, autocompleteRenderer);
 
-      expect(getRegisteredRendererNames()).toEqual([RENDERER_TYPE]);
+      expect(getRegisteredRendererNames()).toEqual(['text', RENDERER_TYPE]);
       expect(getRenderer(RENDERER_TYPE)).toBeInstanceOf(Function);
     });
   });
@@ -36,9 +44,12 @@ describe('autocompleteRenderer', () => {
       const instance = getInstance();
       const cellMeta = {};
 
-      autocompleteRenderer(instance, TD, void 0, void 0, void 0, void 0, cellMeta);
+      autocompleteRenderer(instance, TD, undefined, undefined, undefined, undefined, cellMeta);
 
-      expect(TD.outerHTML).toBe('<td class="htAutocomplete"><div class="htAutocompleteArrow">▼</div></td>');
+      expect(TD.outerHTML).toMatchHTML(
+        '<td class="htAutocomplete"><div class="htAutocompleteArrow">▼</div></td>',
+        toMatchHTMLConfig
+      );
     });
   });
 });

@@ -1,6 +1,16 @@
 module.exports = {
   extends: ['airbnb-base'],
   parser: '@babel/eslint-parser',
+  parserOptions: {
+    ecmaFeatures: {
+      jsx: true
+    },
+    babelOptions: {
+      plugins: [
+        '@babel/plugin-syntax-import-assertions',
+      ],
+    },
+  },
   plugins: [
     '@babel',
     'jsdoc',
@@ -22,6 +32,7 @@ module.exports = {
     'class-methods-use-this': 'off',
     'comma-dangle': 'off',
     'consistent-return': 'off',
+    curly: ['error', 'all'],
     'func-names': 'off',
     'import/no-extraneous-dependencies': 'off',
     'import/prefer-default-export': 'off',
@@ -104,7 +115,18 @@ module.exports = {
     'jsdoc/check-tag-names': [
       'error',
       {
-        definedTags: ['plugin', 'util', 'experimental', 'deprecated', 'preserve', 'core', 'TODO', 'category']
+        definedTags: [
+          'plugin',
+          'util',
+          'experimental',
+          'deprecated',
+          'preserve',
+          'core',
+          'TODO',
+          'category',
+          'package',
+          'template',
+        ]
       }
     ],
     'jsdoc/check-types': 'error',

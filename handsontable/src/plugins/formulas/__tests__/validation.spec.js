@@ -2,11 +2,10 @@ import HyperFormula from 'hyperformula';
 
 describe('Formulas general', () => {
   const debug = false;
-  const id = 'testContainer';
 
   beforeEach(function() {
-    this.$container = $(`<div id="${id}"></div>`).appendTo('body');
-    this.$container2 = $(`<div id="${id}-2"></div>`).appendTo('body');
+    this.$container = $('<div id="testContainer"></div>').appendTo('body');
+    this.$container2 = $('<div id="testContainer-2"></div>').appendTo('body');
   });
 
   afterEach(function() {
@@ -60,9 +59,9 @@ describe('Formulas general', () => {
 
       selectCell(0, 0);
       // Opening an editor
-      keyDown('enter');
+      keyDownUp('enter');
       // Closing the editor and saving changes.
-      keyDown('enter');
+      keyDownUp('enter');
 
       await sleep(100); // Validator is asynchronous.
 
@@ -70,9 +69,9 @@ describe('Formulas general', () => {
 
       selectCell(0, 2);
       // Opening an editor
-      keyDown('enter');
+      keyDownUp('enter');
       // Closing the editor and saving changes.
-      keyDown('enter');
+      keyDownUp('enter');
 
       await sleep(100); // Validator is asynchronous.
 
@@ -319,7 +318,7 @@ describe('Formulas general', () => {
           ['2', 2, '=D2', 'text2', 'foo2'],
           ['3', 2, '=D3', 'text3', 'foo3'],
           ['4', 2, '=D4', 'text4', 'foo4'],
-          ['5', 2, '=D5', 'text5', '=A1+3'],
+          ['5', 2, '=D5', 'text5', '=B5+3'],
         ],
         formulas: {
           engine: HyperFormula
@@ -330,16 +329,16 @@ describe('Formulas general', () => {
         beforeValidate,
       });
 
-      hot.columnIndexMapper.indexesSequence.setValues([0, 2, 3, 4, 1]);
-      hot.rowIndexMapper.indexesSequence.setValues([0, 2, 3, 4, 1]);
+      hot.columnIndexMapper.setIndexesSequence([0, 2, 3, 4, 1]);
+      hot.rowIndexMapper.setIndexesSequence([0, 2, 3, 4, 1]);
 
       render();
-      setDataAtCell(0, 0, 6);
+      setDataAtCell(3, 0, 6);
 
       await sleep(100); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledTimes(2);
-      expect(beforeValidate).toHaveBeenCalledWith(6, 0, 0);
+      expect(beforeValidate).toHaveBeenCalledWith(6, 3, 0);
       expect(beforeValidate).toHaveBeenCalledWith(9, 3, 4);
     });
 
@@ -370,6 +369,30 @@ describe('Formulas general', () => {
       expect(errorList.length).toEqual(0);
       // 3 from the visible cells + 1 from setDataAtCell
       expect(validatorCallsCount).toEqual(4);
+    });
+
+    it('should not throw type error while validating sheets added through the HyperFormula instance', () => {
+      const hf = HyperFormula.buildEmpty();
+
+      handsontable({
+        data: [
+          ['1', '2', '= mainSheet!A1 * mainSheet!B1']
+        ],
+        formulas: {
+          engine: hf,
+          sheetName: 'mainSheet'
+        },
+      });
+
+      const sheetId = hf.getSheetId(hf.addSheet('sheet2'));
+
+      hf.setSheetContent(sheetId, [
+        ['1', '2', '= mainSheet!A1 * mainSheet!B1']
+      ]);
+
+      expect(() => {
+        setDataAtCell(0, 1, 'test');
+      }).not.toThrowError();
     });
   });
 });

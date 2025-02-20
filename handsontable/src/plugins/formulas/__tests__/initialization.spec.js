@@ -5,12 +5,11 @@ import plPL from 'hyperformula/es/i18n/languages/plPL';
 
 describe('Formulas general', () => {
   const debug = false;
-  const id = 'testContainer';
 
   beforeEach(function() {
-    this.$container = $(`<div id="${id}"></div>`).appendTo('body');
-    this.$container2 = $(`<div id="${id}-2"></div>`).appendTo('body');
-    this.$container3 = $(`<div id="${id}-3"></div>`).appendTo('body');
+    this.$container = $('<div id="testContainer"></div>').appendTo('body');
+    this.$container2 = $('<div id="testContainer-2"></div>').appendTo('body');
+    this.$container3 = $('<div id="testContainer-3"></div>').appendTo('body');
   });
 
   afterEach(function() {
@@ -155,7 +154,6 @@ describe('Formulas general', () => {
       const hot = handsontable({
         data: getDataSimpleExampleFormulas(),
         formulas: true,
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       // eslint-disable-next-line no-console
@@ -171,7 +169,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: HyperFormula
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
       const staticRegister = hot.getPlugin('formulas').staticRegister;
       const hotInstances = staticRegister.getItem('engine_relationship');
@@ -196,7 +193,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: hfInstance
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const staticRegister = hot.getPlugin('formulas').staticRegister;
@@ -205,13 +201,13 @@ describe('Formulas general', () => {
       const relatedHotInstanceEntry = hotInstances.get(hot.getPlugin('formulas').engine);
       const sharedHotIdsEntry = sharedHotIds ?
         sharedHotIds.get(hot.getPlugin('formulas').engine) :
-        void 0;
+        undefined;
       // The registry (for the related HF instance) can be empty or undefined, depending on the context:
       // - if it's the first HOT instance on the page, it will be undefined (no registry will be ever created, because
       //   there's no need for it
       // - if it's not the first HOT instance (which will be usually the case with the test cases), the registry can be
       //   already created, but there should be no entry for the provided HyperFormula instance.
-      const noEntryInRegistry = sharedHotIds === void 0 || sharedHotIdsEntry === void 0;
+      const noEntryInRegistry = sharedHotIds === undefined || sharedHotIdsEntry === undefined;
 
       expect(getDataAtCell(4, 1)).toBe(8042);
       expect(noEntryInRegistry).toBe(true);
@@ -228,7 +224,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: HyperFormula
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const hot2 = spec().$container2.handsontable({
@@ -236,7 +231,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: HyperFormula
         },
-        licenseKey: 'non-commercial-and-evaluation'
       }).data('handsontable');
 
       const formulasPlugin1 = hot1.getPlugin('formulas');
@@ -287,7 +281,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: hfInstance1
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const hot2 = spec().$container2.handsontable({
@@ -295,7 +288,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: hfInstance2
         },
-        licenseKey: 'non-commercial-and-evaluation'
       }).data('handsontable');
 
       const formulasPlugin1 = hot1.getPlugin('formulas');
@@ -346,7 +338,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -354,7 +345,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const formulasPlugin1 = hot1.getPlugin('formulas');
@@ -389,7 +379,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hfInstance1
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -397,7 +386,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hfInstance2
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const formulasPlugin1 = hot1.getPlugin('formulas');
@@ -407,8 +395,8 @@ describe('Formulas general', () => {
         const sharedHotIds = staticRegister.getItem('shared_engine_usage');
         const relatedHotInstanceEntry1 = hotInstances.get(formulasPlugin1.engine);
         const relatedHotInstanceEntry2 = hotInstances.get(formulasPlugin2.engine);
-        const sharedHotIdsEntry1 = sharedHotIds ? sharedHotIds.get(formulasPlugin1.engine) : void 0;
-        const sharedHotIdsEntry2 = sharedHotIds ? sharedHotIds.get(formulasPlugin2.engine) : void 0;
+        const sharedHotIdsEntry1 = sharedHotIds ? sharedHotIds.get(formulasPlugin1.engine) : undefined;
+        const sharedHotIdsEntry2 = sharedHotIds ? sharedHotIds.get(formulasPlugin2.engine) : undefined;
 
         // The registry (for the related HF instance) can be empty or undefined, depending on the context:
         // - if it's the first HOT instance on the page, it will be undefined (no registry will be ever created,
@@ -416,8 +404,8 @@ describe('Formulas general', () => {
         //   there's no need for it
         // - if it's not the first HOT instance (which will be usually the case with the test cases), the registry can
         // be already created, but there should be no entry for the provided HyperFormula instance.
-        const noEntryInRegistry1 = sharedHotIds === void 0 || sharedHotIdsEntry1 === void 0;
-        const noEntryInRegistry2 = sharedHotIds === void 0 || sharedHotIdsEntry2 === void 0;
+        const noEntryInRegistry1 = sharedHotIds === undefined || sharedHotIdsEntry1 === undefined;
+        const noEntryInRegistry2 = sharedHotIds === undefined || sharedHotIdsEntry2 === undefined;
 
         expect(formulasPlugin1.engine !== formulasPlugin2.engine).withContext('Both of the HOT instances' +
           ' should have separate HF instances.').toBe(true);
@@ -438,7 +426,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -446,7 +433,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const formulasPlugin1HF = hot1.getPlugin('formulas').engine;
@@ -470,7 +456,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hfInstance1
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -478,7 +463,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hfInstance2
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const formulasPlugin1HF = hot1.getPlugin('formulas').engine;
@@ -507,7 +491,6 @@ describe('Formulas general', () => {
             sheetName: 'Sheet1'
           },
           afterViewRender: afterViewRender1,
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -520,7 +503,6 @@ describe('Formulas general', () => {
             sheetName: 'Sheet2'
           },
           afterViewRender: afterViewRender2,
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const hot3 = spec().$container3.handsontable({
@@ -533,7 +515,6 @@ describe('Formulas general', () => {
             sheetName: 'Sheet3'
           },
           afterViewRender: afterViewRender3,
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         expect(afterViewRender1).toHaveBeenCalledTimes(2);
@@ -604,7 +585,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -612,7 +592,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hot1.getPlugin('formulas').engine
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const formulasPlugin1 = hot1.getPlugin('formulas');
@@ -643,7 +622,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -651,7 +629,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hot1.getPlugin('formulas').engine
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const formulasPlugin1 = hot1.getPlugin('formulas');
@@ -676,7 +653,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: HyperFormula
           },
-          licenseKey: 'non-commercial-and-evaluation'
         });
 
         const hot2 = spec().$container2.handsontable({
@@ -684,7 +660,6 @@ describe('Formulas general', () => {
           formulas: {
             engine: hot1.getPlugin('formulas').engine
           },
-          licenseKey: 'non-commercial-and-evaluation'
         }).data('handsontable');
 
         const hotInstances = hot1.getPlugin('formulas').staticRegister.getItem('engine_relationship');
@@ -718,7 +693,6 @@ describe('Formulas general', () => {
               engine: hfInstance1,
               sheetName: 'Test Sheet'
             },
-            licenseKey: 'non-commercial-and-evaluation'
           });
 
           const plugin = getPlugin('formulas');
@@ -738,7 +712,6 @@ describe('Formulas general', () => {
               engine: hfInstance1,
               sheetName: 'Test Sheet'
             },
-            licenseKey: 'non-commercial-and-evaluation'
           });
 
           const plugin = getPlugin('formulas');
@@ -759,7 +732,6 @@ describe('Formulas general', () => {
             formulas: {
               engine: hfInstance1
             },
-            licenseKey: 'non-commercial-and-evaluation'
           });
 
           const plugin = getPlugin('formulas');
@@ -781,7 +753,6 @@ describe('Formulas general', () => {
               engine: hfInstance1,
               sheetName: 'Test Sheet'
             },
-            licenseKey: 'non-commercial-and-evaluation'
           });
 
           const plugin = getPlugin('formulas');
@@ -808,7 +779,6 @@ describe('Formulas general', () => {
               engine: hfInstance1,
               sheetName: 'Test Sheet'
             },
-            licenseKey: 'non-commercial-and-evaluation'
           });
 
           const plugin = getPlugin('formulas');
@@ -830,7 +800,6 @@ describe('Formulas general', () => {
             formulas: {
               engine: hfInstance1
             },
-            licenseKey: 'non-commercial-and-evaluation'
           });
 
           const plugin = getPlugin('formulas');
@@ -857,7 +826,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: HyperFormula
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const plugin = getPlugin('formulas');
@@ -869,7 +837,7 @@ describe('Formulas general', () => {
       expect(hfConfig.precisionEpsilon).toEqual(1e-13);
       expect(hfConfig.precisionRounding).toEqual(14);
       expect(hfConfig.smartRounding).toEqual(true);
-      expect(hfConfig.leapYear1900).toEqual(true);
+      expect(hfConfig.leapYear1900).toEqual(false);
     });
 
     it('should NOT update the HyperFormula config with the default set of settings', () => {
@@ -885,7 +853,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: hfInstance1
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const plugin = getPlugin('formulas');
@@ -906,7 +873,6 @@ describe('Formulas general', () => {
             useStats: true,
           }
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const plugin = getPlugin('formulas');
@@ -925,7 +891,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: hfInstance1
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(hfInstance1.getConfig().licenseKey).toEqual('internal-use-in-handsontable');
@@ -939,7 +904,6 @@ describe('Formulas general', () => {
         formulas: {
           engine: hfInstance1
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(hfInstance1.getConfig().licenseKey).toEqual('dummy-license-key');
@@ -965,7 +929,50 @@ describe('Formulas general', () => {
       expect(hot.getPlugin('formulas').engine.getConfig().undoLimit).toEqual(50);
     });
 
-    it('should not update `sheetName` if `updateSettings` was got one that doesn\'t exist in the engine', () => {
+    it('should not update HyperFormula\'s settings if the new Handsontable settings wouldn\'t change anything in the' +
+      ' HF settings', () => {
+      const hot = handsontable({
+        formulas: {
+          engine: HyperFormula
+        }
+      });
+
+      spyOn(hot.getPlugin('formulas').engine, 'updateConfig').and.callThrough();
+
+      hot.updateSettings({
+        formulas: {
+          engine: HyperFormula
+        }
+      });
+
+      expect(hot.getPlugin('formulas').engine.updateConfig).not.toHaveBeenCalled();
+    });
+
+    it('should update HyperFormula\'s settings if the new Handsontable settings would change them', () => {
+      const hot = handsontable({
+        formulas: {
+          engine: HyperFormula
+        }
+      });
+
+      spyOn(hot.getPlugin('formulas').engine, 'updateConfig').and.callThrough();
+
+      hot.updateSettings({
+        maxColumns: 27
+      });
+
+      expect(hot.getPlugin('formulas').engine.updateConfig).toHaveBeenCalledTimes(1);
+      expect(hot.getPlugin('formulas').engine.getConfig().maxColumns).toEqual(27);
+
+      hot.updateSettings({
+        maxRows: 27
+      });
+
+      expect(hot.getPlugin('formulas').engine.updateConfig).toHaveBeenCalledTimes(2);
+      expect(hot.getPlugin('formulas').engine.getConfig().maxRows).toEqual(27);
+    });
+
+    it('should not update `sheetName` if `updateSettings` contains one that doesn\'t exist in the engine', () => {
       const hot = handsontable({
         formulas: {
           engine: HyperFormula,
@@ -1080,7 +1087,6 @@ describe('Formulas general', () => {
           engine: HyperFormula,
           sheetName: 'Sheet1'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const hot2 = spec().$container2.handsontable({
@@ -1089,7 +1095,6 @@ describe('Formulas general', () => {
           engine: getPlugin('formulas').engine,
           sheetName: 'Sheet2'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       }).data('handsontable');
 
       expect(hot1.getDataAtCell(1, 0)).toEqual('hello from sheet 2');
@@ -1103,7 +1108,6 @@ describe('Formulas general', () => {
           engine: HyperFormula,
           sheetName: 'Sheet1'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const hot2 = spec().$container2.handsontable({
@@ -1112,7 +1116,6 @@ describe('Formulas general', () => {
           engine: getPlugin('formulas').engine,
           sheetName: 'Sheet2'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       }).data('handsontable');
 
       hot1.setDataAtCell(0, 0, 'Hello from 1');
@@ -1139,7 +1142,6 @@ describe('Formulas general', () => {
             }
           ]
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(getDataAtCell(0, 0)).toEqual(1234);
@@ -1165,7 +1167,6 @@ describe('Formulas general', () => {
             }
           ]
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(getDataAtCell(0, 0)).toEqual(1234);
@@ -1203,7 +1204,6 @@ describe('Formulas general', () => {
             }
           ]
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(getDataAtCell(0, 0)).toEqual('customFP output');
@@ -1255,7 +1255,6 @@ describe('Formulas general', () => {
             }
           ]
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(getDataAtCell(0, 0)).toEqual('customFP output');
@@ -1274,7 +1273,6 @@ describe('Formulas general', () => {
           sheetName: 'Sheet1',
           language: plPL
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(getDataAtCell(1, 0)).toEqual('test');
@@ -1296,7 +1294,6 @@ describe('Formulas general', () => {
           sheetName: 'Sheet1',
           language: plPL
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       expect(getDataAtCell(1, 0)).toEqual('test');

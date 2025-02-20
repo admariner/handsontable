@@ -1,6 +1,5 @@
 import { stringify } from '../3rdparty/SheetClip';
 import {
-  cellMethodLookupFactory,
   countFirstRowKeys
 } from '../helpers/data';
 import {
@@ -16,8 +15,6 @@ import {
 import { extendArray, to2dArray } from '../helpers/array';
 import { rangeEach } from '../helpers/number';
 import { isDefined } from '../helpers/mixed';
-
-const copyableLookup = cellMethodLookupFactory('copyable', false);
 
 /*
 This class contains open-source contributions covered by the MIT license.
@@ -66,49 +63,62 @@ class DataMap {
   }
 
   /**
-   * @param {object} instance Instance of Handsontable.
-   * @param {Array} data Array of arrays or array of objects containing data.
-   * @param {TableMeta} tableMeta The table meta instance.
+   * Instance of {@link Handsontable}.
+   *
+   * @private
+   * @type {Handsontable}
    */
-  constructor(instance, data, tableMeta) {
-    /**
-     * Instance of {@link Handsontable}.
-     *
-     * @private
-     * @type {Handsontable}
-     */
-    this.instance = instance;
-    /**
-     * Instance of {@link TableMeta}.
-     *
-     * @private
-     * @type {TableMeta}
-     */
-    this.tableMeta = tableMeta;
-    /**
-     * Reference to the original dataset.
-     *
-     * @type {*}
-     */
+  hot;
+  /**
+   * Instance of {@link MetaManager}.
+   *
+   * @private
+   * @type {MetaManager}
+   */
+  metaManager;
+  /**
+   * Instance of {@link TableMeta}.
+   *
+   * @private
+   * @type {TableMeta}
+   */
+  tableMeta;
+  /**
+   * Reference to the original dataset.
+   *
+   * @type {*}
+   */
+  dataSource;
+  /**
+   * Generated schema based on the first row from the source data.
+   *
+   * @type {object}
+   */
+  duckSchema;
+  /**
+   * Cached array of properties to columns.
+   *
+   * @type {Array}
+   */
+  colToPropCache;
+  /**
+   * Cached map of properties to columns.
+   *
+   * @type {Map}
+   */
+  propToColCache;
+
+  /**
+   * @param {object} hotInstance Instance of Handsontable.
+   * @param {Array} data Array of arrays or array of objects containing data.
+   * @param {MetaManager} metaManager The meta manager instance.
+   */
+  constructor(hotInstance, data, metaManager) {
+    this.hot = hotInstance;
+    this.metaManager = metaManager;
+    this.tableMeta = metaManager.getTableMeta();
     this.dataSource = data;
-    /**
-     * Generated schema based on the first row from the source data.
-     *
-     * @type {object}
-     */
-    this.duckSchema = this.dataSource && this.dataSource[0] ? duckSchema(this.dataSource[0]) : {};
-    /**
-     * Cached array of properties to columns.
-     *
-     * @type {Array}
-     */
-    this.colToPropCache = void 0;
-    /**
-     * Cached map of properties to columns.
-     *
-     * @type {Map}
-     */
-    this.propToColCache = void 0;
+    this.duckSchema = this.createDuckSchema();
 
     this.createMap();
   }
@@ -222,7 +232,7 @@ class DataMap {
       return column;
     }
 
-    const physicalColumn = this.instance.toPhysicalColumn(column);
+    const physicalColumn = this.hot.toPhysicalColumn(column);
 
     // Out of range, not visible column index.
     if (physicalColumn === null) {
@@ -247,11 +257,11 @@ class DataMap {
     const cachedPhysicalIndex = this.propToColCache.get(prop);
 
     if (isDefined(cachedPhysicalIndex)) {
-      return this.instance.toVisualColumn(cachedPhysicalIndex);
+      return this.hot.toVisualColumn(cachedPhysicalIndex);
     }
 
     // Property may be a physical column index.
-    const visualColumn = this.instance.toVisualColumn(prop);
+    const visualColumn = this.hot.toVisualColumn(prop);
 
     if (visualColumn === null) {
       return prop;
@@ -280,16 +290,34 @@ class DataMap {
   }
 
   /**
+   * Creates the duck schema based on the current dataset.
+   *
+   * @returns {Array|object}
+   */
+  createDuckSchema() {
+    return this.dataSource && this.dataSource[0] ? duckSchema(this.dataSource[0]) : {};
+  }
+
+  /**
+   * Refresh the data schema.
+   */
+  refreshDuckSchema() {
+    this.duckSchema = this.createDuckSchema();
+  }
+
+  /**
    * Creates row at the bottom of the data array.
    *
    * @param {number} [index] Physical index of the row before which the new row will be inserted.
    * @param {number} [amount=1] An amount of rows to add.
-   * @param {string} [source] Source of method call.
+   * @param {object} [options] Additional options for created rows.
+   * @param {string} [options.source] Source of method call.
+   * @param {'above'|'below'} [options.mode] Sets where the row is inserted: above or below the passed index.
    * @fires Hooks#afterCreateRow
    * @returns {number} Returns number of created rows.
    */
-  createRow(index, amount = 1, source) {
-    const sourceRowsCount = this.instance.countSourceRows();
+  createRow(index, amount = 1, { source, mode = 'above' } = {}) {
+    const sourceRowsCount = this.hot.countSourceRows();
     let physicalRowIndex = sourceRowsCount;
     let numberOfCreatedRows = 0;
     let rowIndex = index;
@@ -298,24 +326,26 @@ class DataMap {
       rowIndex = sourceRowsCount;
     }
 
-    if (rowIndex < this.instance.countRows()) {
-      physicalRowIndex = this.instance.toPhysicalRow(rowIndex);
+    if (rowIndex < this.hot.countRows()) {
+      physicalRowIndex = this.hot.toPhysicalRow(rowIndex);
     }
 
-    const continueProcess = this.instance.runHooks('beforeCreateRow', rowIndex, amount, source);
+    const continueProcess = this.hot.runHooks('beforeCreateRow', rowIndex, amount, source);
 
     if (continueProcess === false || physicalRowIndex === null) {
-      return 0;
+      return {
+        delta: 0,
+      };
     }
 
     const maxRows = this.tableMeta.maxRows;
-    const columnCount = this.instance.countCols();
+    const columnCount = this.getSchema().length;
     const rowsToAdd = [];
 
     while (numberOfCreatedRows < amount && sourceRowsCount + numberOfCreatedRows < maxRows) {
       let row = null;
 
-      if (this.instance.dataType === 'array') {
+      if (this.hot.dataType === 'array') {
         if (this.tableMeta.dataSchema) {
           // Clone template array
           row = deepClone(this.getSchema());
@@ -326,7 +356,7 @@ class DataMap {
           rangeEach(columnCount - 1, () => row.push(null));
         }
 
-      } else if (this.instance.dataType === 'function') {
+      } else if (this.hot.dataType === 'function') {
         row = this.tableMeta.dataSchema(rowIndex + numberOfCreatedRows);
 
       } else {
@@ -339,14 +369,40 @@ class DataMap {
       numberOfCreatedRows += 1;
     }
 
-    this.instance.rowIndexMapper.insertIndexes(rowIndex, numberOfCreatedRows);
+    this.hot.rowIndexMapper.insertIndexes(rowIndex, numberOfCreatedRows);
 
-    this.spliceData(physicalRowIndex, 0, ...rowsToAdd);
+    if (mode === 'below') {
+      physicalRowIndex = Math.min(physicalRowIndex + 1, sourceRowsCount);
+    }
 
-    this.instance.runHooks('afterCreateRow', rowIndex, numberOfCreatedRows, source);
-    this.instance.forceFullRender = true; // used when data was changed
+    this.spliceData(physicalRowIndex, 0, rowsToAdd);
 
-    return numberOfCreatedRows;
+    const newVisualRowIndex = this.hot.toVisualRow(physicalRowIndex);
+
+    // In case the created rows are the only ones in the table, the column index mappers need to be rebuilt based on
+    // the number of columns created in the row or the schema.
+    if (this.hot.countSourceRows() === rowsToAdd.length) {
+      this.hot.columnIndexMapper.initToLength(this.hot.getInitialColumnCount());
+    }
+
+    if (numberOfCreatedRows > 0) {
+      if ((index === undefined || index === null)) {
+        // Creates the meta rows at the end of the rows collection without shifting the cells
+        // that were defined out of the range of the dataset.
+        this.metaManager.createRow(null, numberOfCreatedRows);
+
+      } else if (source !== 'auto') {
+        this.metaManager.createRow(physicalRowIndex, amount);
+      }
+    }
+
+    this.hot.runHooks('afterCreateRow', newVisualRowIndex, numberOfCreatedRows, source);
+    this.hot.forceFullRender = true; // used when data was changed
+
+    return {
+      delta: numberOfCreatedRows,
+      startPhysicalIndex: physicalRowIndex,
+    };
   }
 
   /**
@@ -354,12 +410,15 @@ class DataMap {
    *
    * @param {number} [index] Visual index of the column before which the new column will be inserted.
    * @param {number} [amount=1] An amount of columns to add.
-   * @param {string} [source] Source of method call.
+   * @param {object} [options] Additional options for created columns.
+   * @param {string} [options.source] Source of method call.
+   * @param {'start'|'end'} [options.mode] Sets where the column is inserted: at the start (left in [LTR](@/api/options.md#layoutdirection), right in [RTL](@/api/options.md#layoutdirection)) or at the end (right in LTR, left in LTR)
+   * the passed index.
    * @fires Hooks#afterCreateCol
    * @returns {number} Returns number of created columns.
    */
-  createCol(index, amount = 1, source) {
-    if (!this.instance.isColumnModificationAllowed()) {
+  createCol(index, amount = 1, { source, mode = 'start' } = {}) {
+    if (!this.hot.isColumnModificationAllowed()) {
       throw new Error('Cannot create new column. When data source in an object, ' +
         'you can only have as much columns as defined in first data row, data schema or in the \'columns\' setting.' +
         'If you want to be able to add new columns, you have to use array datasource.');
@@ -367,28 +426,37 @@ class DataMap {
 
     const dataSource = this.dataSource;
     const maxCols = this.tableMeta.maxCols;
+    const countSourceCols = this.hot.countSourceCols();
     let columnIndex = index;
 
-    if (typeof columnIndex !== 'number' || columnIndex >= this.instance.countSourceCols()) {
-      columnIndex = this.instance.countSourceCols();
+    if (typeof columnIndex !== 'number' || columnIndex >= countSourceCols) {
+      columnIndex = countSourceCols;
     }
 
-    const continueProcess = this.instance.runHooks('beforeCreateCol', columnIndex, amount, source);
+    const continueProcess = this.hot.runHooks('beforeCreateCol', columnIndex, amount, source);
 
     if (continueProcess === false) {
-      return 0;
+      return {
+        delta: 0,
+      };
     }
 
-    let physicalColumnIndex = this.instance.countSourceCols();
+    let physicalColumnIndex = countSourceCols;
 
-    if (columnIndex < this.instance.countCols()) {
-      physicalColumnIndex = this.instance.toPhysicalColumn(columnIndex);
+    if (columnIndex < this.hot.countCols()) {
+      physicalColumnIndex = this.hot.toPhysicalColumn(columnIndex);
     }
 
-    const numberOfSourceRows = this.instance.countSourceRows();
-    let nrOfColumns = this.instance.countCols();
+    const numberOfSourceRows = this.hot.countSourceRows();
+    let nrOfColumns = this.hot.countCols();
     let numberOfCreatedCols = 0;
     let currentIndex = physicalColumnIndex;
+
+    if (mode === 'end') {
+      currentIndex = Math.min(currentIndex + 1, countSourceCols);
+    }
+
+    const startPhysicalIndex = currentIndex;
 
     while (numberOfCreatedCols < amount && nrOfColumns < maxCols) {
       if (typeof columnIndex !== 'number' || columnIndex >= nrOfColumns) {
@@ -415,12 +483,30 @@ class DataMap {
       nrOfColumns += 1;
     }
 
-    this.instance.columnIndexMapper.insertIndexes(columnIndex, numberOfCreatedCols);
+    this.hot.columnIndexMapper.insertIndexes(columnIndex, numberOfCreatedCols);
 
-    this.instance.runHooks('afterCreateCol', columnIndex, numberOfCreatedCols, source);
-    this.instance.forceFullRender = true; // used when data was changed
+    if (numberOfCreatedCols > 0) {
+      if ((index === undefined || index === null)) {
+        // Creates the meta columns at the end of the columns collection without shifting the cells
+        // that were defined out of the range of the dataset.
+        this.metaManager.createColumn(null, numberOfCreatedCols);
 
-    return numberOfCreatedCols;
+      } else if (source !== 'auto') {
+        this.metaManager.createColumn(startPhysicalIndex, amount);
+      }
+    }
+
+    const newVisualColumnIndex = this.hot.toVisualColumn(startPhysicalIndex);
+
+    this.hot.runHooks('afterCreateCol', newVisualColumnIndex, numberOfCreatedCols, source);
+    this.hot.forceFullRender = true; // used when data was changed
+
+    this.refreshDuckSchema();
+
+    return {
+      delta: numberOfCreatedCols,
+      startPhysicalIndex,
+    };
   }
 
   /**
@@ -436,12 +522,12 @@ class DataMap {
   removeRow(index, amount = 1, source) {
     let rowIndex = Number.isInteger(index) ? index : -amount; // -amount = taking indexes from the end.
     const removedPhysicalIndexes = this.visualRowsToPhysical(rowIndex, amount);
-    const sourceRowsLength = this.instance.countSourceRows();
+    const sourceRowsLength = this.hot.countSourceRows();
 
     rowIndex = (sourceRowsLength + rowIndex) % sourceRowsLength;
 
     // It handle also callback from the `NestedRows` plugin. Removing parent node has effect in removing children nodes.
-    const actionWasNotCancelled = this.instance.runHooks(
+    const actionWasNotCancelled = this.hot.runHooks(
       'beforeRemoveRow', rowIndex, removedPhysicalIndexes.length, removedPhysicalIndexes, source
     );
 
@@ -455,20 +541,25 @@ class DataMap {
     this.filterData(rowIndex, numberOfRemovedIndexes, removedPhysicalIndexes);
 
     // TODO: Function `removeRow` should validate fully, probably above.
-    if (rowIndex < this.instance.countRows()) {
-      this.instance.rowIndexMapper.removeIndexes(removedPhysicalIndexes);
+    if (rowIndex < this.hot.countRows()) {
+      this.hot.rowIndexMapper.removeIndexes(removedPhysicalIndexes);
 
       const customDefinedColumns = isDefined(this.tableMeta.columns) || isDefined(this.tableMeta.dataSchema);
 
       // All rows have been removed. There shouldn't be any columns.
-      if (this.instance.rowIndexMapper.getNotTrimmedIndexesLength() === 0 && customDefinedColumns === false) {
-        this.instance.columnIndexMapper.setIndexesSequence([]);
+      if (this.hot.rowIndexMapper.getNotTrimmedIndexesLength() === 0 && customDefinedColumns === false) {
+        this.hot.columnIndexMapper.setIndexesSequence([]);
       }
     }
 
-    this.instance.runHooks('afterRemoveRow', rowIndex, numberOfRemovedIndexes, removedPhysicalIndexes, source);
+    const descendingPhysicalRows = removedPhysicalIndexes.slice(0).sort((a, b) => b - a);
 
-    this.instance.forceFullRender = true; // used when data was changed
+    descendingPhysicalRows.forEach((rowPhysicalIndex) => {
+      this.metaManager.removeRow(rowPhysicalIndex, 1);
+    });
+
+    this.hot.runHooks('afterRemoveRow', rowIndex, numberOfRemovedIndexes, removedPhysicalIndexes, source);
+    this.hot.forceFullRender = true; // used when data was changed
 
     return true;
   }
@@ -484,57 +575,66 @@ class DataMap {
    * @returns {boolean} Returns `false` when action was cancelled, otherwise `true`.
    */
   removeCol(index, amount = 1, source) {
-    if (this.instance.dataType === 'object' || this.tableMeta.columns) {
+    if (this.hot.dataType === 'object' || this.tableMeta.columns) {
       throw new Error('cannot remove column with object data source or columns option specified');
     }
     let columnIndex = typeof index !== 'number' ? -amount : index;
 
-    columnIndex = (this.instance.countCols() + columnIndex) % this.instance.countCols();
+    columnIndex = (this.hot.countCols() + columnIndex) % this.hot.countCols();
 
-    const logicColumns = this.visualColumnsToPhysical(columnIndex, amount);
-    const descendingLogicColumns = logicColumns.slice(0).sort((a, b) => b - a);
-    const actionWasNotCancelled = this.instance.runHooks('beforeRemoveCol', columnIndex, amount, logicColumns, source);
+    const removedPhysicalIndexes = this.visualColumnsToPhysical(columnIndex, amount);
+    const descendingPhysicalColumns = removedPhysicalIndexes.slice(0).sort((a, b) => b - a);
+    const actionWasNotCancelled = this.hot
+      .runHooks('beforeRemoveCol', columnIndex, amount, removedPhysicalIndexes, source);
 
     if (actionWasNotCancelled === false) {
       return false;
     }
 
     let isTableUniform = true;
-    const removedColumnsCount = descendingLogicColumns.length;
+    const removedColumnsCount = descendingPhysicalColumns.length;
     const data = this.dataSource;
 
     for (let c = 0; c < removedColumnsCount; c++) {
-      if (isTableUniform && logicColumns[0] !== logicColumns[c] - c) {
+      if (isTableUniform && removedPhysicalIndexes[0] !== removedPhysicalIndexes[c] - c) {
         isTableUniform = false;
       }
     }
 
     if (isTableUniform) {
-      for (let r = 0, rlen = this.instance.countSourceRows(); r < rlen; r++) {
-        data[r].splice(logicColumns[0], amount);
+      for (let r = 0, rlen = this.hot.countSourceRows(); r < rlen; r++) {
+        data[r].splice(removedPhysicalIndexes[0], amount);
+
+        if (r === 0) {
+          this.metaManager.removeColumn(removedPhysicalIndexes[0], amount);
+        }
       }
 
     } else {
-      for (let r = 0, rlen = this.instance.countSourceRows(); r < rlen; r++) {
+      for (let r = 0, rlen = this.hot.countSourceRows(); r < rlen; r++) {
         for (let c = 0; c < removedColumnsCount; c++) {
-          data[r].splice(descendingLogicColumns[c], 1);
+          data[r].splice(descendingPhysicalColumns[c], 1);
+
+          if (r === 0) {
+            this.metaManager.removeColumn(descendingPhysicalColumns[c], 1);
+          }
         }
       }
     }
 
     // TODO: Function `removeCol` should validate fully, probably above.
-    if (columnIndex < this.instance.countCols()) {
-      this.instance.columnIndexMapper.removeIndexes(logicColumns);
+    if (columnIndex < this.hot.countCols()) {
+      this.hot.columnIndexMapper.removeIndexes(removedPhysicalIndexes);
 
       // All columns have been removed. There shouldn't be any rows.
-      if (this.instance.columnIndexMapper.getNotTrimmedIndexesLength() === 0) {
-        this.instance.rowIndexMapper.setIndexesSequence([]);
+      if (this.hot.columnIndexMapper.getNotTrimmedIndexesLength() === 0) {
+        this.hot.rowIndexMapper.setIndexesSequence([]);
       }
     }
 
-    this.instance.runHooks('afterRemoveCol', columnIndex, amount, logicColumns, source);
-
-    this.instance.forceFullRender = true; // used when data was changed
+    this.hot.runHooks('afterRemoveCol', columnIndex, amount, removedPhysicalIndexes, source);
+    this.hot.forceFullRender = true; // used when data was changed
+    this.refreshDuckSchema();
 
     return true;
   }
@@ -549,7 +649,7 @@ class DataMap {
    * @returns {Array} Returns removed portion of columns.
    */
   spliceCol(col, index, amount, ...elements) {
-    const colData = this.instance.getDataAtCol(col);
+    const colData = this.hot.getDataAtCol(col);
     const removed = colData.slice(index, index + amount);
     const after = colData.slice(index + amount);
 
@@ -561,7 +661,7 @@ class DataMap {
       i += 1;
     }
     to2dArray(elements);
-    this.instance.populateFromArray(index, col, elements, null, null, 'spliceCol');
+    this.hot.populateFromArray(index, col, elements, null, null, 'spliceCol');
 
     return removed;
   }
@@ -576,7 +676,7 @@ class DataMap {
    * @returns {Array} Returns removed portion of rows.
    */
   spliceRow(row, index, amount, ...elements) {
-    const rowData = this.instance.getSourceDataAtRow(row);
+    const rowData = this.hot.getSourceDataAtRow(row);
     const removed = rowData.slice(index, index + amount);
     const after = rowData.slice(index + amount);
 
@@ -587,7 +687,7 @@ class DataMap {
       elements.push(null); // add null in place of removed elements
       i += 1;
     }
-    this.instance.populateFromArray(row, index, [elements], null, null, 'spliceRow');
+    this.hot.populateFromArray(row, index, [elements], null, null, 'spliceRow');
 
     return removed;
   }
@@ -596,14 +696,21 @@ class DataMap {
    * Add/remove row(s) to/from the data source.
    *
    * @param {number} index Physical index of the element to add/remove.
-   * @param {number} amount Number of rows to add/remove.
-   * @param {...object} elements Row elements to be added.
+   * @param {number} deleteCount Number of rows to remove.
+   * @param {Array<object>} elements Row elements to be added.
    */
-  spliceData(index, amount, ...elements) {
-    const continueSplicing = this.instance.runHooks('beforeDataSplice', index, amount, elements);
+  spliceData(index, deleteCount, elements) {
+    const continueSplicing = this.hot.runHooks('beforeDataSplice', index, deleteCount, elements);
 
     if (continueSplicing !== false) {
-      this.dataSource.splice(index, amount, ...elements);
+      const newData = [...this.dataSource.slice(0, index), ...elements, ...this.dataSource.slice(index)];
+
+      // We try not to change the reference.
+      this.dataSource.length = 0;
+
+      // Pushing to array instead of using `splice`, because Babel changes the code to one that uses the `apply` method.
+      // The used method was cause of the problem described within #7840.
+      newData.forEach(row => this.dataSource.push(row));
     }
   }
 
@@ -616,7 +723,7 @@ class DataMap {
    */
   filterData(index, amount, physicalRows) {
     // Custom data filtering (run as a consequence of calling the below hook) provide an array containing new data.
-    let data = this.instance.runHooks('filterData', index, amount, physicalRows);
+    let data = this.hot.runHooks('filterData', index, amount, physicalRows);
 
     // Hooks by default returns first argument (when there is no callback changing execution result).
     if (Array.isArray(data) === false) {
@@ -635,28 +742,31 @@ class DataMap {
    * @returns {*}
    */
   get(row, prop) {
-    const physicalRow = this.instance.toPhysicalRow(row);
+    const physicalRow = this.hot.toPhysicalRow(row);
 
     let dataRow = this.dataSource[physicalRow];
     // TODO: To remove, use 'modifyData' hook instead (see below)
-    const modifiedRowData = this.instance.runHooks('modifyRowData', physicalRow);
+    const modifiedRowData = this.hot.runHooks('modifyRowData', physicalRow);
 
     dataRow = isNaN(modifiedRowData) ? modifiedRowData : dataRow;
     //
 
+    const { dataDotNotation } = this.hot.getSettings();
     let value = null;
 
     // try to get value under property `prop` (includes dot)
     if (dataRow && dataRow.hasOwnProperty && hasOwnProperty(dataRow, prop)) {
       value = dataRow[prop];
 
-    } else if (typeof prop === 'string' && prop.indexOf('.') > -1) {
-      const sliced = prop.split('.');
+    } else if (dataDotNotation && typeof prop === 'string' && prop.indexOf('.') > -1) {
       let out = dataRow;
 
       if (!out) {
         return null;
       }
+
+      const sliced = prop.split('.');
+
       for (let i = 0, ilen = sliced.length; i < ilen; i++) {
         out = out[sliced[i]];
 
@@ -664,16 +774,17 @@ class DataMap {
           return null;
         }
       }
+
       value = out;
 
     } else if (typeof prop === 'function') {
       value = prop(this.dataSource.slice(physicalRow, physicalRow + 1)[0]);
     }
 
-    if (this.instance.hasHook('modifyData')) {
+    if (this.hot.hasHook('modifyData')) {
       const valueHolder = createObjectPropListener(value);
 
-      this.instance.runHooks('modifyData', physicalRow, this.propToCol(prop), valueHolder, 'get');
+      this.hot.runHooks('modifyData', physicalRow, this.propToCol(prop), valueHolder, 'get');
 
       if (valueHolder.isTouched()) {
         value = valueHolder.value;
@@ -691,7 +802,7 @@ class DataMap {
    * @returns {string}
    */
   getCopyable(row, prop) {
-    if (copyableLookup.call(this.instance, row, this.propToCol(prop))) {
+    if (this.hot.getCellMeta(row, this.propToCol(prop)).copyable) {
       return this.get(row, prop);
     }
 
@@ -706,47 +817,60 @@ class DataMap {
    * @param {string} value The value to set.
    */
   set(row, prop, value) {
-    const physicalRow = this.instance.toPhysicalRow(row);
+    const physicalRow = this.hot.toPhysicalRow(row);
     let newValue = value;
     let dataRow = this.dataSource[physicalRow];
     // TODO: To remove, use 'modifyData' hook instead (see below)
-    const modifiedRowData = this.instance.runHooks('modifyRowData', physicalRow);
+    const modifiedRowData = this.hot.runHooks('modifyRowData', physicalRow);
 
     dataRow = isNaN(modifiedRowData) ? modifiedRowData : dataRow;
     //
 
-    if (this.instance.hasHook('modifyData')) {
+    if (this.hot.hasHook('modifyData')) {
       const valueHolder = createObjectPropListener(newValue);
 
-      this.instance.runHooks('modifyData', physicalRow, this.propToCol(prop), valueHolder, 'set');
+      this.hot.runHooks('modifyData', physicalRow, this.propToCol(prop), valueHolder, 'set');
 
       if (valueHolder.isTouched()) {
         newValue = valueHolder.value;
       }
     }
 
+    const { dataDotNotation } = this.hot.getSettings();
+
     // try to set value under property `prop` (includes dot)
     if (dataRow && dataRow.hasOwnProperty && hasOwnProperty(dataRow, prop)) {
       dataRow[prop] = newValue;
 
-    } else if (typeof prop === 'string' && prop.indexOf('.') > -1) {
-      const sliced = prop.split('.');
+    } else if (dataDotNotation && typeof prop === 'string' && prop.indexOf('.') > -1) {
       let out = dataRow;
       let i = 0;
       let ilen;
 
+      const sliced = prop.split('.');
+
       for (i = 0, ilen = sliced.length - 1; i < ilen; i++) {
+        if (sliced[i] === '__proto__' || sliced[i] === 'constructor' || sliced[i] === 'prototype') {
+          // Security: prototype-polluting is not allowed
+          return;
+        }
+
         if (typeof out[sliced[i]] === 'undefined') {
           out[sliced[i]] = {};
         }
         out = out[sliced[i]];
       }
-      out[sliced[i]] = newValue;
 
+      out[sliced[i]] = newValue;
     } else if (typeof prop === 'function') {
       prop(this.dataSource.slice(physicalRow, physicalRow + 1)[0], newValue);
 
     } else {
+      if (prop === '__proto__' || prop === 'constructor' || prop === 'prototype') {
+        // Security: prototype-polluting is not allowed
+        return;
+      }
+
       dataRow[prop] = newValue;
     }
   }
@@ -761,14 +885,14 @@ class DataMap {
    * @returns {number}
    */
   visualRowsToPhysical(index, amount) {
-    const totalRows = this.instance.countSourceRows();
+    const totalRows = this.hot.countSourceRows();
     const logicRows = [];
     let physicRow = (totalRows + index) % totalRows;
     let rowsToRemove = amount;
     let row;
 
     while (physicRow < totalRows && rowsToRemove) {
-      row = this.instance.toPhysicalRow(physicRow);
+      row = this.hot.toPhysicalRow(physicRow);
       logicRows.push(row);
 
       rowsToRemove -= 1;
@@ -785,13 +909,13 @@ class DataMap {
    * @returns {Array}
    */
   visualColumnsToPhysical(index, amount) {
-    const totalCols = this.instance.countCols();
+    const totalCols = this.hot.countCols();
     const visualCols = [];
     let physicalCol = (totalCols + index) % totalCols;
     let colsToRemove = amount;
 
     while (physicalCol < totalCols && colsToRemove) {
-      const col = this.instance.toPhysicalColumn(physicalCol);
+      const col = this.hot.toPhysicalColumn(physicalCol);
 
       visualCols.push(col);
 
@@ -806,8 +930,8 @@ class DataMap {
    * Clears the data array.
    */
   clear() {
-    for (let r = 0; r < this.instance.countSourceRows(); r++) {
-      for (let c = 0; c < this.instance.countCols(); c++) {
+    for (let r = 0; r < this.hot.countSourceRows(); r++) {
+      for (let c = 0; c < this.hot.countCols(); c++) {
         this.set(r, this.colToProp(c), '');
       }
     }
@@ -829,7 +953,7 @@ class DataMap {
       maxRows = maxRowsFromSettings || Infinity;
     }
 
-    const length = this.instance.rowIndexMapper.getNotTrimmedIndexesLength();
+    const length = this.hot.rowIndexMapper.getNotTrimmedIndexesLength();
 
     return Math.min(length, maxRows);
   }
@@ -846,11 +970,11 @@ class DataMap {
     };
 
     const end = {
-      row: Math.max(this.instance.countRows() - 1, 0),
-      col: Math.max(this.instance.countCols() - 1, 0),
+      row: Math.max(this.hot.countRows() - 1, 0),
+      col: Math.max(this.hot.countCols() - 1, 0),
     };
 
-    if (start.row - end.row === 0 && !this.instance.countSourceRows()) {
+    if (start.row - end.row === 0 && !this.hot.countSourceRows()) {
       return [];
     }
 
@@ -895,7 +1019,7 @@ class DataMap {
     for (r = Math.min(start.row, end.row); r <= rlen; r++) {
       row = [];
       // We just store indexes for rows without headers.
-      const physicalRow = r >= 0 ? this.instance.toPhysicalRow(r) : r;
+      const physicalRow = r >= 0 ? this.hot.toPhysicalRow(r) : r;
 
       for (c = Math.min(start.col, end.col); c <= clen; c++) {
 
@@ -938,14 +1062,14 @@ class DataMap {
    * Destroy instance.
    */
   destroy() {
-    this.instance = null;
-    this.tableMeta = null;
+    this.hot = null;
+    this.metaManager = null;
     this.dataSource = null;
     this.duckSchema = null;
     this.colToPropCache.length = 0;
 
     this.propToColCache.clear();
-    this.propToColCache = void 0;
+    this.propToColCache = undefined;
   }
 }
 

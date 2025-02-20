@@ -1,22 +1,14 @@
 import React from 'react';
-import {
-  mount,
-  ReactWrapper
-} from 'enzyme';
+import { act } from '@testing-library/react';
 import {
   HotTable
 } from '../src/hotTable';
 import {
   createSpreadsheetData,
   mockElementDimensions,
+  mountComponentWithRef,
   sleep,
 } from './_helpers';
-
-beforeEach(() => {
-  let container = document.createElement('DIV');
-  container.id = 'hotContainer';
-  document.body.appendChild(container);
-});
 
 /**
  * Worth noting, that although it's possible to use React.memo on renderer components, it doesn't do much, as currently they're recreated on every
@@ -34,7 +26,7 @@ describe('React.memo', () => {
 
     const MemoizedRendererComponent2 = React.memo(RendererComponent2);
 
-    const wrapper: ReactWrapper<{}, {}, any> = mount(
+    const hotInstance = mountComponentWithRef((
       <HotTable licenseKey="non-commercial-and-evaluation"
                 id="test-hot"
                 data={createSpreadsheetData(1, 1)}
@@ -48,21 +40,16 @@ describe('React.memo', () => {
                   mockElementDimensions(this.rootElement, 300, 300);
                 }}>
         <MemoizedRendererComponent2 hot-renderer/>
-      </HotTable>, {attachTo: document.body.querySelector('#hotContainer')}
-    );
+      </HotTable>
+    )).hotInstance;
 
-    await sleep(100);
-
-    const hotTableInstance = wrapper.instance();
-    const hotInstance = hotTableInstance.hotInstance;
-
-    hotInstance.render();
+    await act(async () => {
+      hotInstance.render();
+    });
 
     await sleep(100);
 
     expect(hotInstance.getCell(0, 0).innerHTML).toEqual('<div>value: A1</div>');
-
-    wrapper.detach();
   });
 
   /*

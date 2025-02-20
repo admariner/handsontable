@@ -4,9 +4,10 @@ import { BasePlugin } from '../base';
 
 export type PredefinedMenuItemKey = 'row_above' | 'row_below' | 'col_left' | 'col_right' |
   '---------' | 'remove_row' | 'remove_col' | 'clear_column' | 'undo' | 'redo' |
-  'make_read_only' | 'alignment' | 'cut' | 'copy' | 'freeze_column' | 'unfreeze_column' |
-  'borders' | 'commentsAddEdit' | 'commentsRemove' | 'commentsReadOnly' | 'mergeCells' |
-  'add_child' | 'detach_from_parent' | 'hidden_columns_hide' | 'hidden_columns_show' |
+  'make_read_only' | 'alignment' | 'cut' | 'copy' | 'copy_column_headers_only' |
+  'copy_with_column_group_headers' | 'copy_with_column_headers' | 'freeze_column' |
+  'unfreeze_column' | 'borders' | 'commentsAddEdit' | 'commentsRemove' | 'commentsReadOnly' |
+  'mergeCells' | 'add_child' | 'detach_from_parent' | 'hidden_columns_hide' | 'hidden_columns_show' |
   'hidden_rows_hide' | 'hidden_rows_show' | 'filter_by_condition' | 'filter_operators' |
   'filter_by_condition2' | 'filter_by_value' | 'filter_action_bar';
 
@@ -20,7 +21,7 @@ export interface Selection {
 }
 
 export interface MenuConfig {
-  [key: string]: MenuItemConfig;
+  [key: string]: MenuItemConfig | PredefinedMenuItemKey;
 }
 
 export interface MenuItemConfig {
@@ -48,7 +49,8 @@ export interface SubmenuItemConfig extends Omit<MenuItemConfig, "key"> {
 
 export interface DetailedSettings {
   callback?: (key: string, selection: Selection[], clickEvent: MouseEvent) => void;
-  items: PredefinedMenuItemKey[] | MenuConfig;
+  uiContainer?: HTMLElement,
+  items?: PredefinedMenuItemKey[] | MenuConfig;
 }
 
 export type Settings = boolean | PredefinedMenuItemKey[] | DetailedSettings;
@@ -59,7 +61,7 @@ export class ContextMenu extends BasePlugin {
 
   constructor(hotInstance: Core);
   isEnabled(): boolean;
-  open(event: Event): void;
+  open(position: { left: number, top: number } | Event, offset?: { above?: number, below?: number, left?: number, right?: number }): void;
   close(): void;
   executeCommand(commandName: string, ...params: any): void;
 }

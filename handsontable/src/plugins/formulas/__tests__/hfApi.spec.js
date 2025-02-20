@@ -2,10 +2,9 @@ import HyperFormula from 'hyperformula';
 
 describe('Formulas general', () => {
   const debug = false;
-  const id = 'testContainer';
 
   beforeEach(function() {
-    this.$container = $(`<div id="${id}"></div>`).appendTo('body');
+    this.$container = $('<div id="testContainer"></div>').appendTo('body');
   });
 
   afterEach(function() {
@@ -34,7 +33,6 @@ describe('Formulas general', () => {
           engine: hfInstance1,
           sheetName: 'Test Sheet'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       updateSettings({
@@ -64,7 +62,6 @@ describe('Formulas general', () => {
           engine: hfInstance1,
           sheetName: 'Test Sheet'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const plugin = getPlugin('formulas');
@@ -88,7 +85,6 @@ describe('Formulas general', () => {
           engine: hfInstance1,
           sheetName: 'Test Sheet'
         },
-        licenseKey: 'non-commercial-and-evaluation'
       });
 
       const plugin = getPlugin('formulas');

@@ -1,5 +1,5 @@
 import { extend } from '../../../helpers/object';
-import { expandMetaType } from '../utils';
+import { extendByMetaType } from '../utils';
 
 /**
  * The table meta object is a layer that keeps all settings of the Handsontable that was passed in
@@ -27,21 +27,23 @@ import { expandMetaType } from '../utils';
  *                    +-------------+.
  */
 export default class TableMeta {
+  /**
+   * Main object (instance of the internal TableMeta class from GlobalMeta), holder for all settings defined in the table scope.
+   *
+   * @type {TableMeta}
+   */
+  meta;
+
   constructor(globalMeta) {
     const MetaCtor = globalMeta.getMetaConstructor();
 
-    /**
-     * Main object (instance of the internal TableMeta class from GlobalMeta), holder for all settings defined in the table scope.
-     *
-     * @type {object}
-     */
     this.meta = new MetaCtor();
   }
 
   /**
    * Gets settings object for this layer.
    *
-   * @returns {object}
+   * @returns {TableMeta}
    */
   getMeta() {
     return this.meta;
@@ -54,6 +56,6 @@ export default class TableMeta {
    */
   updateMeta(settings) {
     extend(this.meta, settings);
-    extend(this.meta, expandMetaType(settings.type, settings));
+    extendByMetaType(this.meta, settings, settings);
   }
 }

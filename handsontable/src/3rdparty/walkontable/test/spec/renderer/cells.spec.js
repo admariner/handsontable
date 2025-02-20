@@ -3,11 +3,17 @@ describe('Walkontable.Renderer.CellsRenderer', () => {
     constructor() {
       this.rootDocument = document;
     }
+
     renderedRowToSource(visibleRowIndex) {
       return visibleRowIndex;
     }
+
     renderedColumnToSource(visibleColumnIndex) {
       return visibleColumnIndex;
+    }
+
+    isAriaEnabled() {
+      return true;
     }
   }
 
@@ -27,6 +33,15 @@ describe('Walkontable.Renderer.CellsRenderer', () => {
 
     return { rowHeadersRenderer, rowsRenderer, cellsRenderer, tableMock, rootNode };
   }
+
+  beforeEach(function() {
+    // Matchers configuration.
+    this.matchersConfig = {
+      toMatchHTML: {
+        keepAttributes: ['dir', 'style']
+      }
+    };
+  });
 
   it('should not generate any cells', () => {
     const { rowHeadersRenderer, rowsRenderer, cellsRenderer, tableMock, rootNode } = createRenderer();
@@ -77,14 +92,14 @@ describe('Walkontable.Renderer.CellsRenderer', () => {
     expect(rootNode.outerHTML).toMatchHTML(`
       <tbody>
         <tr>
-          <th class=""></th>
-          <td class=""></td>
-          <td class=""></td>
+          <th></th>
+          <td></td>
+          <td></td>
         </tr>
         <tr>
-          <th class=""></th>
-          <td class=""></td>
-          <td class=""></td>
+          <th></th>
+          <td></td>
+          <td></td>
         </tr>
       </tbody>
       `);
@@ -93,6 +108,66 @@ describe('Walkontable.Renderer.CellsRenderer', () => {
     expect(cellRenderer.calls.argsFor(2)).toEqual([1, 0, jasmine.any(HTMLElement)]);
     expect(cellRenderer.calls.argsFor(3)).toEqual([1, 1, jasmine.any(HTMLElement)]);
     expect(cellRenderer).toHaveBeenCalledTimes(4);
+  });
+
+  it('should clear "style" and "dir" attributes from the cell element each render cycle', () => {
+    const { rowHeadersRenderer, rowsRenderer, cellsRenderer, tableMock, rootNode } = createRenderer();
+
+    tableMock.rowsToRender = 2;
+    tableMock.columnsToRender = 3;
+    tableMock.rowHeadersCount = 0;
+    tableMock.cellRenderer = (sourceRowIndex, sourceColumnIndex, TD) => {
+      TD.style.width = '60px';
+      TD.dir = 'rtl';
+    };
+
+    rowsRenderer.adjust();
+    rowHeadersRenderer.adjust();
+    cellsRenderer.adjust();
+
+    rowsRenderer.render();
+    rowHeadersRenderer.render();
+    cellsRenderer.render();
+
+    expect(rootNode.outerHTML).toMatchHTML(`
+      <tbody>
+        <tr>
+          <td dir="rtl" style="width: 60px;"></td>
+          <td dir="rtl" style="width: 60px;"></td>
+          <td dir="rtl" style="width: 60px;"></td>
+        </tr>
+        <tr>
+          <td dir="rtl" style="width: 60px;"></td>
+          <td dir="rtl" style="width: 60px;"></td>
+          <td dir="rtl" style="width: 60px;"></td>
+        </tr>
+      </tbody>
+      `);
+
+    tableMock.cellRenderer = () => {}; // reset the cell renderer function
+
+    rowsRenderer.adjust();
+    rowHeadersRenderer.adjust();
+    cellsRenderer.adjust();
+
+    rowsRenderer.render();
+    rowHeadersRenderer.render();
+    cellsRenderer.render();
+
+    expect(rootNode.outerHTML).toMatchHTML(`
+      <tbody>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tbody>
+      `);
   });
 
   it('should generate cells properly after rerendering the cells from 0 to N cells', () => {
@@ -133,14 +208,14 @@ describe('Walkontable.Renderer.CellsRenderer', () => {
     expect(rootNode.outerHTML).toMatchHTML(`
       <tbody>
         <tr>
-          <td class=""></td>
-          <td class=""></td>
-          <td class=""></td>
+          <td></td>
+          <td></td>
+          <td></td>
         </tr>
         <tr>
-          <td class=""></td>
-          <td class=""></td>
-          <td class=""></td>
+          <td></td>
+          <td></td>
+          <td></td>
         </tr>
       </tbody>
       `);
@@ -168,14 +243,14 @@ describe('Walkontable.Renderer.CellsRenderer', () => {
     expect(rootNode.outerHTML).toMatchHTML(`
       <tbody>
         <tr>
-          <td class=""></td>
-          <td class=""></td>
-          <td class=""></td>
+          <td></td>
+          <td></td>
+          <td></td>
         </tr>
         <tr>
-          <td class=""></td>
-          <td class=""></td>
-          <td class=""></td>
+          <td></td>
+          <td></td>
+          <td></td>
         </tr>
       </tbody>
       `);

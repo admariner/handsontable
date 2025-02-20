@@ -41,7 +41,7 @@ describe('Events', () => {
       height: 400,
     });
 
-    hot.view.wt.update('onCellDblClick', onCellDblClick);
+    hot.view._wt.update('onCellDblClick', onCellDblClick);
 
     const cell = hot.getCell(1, 1);
 
@@ -78,7 +78,15 @@ describe('Events', () => {
 
       const event = triggerTouchEvent('touchend', cell);
 
-      expect(event.defaultPrevented).toBeFalse();
+      // In the WebKit-based engines the second touch event is not prevent defaulted.
+      // See ./handsontable/src/3rdparty/walkontable/src/event.js#L327
+      if (Handsontable.helper.isIOS() &&
+        (Handsontable.helper.isChromeWebKit() || Handsontable.helper.isFirefoxWebKit())) {
+        expect(event.defaultPrevented).toBeTrue();
+
+      } else {
+        expect(event.defaultPrevented).toBeFalse();
+      }
     }
   });
 

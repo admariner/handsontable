@@ -1,8 +1,6 @@
 describe('HandsontableEditor', () => {
-  const id = 'testContainer';
-
   beforeEach(function() {
-    this.$container = $(`<div id="${id}"></div>`).appendTo('body');
+    this.$container = $('<div id="testContainer"></div>').appendTo('body');
   });
 
   afterEach(function() {
@@ -40,7 +38,7 @@ describe('HandsontableEditor', () => {
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editor.offset()).toEqual($(getCell(0, 0)).offset());
   });
@@ -65,7 +63,7 @@ describe('HandsontableEditor', () => {
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    keyDownUp('F2');
 
     expect(editor.offset()).toEqual($(getCell(0, 0)).offset());
   });
@@ -94,12 +92,12 @@ describe('HandsontableEditor', () => {
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editor.offset()).toEqual($(getCell(0, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional top border.
     const editorOffset = () => ({
@@ -109,34 +107,34 @@ describe('HandsontableEditor', () => {
 
     expect(editorOffset()).toEqual($(getCell(1, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(2, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(3, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(4, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // The first row of the bottom overlay has different position, influenced by `innerBorderTop` CSS class.
     expect(editor.offset()).toEqual($(getCell(5, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(6, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(7, 0, true)).offset());
   });
@@ -147,7 +145,7 @@ describe('HandsontableEditor', () => {
       data: Handsontable.helper.createSpreadsheetData(2, 5),
       rowHeaders: true,
       colHeaders: true,
-      fixedColumnsLeft: 3,
+      fixedColumnsStart: 3,
       type: 'handsontable',
       handsontable: {
         colHeaders: ['Marque', 'Country', 'Parent company'],
@@ -159,12 +157,12 @@ describe('HandsontableEditor', () => {
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editor.offset()).toEqual($(getCell(0, 0, true)).offset());
 
     selectCell(0, 1);
-    keyDown('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional left border.
     const editorOffset = () => ({
@@ -175,17 +173,17 @@ describe('HandsontableEditor', () => {
     expect(editorOffset()).toEqual($(getCell(0, 1, true)).offset());
 
     selectCell(0, 2);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 2, true)).offset());
 
     selectCell(0, 3);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 3, true)).offset());
 
     selectCell(0, 4);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 4, true)).offset());
   });
@@ -218,13 +216,13 @@ describe('HandsontableEditor', () => {
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     // First renderable row index.
     expect(editor.offset()).toEqual($(getCell(1, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional top border.
     const editorOffset = () => ({
@@ -234,24 +232,24 @@ describe('HandsontableEditor', () => {
 
     expect(editorOffset()).toEqual($(getCell(2, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(3, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(4, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     // The first row of the bottom overlay has different position, influenced by `innerBorderTop` CSS class.
     expect(editor.offset()).toEqual($(getCell(6, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    keyDownUp('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(7, 0, true)).offset());
   });
@@ -262,7 +260,7 @@ describe('HandsontableEditor', () => {
       data: Handsontable.helper.createSpreadsheetData(2, 5),
       rowHeaders: true,
       colHeaders: true,
-      fixedColumnsLeft: 3,
+      fixedColumnsStart: 3,
       hiddenColumns: {
         indicators: true,
         columns: [0],
@@ -278,13 +276,13 @@ describe('HandsontableEditor', () => {
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    keyDownUp('enter');
 
     // First renderable column index.
     expect(editor.offset()).toEqual($(getCell(0, 1, true)).offset());
 
     selectCell(0, 2);
-    keyDown('enter');
+    keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional left border.
     const editorOffset = () => ({
@@ -295,12 +293,12 @@ describe('HandsontableEditor', () => {
     expect(editorOffset()).toEqual($(getCell(0, 2, true)).offset());
 
     selectCell(0, 3);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 3, true)).offset());
 
     selectCell(0, 4);
-    keyDown('enter');
+    keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 4, true)).offset());
   });
@@ -315,7 +313,7 @@ describe('HandsontableEditor', () => {
     });
 
     selectCell(0, 0);
-    keyDown('enter');
+    keyDownUp('enter');
 
     const editor = getActiveEditor().TEXTAREA;
 
@@ -467,7 +465,7 @@ describe('HandsontableEditor', () => {
     selectCell(2, 0);
 
     keyDownUp('enter');
-    keyDownUp('esc');
+    keyDownUp('escape');
     expect(spec().$container.find('.handsontableEditor:visible').length).toEqual(0);
   });
 
@@ -526,6 +524,38 @@ describe('HandsontableEditor', () => {
     window.onerror = prevError;
   });
 
+  it('should not throw an error while closing editor that is not visible in the viewport', async() => {
+    const spy = jasmine.createSpyObj('error', ['test']);
+    const prevError = window.onerror;
+
+    window.onerror = function() {
+      spy.test();
+
+      return true;
+    };
+    handsontable({
+      data: createSpreadsheetData(100, 1),
+      width: 300,
+      height: 200,
+      columns: [{
+        type: 'handsontable',
+        handsontable: {
+          data: [['Marque'], ['Country'], ['Parent company']]
+        }
+      }],
+    });
+
+    selectCell(0, 0);
+    keyDownUp('enter');
+    scrollViewportTo({ row: 95 });
+
+    await sleep(100);
+
+    expect(spy.test.calls.count()).toBe(0);
+
+    window.onerror = prevError;
+  });
+
   it('Enter pressed in nested HT should set the value and hide the editor', () => {
     handsontable({
       columns: [
@@ -541,7 +571,7 @@ describe('HandsontableEditor', () => {
     selectCell(2, 0);
 
     keyDownUp('enter');
-    keyDownUp('arrow_down');
+    keyDownUp('arrowdown');
     keyDownUp('enter');
     expect(spec().$container.find('.handsontableEditor:visible').length).toEqual(0);
     expect(getDataAtCell(2, 0)).toEqual('BMW');
@@ -563,7 +593,7 @@ describe('HandsontableEditor', () => {
     selectCell(2, 0);
 
     keyDownUp('enter');
-    keyDownUp('arrow_down');
+    keyDownUp('arrowdown');
     expect(document.activeElement).toEqual(hot.getActiveEditor().TEXTAREA);
   });
 
@@ -581,8 +611,8 @@ describe('HandsontableEditor', () => {
     });
 
     selectCell(2, 0);
-    keyDownUp('arrow_down');
-    keyDownUp('arrow_down');
+    keyDownUp('arrowdown');
+    keyDownUp('arrowdown');
 
     expect(getSelected()).toEqual([[4, 0, 4, 0]]);
   });
@@ -612,16 +642,16 @@ describe('HandsontableEditor', () => {
     selectCell(1, 0);
     expect(selections[0]).toEqual(['outer', 1]);
 
-    keyDownUp('arrow_down');
+    keyDownUp('arrowdown');
     expect(selections[1]).toEqual(['outer', 2]);
 
     keyDownUp('enter');
 
-    keyDownUp('arrow_down');
+    keyDownUp('arrowdown');
     expect(selections[2]).toEqual(['inner', 0]);
 
-    keyDownUp('esc');
-    keyDownUp('arrow_down');
+    keyDownUp('escape');
+    keyDownUp('arrowdown');
     expect(selections[3]).toEqual(['outer', 3]);
 
     expect(selections.length).toBe(4);
@@ -700,8 +730,34 @@ describe('HandsontableEditor', () => {
     });
   });
 
+  it('should render an editable editor\'s element without messing with "dir" attribute', () => {
+    handsontable({
+      data: Handsontable.helper.createSpreadsheetData(2, 5),
+      editor: 'handsontable',
+    });
+
+    selectCell(0, 0);
+
+    const editableElement = getActiveEditor().TEXTAREA;
+
+    expect(editableElement.getAttribute('dir')).toBeNull();
+  });
+
+  it('should inherit the actual layout direction option from the root Handsontable instance', async() => {
+    handsontable({
+      data: createSpreadsheetData(4, 4),
+      editor: 'handsontable',
+      layoutDirection: 'inherit',
+    });
+
+    selectCell(0, 0);
+    keyDownUp('enter');
+
+    expect(getActiveEditor().htEditor.getSettings().layoutDirection).toBe('ltr');
+  });
+
   describe('IME support', () => {
-    it('should focus editable element after selecting the cell', async() => {
+    it('should focus editable element after a timeout when selecting the cell if `imeFastEdit` is enabled', async() => {
       handsontable({
         columns: [
           {
@@ -711,13 +767,142 @@ describe('HandsontableEditor', () => {
               data: getManufacturerData()
             }
           }
-        ]
+        ],
+        imeFastEdit: true,
       });
+
       selectCell(0, 0, 0, 0, true, false);
 
-      await sleep(10);
+      // The `imeFastEdit` timeout is set to 50ms.
+      await sleep(55);
 
       expect(document.activeElement).toBe(getActiveEditor().TEXTAREA);
+    });
+  });
+
+  it('should open editors properly and handle keydown event properly (does not close editor)', async() => {
+    handsontable({
+      data: [
+        ['Tesla', 2017, 'black', 'black'],
+        ['Nissan', 2018, 'blue', 'blue'],
+        ['Chrysler', 2019, 'yellow', 'black'],
+        ['Volvo', 2020, 'white', 'gray']
+      ],
+      colHeaders: ['Car', 'Year', 'Chassis color', 'Bumper color'],
+      columns: [
+        {
+          type: 'handsontable',
+          handsontable: {
+            colHeaders: ['Marque', 'Country', 'Parent company'],
+            data: getManufacturerData()
+          }
+        },
+        {},
+        {
+          type: 'handsontable',
+          handsontable: {
+            colHeaders: ['Marque', 'Country', 'Parent company'],
+            data: getManufacturerData()
+          }
+        },
+        {},
+      ]
+    });
+
+    $(getCell(2, 0)).find('.htAutocompleteArrow').simulate('mousedown');
+    $(getCell(2, 0)).find('.htAutocompleteArrow').simulate('mouseup');
+    $(getCell(1, 2)).find('.htAutocompleteArrow').simulate('mousedown');
+    $(getCell(1, 2)).find('.htAutocompleteArrow').simulate('mouseup');
+
+    keyDownUp('arrowup');
+
+    expect(getSelected()).toEqual([[1, 2, 1, 2]]);
+
+    keyDownUp('arrowright');
+
+    expect(getSelected()).toEqual([[1, 2, 1, 2]]);
+
+    keyDownUp('arrowleft');
+
+    expect(getSelected()).toEqual([[1, 2, 1, 2]]);
+
+    keyDownUp('arrowdown');
+
+    expect(getSelected()).toEqual([[1, 2, 1, 2]]);
+  });
+
+  it('should open editor with the correct size', async() => {
+    handsontable({
+      colWidths: 120,
+      columns: [
+        {
+          type: 'handsontable',
+          handsontable: {
+            colHeaders: ['Marque', 'Country', 'Parent company'],
+            data: getManufacturerData(),
+            autoColumnSize: true,
+          }
+        }
+      ]
+    });
+
+    selectCell(0, 0);
+    keyDownUp('enter');
+
+    await sleep(100);
+
+    const container = getActiveEditor().htContainer;
+
+    expect(container.clientWidth).forThemes(({ classic, main }) => {
+      classic.toBe(290);
+      main.toBe(360);
+    });
+    expect(container.clientHeight).forThemes(({ classic, main }) => {
+      classic.toBe(168);
+      main.toBe(212);
+    });
+  });
+
+  it('should open editor with the correct size after other handsontable editor was open beforehand (#dev-2112)', async() => {
+    handsontable({
+      columns: [
+        {
+          type: 'handsontable',
+          handsontable: {
+            colHeaders: ['Marque', 'Country', 'Parent company'],
+            data: getManufacturerData(),
+            autoColumnSize: true,
+          }
+        },
+        {
+          type: 'handsontable',
+          handsontable: {
+            data: [['Red'], ['Green'], ['Blue']],
+          }
+        }
+      ]
+    });
+
+    selectCell(0, 1);
+    keyDownUp('enter');
+    keyDownUp('escape');
+
+    await sleep(100);
+
+    selectCell(0, 0);
+    keyDownUp('enter');
+
+    await sleep(100);
+
+    const container = getActiveEditor().htContainer;
+
+    expect(container.clientWidth).forThemes(({ classic, main }) => {
+      classic.toBe(290);
+      main.toBe(360);
+    });
+    expect(container.clientHeight).forThemes(({ classic, main }) => {
+      classic.toBe(168);
+      main.toBe(212);
     });
   });
 });

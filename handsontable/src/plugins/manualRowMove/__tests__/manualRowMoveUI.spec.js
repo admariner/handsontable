@@ -83,43 +83,8 @@ describe('manualRowMove', () => {
       $headerTH.simulate('mouseup');
       $headerTH.simulate('mousedown');
 
-      expect($('.ht__manualRowMove--backlight').css('z-index')).toBeGreaterThan(getLeftClone().css('z-index'));
-      expect($('.ht__manualRowMove--guideline').css('z-index')).toBeGreaterThan(getLeftClone().css('z-index'));
-    });
-
-    describe('backlight', () => {
-      it('should set proper left position of element when colWidths is undefined', () => {
-        handsontable({
-          data: Handsontable.helper.createSpreadsheetData(10, 10),
-          rowHeaders: true,
-          manualRowMove: true
-        });
-
-        const $headerTH = spec().$container.find('tbody tr:eq(0) th:eq(0)');
-
-        $headerTH.simulate('mousedown');
-        $headerTH.simulate('mouseup');
-        $headerTH.simulate('mousedown');
-
-        expect(spec().$container.find('.ht__manualRowMove--backlight')[0].offsetLeft).toBe(50);
-      });
-
-      it('should set proper left position of element when colWidths is defined', () => {
-        handsontable({
-          data: Handsontable.helper.createSpreadsheetData(10, 10),
-          rowHeaders: true,
-          manualRowMove: true,
-          colWidths: 100,
-        });
-
-        const $headerTH = spec().$container.find('tbody tr:eq(0) th:eq(0)');
-
-        $headerTH.simulate('mousedown');
-        $headerTH.simulate('mouseup');
-        $headerTH.simulate('mousedown');
-
-        expect(spec().$container.find('.ht__manualRowMove--backlight')[0].offsetLeft).toBe(50);
-      });
+      expect($('.ht__manualRowMove--backlight').css('z-index')).toBeGreaterThan(getInlineStartClone().css('z-index'));
+      expect($('.ht__manualRowMove--guideline').css('z-index')).toBeGreaterThan(getInlineStartClone().css('z-index'));
     });
 
     describe('guideline', () => {
@@ -142,7 +107,10 @@ describe('manualRowMove', () => {
         $headers[0].simulate('mouseover');
         $headers[0].simulate('mousemove');
 
-        expect(spec().$container.find('.ht__manualRowMove--guideline')[0].offsetTop).toBe(-1);
+        expect(spec().$container.find('.ht__manualRowMove--guideline')[0].offsetTop).forThemes(({ classic, main }) => {
+          classic.toBe(-1);
+          main.toBe(0);
+        });
       });
     });
 
@@ -198,7 +166,7 @@ describe('manualRowMove', () => {
 
       describe('should be shown properly after undo action', () => {
         it('when moving multiple rows from the top to the bottom', () => {
-          const hot = handsontable({
+          handsontable({
             data: Handsontable.helper.createSpreadsheetData(10, 10),
             rowHeaders: true,
             manualRowMove: true
@@ -218,13 +186,13 @@ describe('manualRowMove', () => {
           });
           $rowHeader.simulate('mouseup');
 
-          hot.undo();
+          getPlugin('undoRedo').undo();
 
           expect(getSelected()).toEqual([[0, -1, 2, 9]]);
         });
 
         it('when moving multiple rows from the bottom to the top', () => {
-          const hot = handsontable({
+          handsontable({
             data: Handsontable.helper.createSpreadsheetData(10, 10),
             rowHeaders: true,
             manualRowMove: true
@@ -245,7 +213,7 @@ describe('manualRowMove', () => {
           });
           $rowHeader.simulate('mouseup');
 
-          hot.undo();
+          getPlugin('undoRedo').undo();
 
           expect(getSelected()).toEqual([[3, -1, 5, 9]]);
         });
@@ -273,8 +241,8 @@ describe('manualRowMove', () => {
           });
           $rowHeader.simulate('mouseup');
 
-          hot.undo();
-          hot.redo();
+          getPlugin('undoRedo').undo();
+          hot.getPlugin('undoRedo').redo();
 
           expect(getSelected()).toEqual([[1, -1, 3, 9]]);
         });
@@ -301,8 +269,8 @@ describe('manualRowMove', () => {
           });
           $rowHeader.simulate('mouseup');
 
-          hot.undo();
-          hot.redo();
+          getPlugin('undoRedo').undo();
+          hot.getPlugin('undoRedo').redo();
 
           expect(getSelected()).toEqual([[1, -1, 3, 9]]);
         });

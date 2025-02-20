@@ -10,20 +10,30 @@
  */
 function createDestroyableResource(presetType, { rootExampleElement, hotInstance }) {
   return () => {
-    if (presetType.startsWith('vue')) {
-      rootExampleElement.firstChild.__vue__.$root.$destroy();
+    const resource = {
+      destroy: () => {
+        if (presetType.startsWith('vue3')) {
+          rootExampleElement.firstChild.__vue_app__.unmount();
 
-    } else if (presetType.startsWith('react')) {
-      ReactDOM.unmountComponentAtNode(rootExampleElement.firstChild);
+        } else if (presetType.startsWith('vue')) {
+          rootExampleElement.firstChild.__vue__.$root.$destroy();
 
-    } else if (presetType.startsWith('angular')) {
-      ng.core.getPlatform().destroy();
+        } else if (presetType.startsWith('react')) {
+          ReactDOM.unmountComponentAtNode(rootExampleElement.firstChild);
 
-    } else if (!hotInstance.isDestroyed) {
-      // Skip internal HoT-based components (e.g. context menu, dropdown menu). They
-      // are managed by the HoT itself.
-      hotInstance.destroy();
-    }
+        } else if (presetType.startsWith('angular')) {
+          ng.core.getPlatform().destroy();
+
+        } else if (!hotInstance.isDestroyed) {
+          // Skip internal HoT-based components (e.g. context menu, dropdown menu). They
+          // are managed by the HoT itself.
+          hotInstance.destroy();
+        }
+      },
+      hotInstance
+    };
+
+    return resource;
   };
 }
 
@@ -63,7 +73,7 @@ function createRegister() {
     return null;
   }
 
-  const register = new Set();
+  const register = new Map();
 
   const listen = () => {
     try {
@@ -74,10 +84,16 @@ function createRegister() {
 
           if (rootExampleElement) {
             const examplePresetType = rootExampleElement.getAttribute('data-preset-type');
+            const exampleId = rootExampleElement.getAttribute('data-example-id');
+            const currentEntry = register.get(exampleId);
+            const currentHotInstance =
+              typeof currentEntry === 'function' ?
+                register.get(exampleId)()?.hotInstance :
+                null;
 
-            register.add(createDestroyableResource(examplePresetType, {
+            register.set(exampleId, createDestroyableResource(examplePresetType, {
               rootExampleElement,
-              hotInstance: this,
+              hotInstance: currentHotInstance || this,
             }));
           }
         });
@@ -89,13 +105,43 @@ function createRegister() {
   };
 
   const destroyAll = () => {
-    register.forEach(destroyableResource => destroyableResource());
+    register.forEach(instanceResource => instanceResource().destroy());
     register.clear();
   };
 
+  const destroyExample = (exampleId) => {
+    if (register.has(exampleId)) {
+      register.get(exampleId)().destroy();
+      register.delete(exampleId);
+    }
+  };
+
+  const abortControllers = new Set();
+
+  const initPage = () => {
+    abortControllers.forEach(ctrl => ctrl.abort());
+    abortControllers.add(new AbortController());
+
+    destroyAll();
+  };
+
+  const getAbortSignal = () => {
+    const controllers = Array.from(abortControllers);
+
+    return controllers[controllers.length - 1].signal;
+  };
+
+  const getAllHotInstances =
+    () =>
+      Array.from(register.values()).map(instanceResource => instanceResource().hotInstance);
+
   return {
+    initPage,
     listen,
     destroyAll,
+    destroyExample,
+    getAbortSignal,
+    getAllHotInstances,
   };
 }
 

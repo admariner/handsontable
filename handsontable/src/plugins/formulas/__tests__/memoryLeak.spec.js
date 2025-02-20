@@ -2,11 +2,10 @@ import HyperFormula from 'hyperformula';
 
 describe('Formulas memory leak check', () => {
   const debug = false;
-  const id = 'testContainer';
 
   beforeEach(function() {
-    this.$container = $(`<div id="${id}"></div>`).appendTo('body');
-    this.$container2 = $(`<div id="${id}-2"></div>`).appendTo('body');
+    this.$container = $('<div id="testContainer"></div>').appendTo('body');
+    this.$container2 = $('<div id="testContainer-2"></div>').appendTo('body');
   });
 
   afterEach(function() {
@@ -54,7 +53,6 @@ describe('Formulas memory leak check', () => {
         engine: hfInstance1,
         sheetName: 'Sheet1'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     });
     const hot2 = spec().$container2.handsontable({
       data: [['bar'], ['Sheet1:A1']],
@@ -62,7 +60,6 @@ describe('Formulas memory leak check', () => {
         engine: hfInstance1,
         sheetName: 'Sheet2'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     }).data('handsontable');
 
     const internalEvents = hfInstance1._emitter.e;
@@ -97,7 +94,6 @@ describe('Formulas memory leak check', () => {
         engine: HyperFormula,
         sheetName: 'Sheet1'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     });
     const hot2 = spec().$container2.handsontable({
       data: [['bar'], ['Sheet1:A1']],
@@ -105,7 +101,6 @@ describe('Formulas memory leak check', () => {
         engine: hot1.getPlugin('formulas').engine,
         sheetName: 'Sheet2'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     }).data('handsontable');
 
     const internalEvents = hot1.getPlugin('formulas').engine._emitter.e;
@@ -145,7 +140,6 @@ describe('Formulas memory leak check', () => {
         engine: hfInstance1,
         sheetName: 'Sheet1'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     });
     const hot2 = spec().$container2.handsontable({
       data: [['bar'], ['Sheet1:A1']],
@@ -153,7 +147,6 @@ describe('Formulas memory leak check', () => {
         engine: hfInstance1,
         sheetName: 'Sheet2'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     }).data('handsontable');
 
     const internalEvents = hfInstance1._emitter.e;
@@ -198,7 +191,6 @@ describe('Formulas memory leak check', () => {
         engine: HyperFormula,
         sheetName: 'Sheet1'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     });
     const hot2 = spec().$container2.handsontable({
       data: [['bar'], ['Sheet1:A1']],
@@ -206,7 +198,6 @@ describe('Formulas memory leak check', () => {
         engine: hot1.getPlugin('formulas').engine,
         sheetName: 'Sheet2'
       },
-      licenseKey: 'non-commercial-and-evaluation'
     }).data('handsontable');
 
     const internalEvents = hot1.getPlugin('formulas').engine._emitter.e;

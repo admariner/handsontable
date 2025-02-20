@@ -7,25 +7,42 @@ const { logger } = utils;
 
 const docsBasePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-const SOURCE_PATH = path.resolve('../handsontable/dist/');
-const TARGET_PATH = path.resolve('./.vuepress/public/handsontable/');
+const SYMLINK_PATHS = [
+  { source: '../handsontable/tmp/', target: './.vuepress/public/handsontable/' },
+  { source: '../wrappers/react/', target: './.vuepress/public/@handsontable/react/' },
+  { source: '../wrappers/react-wrapper/', target: './.vuepress/public/@handsontable/react-wrapper/' },
+  { source: '../wrappers/angular/dist/hot-table/', target: './.vuepress/public/@handsontable/angular/' },
+  { source: '../wrappers/vue/', target: './.vuepress/public/@handsontable/vue/' },
+  { source: '../wrappers/vue3/', target: './.vuepress/public/@handsontable/vue3/' },
+];
 
-const relativeFrom = path.relative(docsBasePath, SOURCE_PATH);
-const relativeTo = path.relative(docsBasePath, TARGET_PATH);
-
-if (fs.existsSync(SOURCE_PATH)) {
-  if (fs.existsSync(TARGET_PATH)) {
-    fs.unlinkSync(TARGET_PATH);
-  }
-
-  fs.symlinkSync(
-    SOURCE_PATH,
-    TARGET_PATH,
-    'junction',
-  );
-
-  logger.success(`Symlink created ${relativeFrom} -> ${relativeTo}.`);
-
-} else {
-  logger.error(`Cannot create symlink from ${relativeFrom} - the path doesn't exist.`);
+if (!fs.existsSync(path.resolve('./.vuepress/public/@handsontable'))) {
+  fs.mkdirSync(path.resolve('./.vuepress/public/@handsontable'));
 }
+
+SYMLINK_PATHS.forEach((paths) => {
+  let { source, target } = paths;
+
+  source = path.resolve(source);
+  target = path.resolve(target);
+
+  const relativeFrom = path.relative(docsBasePath, source);
+  const relativeTo = path.relative(docsBasePath, target);
+
+  if (fs.existsSync(source)) {
+    if (fs.existsSync(target)) {
+      fs.unlinkSync(target);
+    }
+
+    fs.symlinkSync(
+      source,
+      target,
+      'junction',
+    );
+
+    logger.success(`Symlink created ${relativeFrom} -> ${relativeTo}.`);
+
+  } else {
+    logger.error(`Cannot create symlink from ${relativeFrom} - the path doesn't exist.`);
+  }
+});

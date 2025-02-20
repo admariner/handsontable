@@ -12,27 +12,29 @@ describe('Core.emptySelectedCells', () => {
 
   it('should make all selected cells empty', () => {
     handsontable({
-      data: Handsontable.helper.createSpreadsheetObjectData(9, 8),
+      data: createSpreadsheetObjectData(9, 8),
       selectionMode: 'multiple',
     });
 
-    $(getCell(5, 4)).simulate('mousedown');
-    $(getCell(1, 1)).simulate('mouseover');
-    $(getCell(1, 1)).simulate('mouseup');
+    mouseDown(getCell(5, 4));
+    mouseOver(getCell(1, 1));
+    mouseUp(getCell(1, 1));
 
-    keyDown('ctrl');
+    keyDown('control/meta');
 
-    $(getCell(2, 2)).simulate('mousedown');
-    $(getCell(7, 2)).simulate('mouseover');
-    $(getCell(7, 2)).simulate('mouseup');
+    mouseDown(getCell(2, 2));
+    mouseOver(getCell(7, 2));
+    mouseUp(getCell(7, 2));
 
-    $(getCell(2, 4)).simulate('mousedown');
-    $(getCell(2, 4)).simulate('mouseover');
-    $(getCell(2, 4)).simulate('mouseup');
+    mouseDown(getCell(2, 4));
+    mouseOver(getCell(2, 4));
+    mouseUp(getCell(2, 4));
 
-    $(getCell(7, 6)).simulate('mousedown');
-    $(getCell(8, 7)).simulate('mouseover');
-    $(getCell(8, 7)).simulate('mouseup');
+    mouseDown(getCell(7, 6));
+    mouseOver(getCell(8, 7));
+    mouseUp(getCell(8, 7));
+
+    keyUp('control/meta');
 
     emptySelectedCells();
 
@@ -53,9 +55,31 @@ describe('Core.emptySelectedCells', () => {
     expect(getData()).toEqual(snapshot);
   });
 
+  it('should not make the cells empty when the focus points to the header', () => {
+    const beforeChange = jasmine.createSpy('beforeChange');
+
+    handsontable({
+      data: createSpreadsheetData(3, 3),
+      rowHeaders: true,
+      colHeaders: true,
+      navigableHeaders: true,
+      beforeChange,
+    });
+
+    selectCell(-1, 1);
+    emptySelectedCells();
+
+    expect(getData()).toEqual([
+      ['A1', 'B1', 'C1'],
+      ['A2', 'B2', 'C2'],
+      ['A3', 'B3', 'C3'],
+    ]);
+    expect(beforeChange).not.toHaveBeenCalled();
+  });
+
   it('should not throw an error when method is called when all headers are selected', () => {
     handsontable({
-      data: Handsontable.helper.createSpreadsheetData(5, 5),
+      data: createSpreadsheetData(5, 5),
       rowHeaders: true,
       colHeaders: true,
     });
@@ -100,7 +124,7 @@ describe('Core.emptySelectedCells', () => {
       beforeChange: onBeforeChange
     });
 
-    simulateClick(spec().$container.find('.ht_clone_left tr:eq(1) th:eq(0)'));
+    simulateClick(spec().$container.find('.ht_clone_inline_start tr:eq(1) th:eq(0)'));
 
     emptySelectedCells();
 
@@ -126,5 +150,30 @@ describe('Core.emptySelectedCells', () => {
     emptySelectedCells();
 
     expect(onBeforeChange).not.toHaveBeenCalled();
+  });
+
+  it('should override cleared values using `beforeChange` hook', () => {
+    handsontable({
+      data: [
+        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6],
+        [1, 2, 3, 4, 5, 6],
+      ],
+      beforeChange(changes) {
+        changes[0][3] = 'test';
+      }
+    });
+
+    selectCells([[0, 0, 2, 2]]);
+
+    emptySelectedCells();
+
+    expect(getData()).toEqual([
+      ['test', null, null, 4, 5, 6],
+      [null, null, null, 4, 5, 6],
+      [null, null, null, 4, 5, 6],
+      [1, 2, 3, 4, 5, 6],
+    ]);
   });
 });

@@ -1,7 +1,10 @@
 import { extend } from '../../../helpers/object';
-import { expandMetaType } from '../utils';
+import { extendByMetaType } from '../utils';
 import metaSchemaFactory from '../metaSchema';
 
+/**
+ * @typedef {Options} TableMeta
+ */
 /**
  * @returns {TableMeta} Returns an empty object. The holder for global meta object.
  */
@@ -34,18 +37,20 @@ function createTableMetaEmptyClass() {
  *                    +-------------+.
  */
 export default class GlobalMeta {
+  /**
+   * An alias for the constructor. Necessary for inheritance for creating new layers.
+   *
+   * @type {TableMeta}
+   */
+  metaCtor = createTableMetaEmptyClass();
+  /**
+   * Main object (prototype of the internal TableMeta class), holder for all default settings.
+   *
+   * @type {object}
+   */
+  meta;
+
   constructor(hot) {
-    /**
-     * An alias for the constructor. Necessary for inheritance for creating new layers.
-     *
-     * @type {TableMeta}
-     */
-    this.metaCtor = createTableMetaEmptyClass();
-    /**
-     * Main object (prototype of the internal TableMeta class), holder for all default settings.
-     *
-     * @type {object}
-     */
     this.meta = this.metaCtor.prototype;
 
     extend(this.meta, metaSchemaFactory());
@@ -78,6 +83,9 @@ export default class GlobalMeta {
    */
   updateMeta(settings) {
     extend(this.meta, settings);
-    extend(this.meta, expandMetaType(settings.type, settings));
+    extendByMetaType(this.meta, {
+      ...settings,
+      type: settings.type ?? this.meta.type,
+    }, settings);
   }
 }

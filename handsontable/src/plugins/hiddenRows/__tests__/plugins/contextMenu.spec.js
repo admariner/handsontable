@@ -228,7 +228,7 @@ describe('HiddenRows', () => {
             },
           });
 
-          const $header = getTopLeftClone().find('thead tr th');
+          const $header = getTopInlineStartClone().find('thead tr th');
 
           contextMenu($header);
 
@@ -523,13 +523,7 @@ describe('HiddenRows', () => {
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
-            expect(getSelected()).toEqual([[3, -1, 3, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(3);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(3);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 3,0 from: 3,-1 to: 3,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -554,13 +548,7 @@ describe('HiddenRows', () => {
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
-            expect(getSelected()).toEqual([[8, -1, 8, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(8);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(8);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(8);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 8,0 from: 8,-1 to: 8,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -584,14 +572,7 @@ describe('HiddenRows', () => {
             selectRows(3, 4);
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
-
-            expect(getSelected()).toEqual([[2, -1, 2, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(2);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(2);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(2);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 2,0 from: 2,-1 to: 2,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -616,13 +597,7 @@ describe('HiddenRows', () => {
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
-            expect(getSelected()).toEqual([[4, -1, 4, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(4);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(4);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(4);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 4,0 from: 4,-1 to: 4,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -686,13 +661,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[0, -1, 4, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(4);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 4,1']);
           expect(`
             |   ║ - : - |
             |===:===:===|
@@ -733,13 +702,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[0, -1, 2, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,1']);
           expect(`
             |   ║ - : - |
             |===:===:===|
@@ -780,13 +743,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[2, -1, 4, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(2);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(2);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(4);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 2,0 from: 2,-1 to: 4,1']);
           expect(`
             |   ║ - : - |
             |===:===:===|
@@ -816,7 +773,7 @@ describe('HiddenRows', () => {
           expect(getCell(3, 0)).toBe(null);
           expect(getCell(4, 0)).toBe(null);
 
-          const header = getTopLeftClone().find('thead th:eq(0)');
+          const header = getTopInlineStartClone().find('thead th:eq(0)');
 
           contextMenu(header);
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
@@ -827,21 +784,15 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[-1, -1, 4, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(-1);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(4);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,-1 to: 4,1']);
           expect(`
-            |   ║ * : * |
+            |   ║ - : - |
             |===:===:===|
-            | * ║ A : 0 |
-            | * ║ 0 : 0 |
-            | * ║ 0 : 0 |
-            | * ║ 0 : 0 |
-            | * ║ 0 : 0 |
+            | - ║ A : 0 |
+            | - ║ 0 : 0 |
+            | - ║ 0 : 0 |
+            | - ║ 0 : 0 |
+            | - ║ 0 : 0 |
           `).toBeMatchToSelectionPattern();
         });
 
@@ -879,13 +830,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A4');
           expect(getCell(3, 0).innerText).toBe('A5');
           expect(getCell(4, 0)).toBe(null);
-          expect(getSelected()).toEqual([[0, -1, 2, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,4']);
           expect(`
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -928,13 +873,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A4');
           expect(getCell(3, 0).innerText).toBe('A5');
           expect(getCell(4, 0)).toBe(null);
-          expect(getSelected()).toEqual([[0, -1, 2, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,4']);
           expect(`
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -977,13 +916,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A4');
           expect(getCell(3, 0).innerText).toBe('A5');
           expect(getCell(4, 0)).toBe(null);
-          expect(getSelected()).toEqual([[0, -1, 2, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,4']);
           expect(`
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -1011,22 +944,9 @@ describe('HiddenRows', () => {
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
+            selectContextMenuOption('Insert column left');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(2)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column left
-
-            expect(getSelected()).toEqual([[-1, 1, 3, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(1);
-            expect(getSelectedRangeLast().highlight.col).toBe(1);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(1);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 1,1 from: -1,1 to: 3,1']);
             expect(`
               |   ║   : * :   :   :   |
               |===:===:===:===:===:===|
@@ -1050,22 +970,9 @@ describe('HiddenRows', () => {
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
+            selectContextMenuOption('Insert column left');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(2)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column left
-
-            expect(getSelected()).toEqual([[-1, 1, 3, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(0);
-            expect(getSelectedRangeLast().highlight.col).toBe(1);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(1);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 3,1']);
             expect(`
               |   ║   : * :   :   :   |
               |===:===:===:===:===:===|
@@ -1088,22 +995,9 @@ describe('HiddenRows', () => {
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
+            selectContextMenuOption('Insert column right');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(3)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column right
-
-            expect(getSelected()).toEqual([[-1, 0, 3, 0]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(1);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(0);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(0);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 1,0 from: -1,0 to: 3,0']);
             expect(`
               |   ║ * :   :   :   :   |
               |===:===:===:===:===:===|
@@ -1127,22 +1021,9 @@ describe('HiddenRows', () => {
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
             simulateClick(header, 'RMB');
-            contextMenu(header);
+            selectContextMenuOption('Insert column right');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(3)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column right
-
-            expect(getSelected()).toEqual([[-1, 0, 3, 0]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(0);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(0);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(0);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,0 to: 3,0']);
             expect(`
               |   ║ * :   :   :   :   |
               |===:===:===:===:===:===|

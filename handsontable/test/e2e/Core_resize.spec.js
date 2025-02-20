@@ -34,8 +34,8 @@ describe('Core resize', () => {
     expect(getMaster().height()).toBe(0);
     expect(getTopClone().height()).toBe(0);
     expect(getBottomClone().height()).toBe(0);
-    expect(getLeftClone().height()).toBe(0);
-    expect(getBottomLeftClone().height()).toBe(0);
+    expect(getInlineStartClone().height()).toBe(0);
+    expect(getBottomInlineStartClone().height()).toBe(0);
   });
 
   it('should not change table height after window is resized when a handsontable parent elements have not defined height and has overflow scroll', () => {
@@ -53,8 +53,8 @@ describe('Core resize', () => {
     expect(getMaster().height()).toBe(0);
     expect(getTopClone().height()).toBe(0);
     expect(getBottomClone().height()).toBe(0);
-    expect(getLeftClone().height()).toBe(0);
-    expect(getBottomLeftClone().height()).toBe(0);
+    expect(getInlineStartClone().height()).toBe(0);
+    expect(getBottomInlineStartClone().height()).toBe(0);
   });
 
   it('should change table height after changing parent element height', () => {
@@ -68,18 +68,36 @@ describe('Core resize', () => {
     spec().$wrapper.css('height', 200);
     hot().render();
 
+    expect(getInlineStartClone().height()).toBe(200);
     expect(getMaster().height()).toBe(200);
-    expect(getTopClone().height()).toBe(26);
-    expect(getBottomClone().height()).toBe(24);
-    expect(getLeftClone().height()).toBe(200);
-    expect(getBottomLeftClone().height()).toBe(24);
+    expect(getTopClone().height()).forThemes(({ classic, main }) => {
+      classic.toBe(26);
+      main.toBe(29);
+    });
+    expect(getBottomClone().height()).forThemes(({ classic, main }) => {
+      classic.toBe(24);
+      main.toBe(30);
+    });
+    expect(getBottomInlineStartClone().height()).forThemes(({ classic, main }) => {
+      classic.toBe(24);
+      main.toBe(30);
+    });
 
     refreshDimensions();
 
     expect(getMaster().height()).toBe(200);
-    expect(getTopClone().height()).toBe(26);
-    expect(getBottomClone().height()).toBe(24);
-    expect(getLeftClone().height()).toBe(200);
-    expect(getBottomLeftClone().height()).toBe(24);
+    expect(getInlineStartClone().height()).toBe(200);
+    expect(getTopClone().height()).forThemes(({ classic, main }) => {
+      classic.toBe(26);
+      main.toBe(29);
+    });
+    expect(getBottomClone().height()).forThemes(({ classic, main }) => {
+      classic.toBe(24);
+      main.toBe(30);
+    });
+    expect(getBottomInlineStartClone().height()).forThemes(({ classic, main }) => {
+      classic.toBe(24);
+      main.toBe(30);
+    });
   });
 });

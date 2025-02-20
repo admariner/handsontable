@@ -49,6 +49,9 @@ const dictionary = {
   [C.CONTEXTMENU_ITEMS_UNMERGE_CELLS]: 'Unmerge cells',
 
   [C.CONTEXTMENU_ITEMS_COPY]: 'Copy',
+  [C.CONTEXTMENU_ITEMS_COPY_WITH_COLUMN_HEADERS]: ['Copy with header', 'Copy with headers'],
+  [C.CONTEXTMENU_ITEMS_COPY_WITH_COLUMN_GROUP_HEADERS]: ['Copy with group header', 'Copy with group headers'],
+  [C.CONTEXTMENU_ITEMS_COPY_COLUMN_HEADERS_ONLY]: ['Copy header only', 'Copy headers only'],
   [C.CONTEXTMENU_ITEMS_CUT]: 'Cut',
 
   [C.CONTEXTMENU_ITEMS_NESTED_ROWS_INSERT_CHILD]: 'Insert child row',
@@ -96,7 +99,10 @@ const dictionary = {
 
   [C.FILTERS_BUTTONS_PLACEHOLDER_SEARCH]: 'Search',
   [C.FILTERS_BUTTONS_PLACEHOLDER_VALUE]: 'Value',
-  [C.FILTERS_BUTTONS_PLACEHOLDER_SECOND_VALUE]: 'Second value'
+  [C.FILTERS_BUTTONS_PLACEHOLDER_SECOND_VALUE]: 'Second value',
+
+  [C.CHECKBOX_CHECKED]: 'Checked',
+  [C.CHECKBOX_UNCHECKED]: 'Unchecked',
 };
 
 export default dictionary;

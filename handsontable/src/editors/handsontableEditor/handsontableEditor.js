@@ -2,10 +2,11 @@ import { TextEditor } from '../textEditor';
 import { setCaretPosition } from '../../helpers/dom/element';
 import {
   stopImmediatePropagation,
-  isImmediatePropagationStopped,
 } from '../../helpers/dom/event';
-import { KEY_CODES } from '../../helpers/unicode';
 import { extend } from '../../helpers/object';
+import { EDITOR_EDIT_GROUP } from '../../shortcutContexts';
+
+const SHORTCUTS_GROUP = 'handsontableEditor';
 
 export const EDITOR_TYPE = 'handsontable';
 
@@ -22,19 +23,22 @@ export class HandsontableEditor extends TextEditor {
    * Opens the editor and adjust its size.
    */
   open() {
-    // this.addHook('beforeKeyDown', event => this.onBeforeKeyDown(event));
-
     super.open();
+
+    const containerStyle = this.htContainer.style;
 
     if (this.htEditor) {
       this.htEditor.destroy();
+      containerStyle.width = '';
+      containerStyle.height = '';
+      containerStyle.overflow = '';
     }
 
-    if (this.htContainer.style.display === 'none') {
-      this.htContainer.style.display = '';
+    if (containerStyle.display === 'none') {
+      containerStyle.display = '';
     }
 
-    // Construct and initialise a new Handsontable
+    // Constructs and initializes a new Handsontable instance
     this.htEditor = new this.hot.constructor(this.htContainer, this.htOptions);
     this.htEditor.init();
     this.htEditor.rootElement.style.display = '';
@@ -46,6 +50,13 @@ export class HandsontableEditor extends TextEditor {
     }
 
     setCaretPosition(this.TEXTAREA, 0, this.TEXTAREA.value.length);
+
+    this.htEditor.updateSettings({
+      width: this.getWidth(),
+      height: this.getHeight(),
+    });
+
+    this.refreshDimensions();
   }
 
   /**
@@ -68,7 +79,7 @@ export class HandsontableEditor extends TextEditor {
    * @param {number|string} prop The column property (passed when datasource is an array of objects).
    * @param {HTMLTableCellElement} td The rendered cell element.
    * @param {*} value The rendered value.
-   * @param {object} cellProperties The cell meta object ({@see Core#getCellMeta}).
+   * @param {object} cellProperties The cell meta object (see {@link Core#getCellMeta}).
    */
   prepare(row, col, prop, td, value, cellProperties) {
     super.prepare(row, col, prop, td, value, cellProperties);
@@ -87,16 +98,19 @@ export class HandsontableEditor extends TextEditor {
       fillHandle: false,
       autoWrapCol: false,
       autoWrapRow: false,
+      ariaTags: false,
+      themeName: this.hot.getCurrentThemeName(),
       afterOnCellMouseDown(_, coords) {
         const sourceValue = this.getSourceData(coords.row, coords.col);
 
         // if the value is undefined then it means we don't want to set the value
-        if (sourceValue !== void 0) {
+        if (sourceValue !== undefined) {
           parent.setValue(sourceValue);
         }
-        parent.instance.destroyEditor();
+        parent.hot.destroyEditor();
       },
       preventWheel: true,
+      layoutDirection: this.hot.isRtl() ? 'rtl' : 'ltr',
     };
 
     if (this.cellProperties.handsontable) {
@@ -149,9 +163,9 @@ export class HandsontableEditor extends TextEditor {
     }
 
     if (this.htEditor && this.htEditor.getSelectedLast()) {
-      const value = this.htEditor.getInstance().getValue();
+      const value = this.htEditor.getValue();
 
-      if (value !== void 0) { // if the value is undefined then it means we don't want to set the value
+      if (value !== undefined) { // if the value is undefined then it means we don't want to set the value
         this.setValue(value);
       }
     }
@@ -160,80 +174,142 @@ export class HandsontableEditor extends TextEditor {
   }
 
   /**
-   * Assings afterDestroy callback to prevent memory leaks.
+   * Calculates and return the internal Handsontable's height.
+   *
+   * @private
+   * @returns {number}
+   */
+  getHeight() {
+    return this.htEditor.view.getTableHeight() + 1;
+  }
+
+  /**
+   * Calculates and return the internal Handsontable's width.
+   *
+   * @private
+   * @returns {number}
+   */
+  getWidth() {
+    return this.htEditor.view.getTableWidth();
+  }
+
+  /**
+   * Assigns afterDestroy callback to prevent memory leaks.
    *
    * @private
    */
   assignHooks() {
     this.hot.addHook('afterDestroy', () => {
-      if (this.htEditor) {
-        this.htEditor.destroy();
+      this.htEditor?.destroy();
+    });
+
+    this.hot.addHook('afterSetTheme', (themeName, firstRun) => {
+      if (!firstRun) {
+        this.htEditor?.useTheme(themeName);
       }
     });
   }
 
   /**
-   * OnBeforeKeyDown callback.
+   * Register shortcuts responsible for handling editor.
    *
    * @private
-   * @param {Event} event The keyboard event object.
    */
-  onBeforeKeyDown(event) {
-    if (isImmediatePropagationStopped(event)) {
-      return;
-    }
+  registerShortcuts() {
+    const shortcutManager = this.hot.getShortcutManager();
+    const editorContext = shortcutManager.getContext('editor');
 
-    const innerHOT = this.htEditor.getInstance();
+    super.registerShortcuts();
 
-    let rowToSelect;
-    let selectedRow;
+    const contextConfig = {
+      group: SHORTCUTS_GROUP,
+      relativeToGroup: EDITOR_EDIT_GROUP,
+      position: 'before',
+    };
 
-    if (event.keyCode === KEY_CODES.ARROW_DOWN) {
-      if (!innerHOT.getSelectedLast() && !innerHOT.flipped) {
-        rowToSelect = 0;
+    const action = (rowToSelect, event) => {
+      const innerHOT = this.htEditor;
 
-      } else if (innerHOT.getSelectedLast()) {
-        if (innerHOT.flipped) {
-          rowToSelect = innerHOT.getSelectedLast()[0] + 1;
-
-        } else if (!innerHOT.flipped) {
-          const lastRow = innerHOT.countRows() - 1;
-
-          selectedRow = innerHOT.getSelectedLast()[0];
-          rowToSelect = Math.min(lastRow, selectedRow + 1);
-        }
-      }
-
-    } else if (event.keyCode === KEY_CODES.ARROW_UP) {
-      if (!innerHOT.getSelectedLast() && innerHOT.flipped) {
-        rowToSelect = innerHOT.countRows() - 1;
-
-      } else if (innerHOT.getSelectedLast()) {
-        if (innerHOT.flipped) {
-          selectedRow = innerHOT.getSelectedLast()[0];
-          rowToSelect = Math.max(0, selectedRow - 1);
+      if (rowToSelect !== undefined) {
+        if (rowToSelect < 0 || (innerHOT.flipped && rowToSelect > innerHOT.countRows() - 1)) {
+          innerHOT.deselectCell();
         } else {
-          selectedRow = innerHOT.getSelectedLast()[0];
-          rowToSelect = selectedRow - 1;
+          innerHOT.selectCell(rowToSelect, 0);
+        }
+        if (innerHOT.getData().length) {
+          event.preventDefault();
+          stopImmediatePropagation(event);
+
+          this.hot.listen();
+          this.TEXTAREA.focus();
+
+          return false;
         }
       }
-    }
+    };
 
-    if (rowToSelect !== void 0) {
-      if (rowToSelect < 0 || (innerHOT.flipped && rowToSelect > innerHOT.countRows() - 1)) {
-        innerHOT.deselectCell();
-      } else {
-        innerHOT.selectCell(rowToSelect, 0);
-      }
-      if (innerHOT.getData().length) {
-        event.preventDefault();
-        stopImmediatePropagation(event);
+    editorContext.addShortcuts([{
+      keys: [['ArrowUp']],
+      callback: (event) => {
+        const innerHOT = this.htEditor;
+        let rowToSelect;
+        let selectedRow;
 
-        this.hot.listen();
-        this.TEXTAREA.focus();
-      }
-    }
+        if (!innerHOT.getSelectedLast() && innerHOT.flipped) {
+          rowToSelect = innerHOT.countRows() - 1;
 
-    super.onBeforeKeyDown(event);
+        } else if (innerHOT.getSelectedLast()) {
+          if (innerHOT.flipped) {
+            selectedRow = innerHOT.getSelectedLast()[0];
+            rowToSelect = Math.max(0, selectedRow - 1);
+          } else {
+            selectedRow = innerHOT.getSelectedLast()[0];
+            rowToSelect = selectedRow - 1;
+          }
+        }
+
+        return action(rowToSelect, event);
+      },
+      preventDefault: false, // Doesn't block default behaviour (navigation) for a `textArea` HTMLElement.
+    }, {
+      keys: [['ArrowDown']],
+      callback: (event) => {
+        const innerHOT = this.htEditor;
+        let rowToSelect;
+        let selectedRow;
+
+        if (!innerHOT.getSelectedLast() && !innerHOT.flipped) {
+          rowToSelect = 0;
+
+        } else if (innerHOT.getSelectedLast()) {
+          if (innerHOT.flipped) {
+            rowToSelect = innerHOT.getSelectedLast()[0] + 1;
+
+          } else if (!innerHOT.flipped) {
+            const lastRow = innerHOT.countRows() - 1;
+
+            selectedRow = innerHOT.getSelectedLast()[0];
+            rowToSelect = Math.min(lastRow, selectedRow + 1);
+          }
+        }
+
+        return action(rowToSelect, event);
+      },
+      preventDefault: false, // Doesn't block default behaviour (navigation) for a `textArea` HTMLElement.
+    }], contextConfig);
+  }
+
+  /**
+   * Unregister shortcuts responsible for handling editor.
+   *
+   * @private
+   */
+  unregisterShortcuts() {
+    super.unregisterShortcuts();
+
+    const shortcutManager = this.hot.getShortcutManager();
+    const editorContext = shortcutManager.getContext('editor');
+
+    editorContext.removeShortcutsByGroup(SHORTCUTS_GROUP);
   }
 }

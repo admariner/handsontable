@@ -20,36 +20,36 @@ export class TouchScroll extends BasePlugin {
     return PLUGIN_PRIORITY;
   }
 
-  constructor(hotInstance) {
-    super(hotInstance);
-
-    /**
-     * Collection of scrollbars to update.
-     *
-     * @type {Array}
-     */
-    this.scrollbars = [];
-    /**
-     * Collection of overlays to update.
-     *
-     * @type {Array}
-     */
-    this.clones = [];
-    /**
-     * Flag which determines if collection of overlays should be refilled on every table render.
-     *
-     * @type {boolean}
-     * @default false
-     */
-    this.lockedCollection = false;
-    /**
-     * Flag which determines if walkontable should freeze overlays while scrolling.
-     *
-     * @type {boolean}
-     * @default false
-     */
-    this.freezeOverlays = false;
+  static get SETTING_KEYS() {
+    return true;
   }
+
+  /**
+   * Collection of scrollbars to update.
+   *
+   * @type {Array}
+   */
+  scrollbars = [];
+  /**
+   * Collection of overlays to update.
+   *
+   * @type {Array}
+   */
+  clones = [];
+  /**
+   * Flag which determines if collection of overlays should be refilled on every table render.
+   *
+   * @type {boolean}
+   * @default false
+   */
+  lockedCollection = false;
+  /**
+   * Flag which determines if walkontable should freeze overlays while scrolling.
+   *
+   * @type {boolean}
+   * @default false
+   */
+  freezeOverlays = false;
 
   /**
    * Check if plugin is enabled.
@@ -68,7 +68,7 @@ export class TouchScroll extends BasePlugin {
       return;
     }
 
-    this.addHook('afterViewRender', () => this.onAfterViewRender());
+    this.addHook('afterViewRender', () => this.#onAfterViewRender());
     this.registerEvents();
 
     super.enablePlugin();
@@ -96,16 +96,14 @@ export class TouchScroll extends BasePlugin {
    * @private
    */
   registerEvents() {
-    this.addHook('beforeTouchScroll', () => this.onBeforeTouchScroll());
-    this.addHook('afterMomentumScroll', () => this.onAfterMomentumScroll());
+    this.addHook('beforeTouchScroll', () => this.#onBeforeTouchScroll());
+    this.addHook('afterMomentumScroll', () => this.#onAfterMomentumScroll());
   }
 
   /**
    * After view render listener.
-   *
-   * @private
    */
-  onAfterViewRender() {
+  #onAfterViewRender() {
     if (this.lockedCollection) {
       return;
     }
@@ -113,10 +111,10 @@ export class TouchScroll extends BasePlugin {
     const {
       topOverlay,
       bottomOverlay,
-      leftOverlay,
-      topLeftCornerOverlay,
-      bottomLeftCornerOverlay
-    } = this.hot.view.wt.wtOverlays;
+      inlineStartOverlay,
+      topInlineStartCornerOverlay,
+      bottomInlineStartCornerOverlay
+    } = this.hot.view._wt.wtOverlays;
 
     this.lockedCollection = true;
     this.scrollbars.length = 0;
@@ -125,16 +123,17 @@ export class TouchScroll extends BasePlugin {
     if (bottomOverlay.clone) {
       this.scrollbars.push(bottomOverlay);
     }
-    this.scrollbars.push(leftOverlay);
 
-    if (topLeftCornerOverlay) {
-      this.scrollbars.push(topLeftCornerOverlay);
+    this.scrollbars.push(inlineStartOverlay);
+
+    if (topInlineStartCornerOverlay) {
+      this.scrollbars.push(topInlineStartCornerOverlay);
     }
-    if (bottomLeftCornerOverlay && bottomLeftCornerOverlay.clone) {
-      this.scrollbars.push(bottomLeftCornerOverlay);
+    if (bottomInlineStartCornerOverlay && bottomInlineStartCornerOverlay.clone) {
+      this.scrollbars.push(bottomInlineStartCornerOverlay);
     }
 
-    this.clones.length = 0;
+    this.clones = [];
 
     if (topOverlay.needFullRender) {
       this.clones.push(topOverlay.clone.wtTable.holder.parentNode);
@@ -142,23 +141,21 @@ export class TouchScroll extends BasePlugin {
     if (bottomOverlay.needFullRender) {
       this.clones.push(bottomOverlay.clone.wtTable.holder.parentNode);
     }
-    if (leftOverlay.needFullRender) {
-      this.clones.push(leftOverlay.clone.wtTable.holder.parentNode);
+    if (inlineStartOverlay.needFullRender) {
+      this.clones.push(inlineStartOverlay.clone.wtTable.holder.parentNode);
     }
-    if (topLeftCornerOverlay) {
-      this.clones.push(topLeftCornerOverlay.clone.wtTable.holder.parentNode);
+    if (topInlineStartCornerOverlay) {
+      this.clones.push(topInlineStartCornerOverlay.clone.wtTable.holder.parentNode);
     }
-    if (bottomLeftCornerOverlay && bottomLeftCornerOverlay.clone) {
-      this.clones.push(bottomLeftCornerOverlay.clone.wtTable.holder.parentNode);
+    if (bottomInlineStartCornerOverlay && bottomInlineStartCornerOverlay.clone) {
+      this.clones.push(bottomInlineStartCornerOverlay.clone.wtTable.holder.parentNode);
     }
   }
 
   /**
    * Touch scroll listener.
-   *
-   * @private
    */
-  onBeforeTouchScroll() {
+  #onBeforeTouchScroll() {
     this.freezeOverlays = true;
 
     arrayEach(this.clones, (clone) => {
@@ -168,10 +165,8 @@ export class TouchScroll extends BasePlugin {
 
   /**
    * After momentum scroll listener.
-   *
-   * @private
    */
-  onAfterMomentumScroll() {
+  #onAfterMomentumScroll() {
     this.freezeOverlays = false;
 
     arrayEach(this.clones, (clone) => {
@@ -179,7 +174,7 @@ export class TouchScroll extends BasePlugin {
       addClass(clone, 'show-tween');
     });
 
-    setTimeout(() => {
+    this.hot._registerTimeout(() => {
       arrayEach(this.clones, (clone) => {
         removeClass(clone, 'show-tween');
       });
@@ -190,6 +185,6 @@ export class TouchScroll extends BasePlugin {
       scrollbar.resetFixedPosition();
     });
 
-    this.hot.view.wt.wtOverlays.syncScrollWithMaster();
+    this.hot.view._wt.wtOverlays.syncScrollWithMaster();
   }
 }
