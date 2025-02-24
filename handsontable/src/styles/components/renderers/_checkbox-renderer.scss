@@ -12,7 +12,15 @@
       margin: 0;
       vertical-align: middle;
       cursor: pointer;
-      appearance: none;
+      margin-top: -2px;
+
+      &:first-child {
+        margin-inline-end: var(--ht-gap-size);
+      }
+
+      &:last-child {
+        margin-inline-start: var(--ht-gap-size);
+      }
 
       // Box
       &::before {
@@ -129,11 +137,6 @@
       cursor: pointer;
       color: inherit;
       margin: 0;
-
-      .htCheckboxRendererInput {
-        margin-top: -2px;
-        margin-inline-end: var(--ht-gap-size);
-      }
 
       &.fullWidth {
         width: 100%;
