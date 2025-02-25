@@ -6,10 +6,11 @@
   font-size: 13px;
   color #222222;
 
-  * { 
+  *:not(a) { 
     outline: blue solid 0 !important
   }
-  *:focus-visible {
+
+  *:not(a):focus-visible {
     outline: blue solid 0 !important
   }
 
@@ -19,6 +20,10 @@
 
   .handsontable tr {
     background: none;
+  }
+  
+  .htFocusCatcher {
+    border: 0 !important;
   }
 }
 

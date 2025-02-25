@@ -1,5 +1,5 @@
 import { warn } from './helpers/console';
-import { isOutsideInput } from './helpers/dom/element';
+import { isHTMLElement, isOutsideInput } from './helpers/dom/element';
 import { debounce } from './helpers/function';
 
 /**
@@ -149,7 +149,7 @@ export class FocusManager {
         'modifyFocusedElement', currentHighlightCoords.row, currentHighlightCoords.col, element
       );
 
-      if (!(elementToBeFocused instanceof HTMLElement)) {
+      if (!isHTMLElement(elementToBeFocused)) {
         elementToBeFocused = element;
       }
 
@@ -244,7 +244,7 @@ export class FocusManager {
     this.#getSelectedCell((selectedCell) => {
       if (
         this.getFocusMode() === FOCUS_MODES.MIXED &&
-        selectedCell.nodeName === 'TD'
+        selectedCell?.nodeName === 'TD'
       ) {
         this.refocusToEditorTextarea();
       }
