@@ -1231,7 +1231,7 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
     };
 
     for (let i = changes.length - 1; i >= 0; i--) {
-      const [row, prop, , newValue] = changes[i];
+      const [row, prop] = changes[i];
       const visualCol = datamap.propToCol(prop);
       let cellProperties;
 
@@ -1242,10 +1242,6 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
         // If there's no requested visual column, we can use the table meta as the cell properties when retrieving
         // the cell validator.
         cellProperties = { ...Object.getPrototypeOf(tableMeta), ...tableMeta };
-      }
-
-      if (cellProperties.type === 'numeric' && typeof newValue === 'string' && isNumericLike(newValue)) {
-        changes[i][3] = getParsedNumber(newValue);
       }
 
       /* eslint-disable no-loop-func */
@@ -1299,7 +1295,7 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
         while (changes[i][0] > instance.countRows() - 1) {
           const {
             delta: numberOfCreatedRows
-          } = datamap.createRow(undefined, undefined, { source });
+          } = datamap.createRow(undefined, undefined, { source: 'auto' });
 
           if (numberOfCreatedRows === 0) {
             skipThisChange = true;
@@ -1313,7 +1309,7 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
         while (datamap.propToCol(changes[i][1]) > instance.countCols() - 1) {
           const {
             delta: numberOfCreatedColumns
-          } = datamap.createCol(undefined, undefined, { source });
+          } = datamap.createCol(undefined, undefined, { source: 'auto' });
 
           if (numberOfCreatedColumns === 0) {
             skipThisChange = true;
@@ -1488,17 +1484,31 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
    * @returns {Array} List of changes finally applied to the dataset.
    */
   function processChanges(changes, source) {
-    const activeEditor = instance.getActiveEditor();
     const beforeChangeResult = instance.runHooks('beforeChange', changes, source || 'edit');
     // The `beforeChange` hook could add a `null` for purpose of cancelling some dataset's change.
     const filteredChanges = changes.filter(change => change !== null);
 
     if (beforeChangeResult === false || filteredChanges.length === 0) {
-      if (activeEditor) {
-        activeEditor.cancelChanges();
-      }
+      instance.getActiveEditor()?.cancelChanges();
 
       return [];
+    }
+
+    for (let i = filteredChanges.length - 1; i >= 0; i--) {
+      const [row, prop, , newValue] = filteredChanges[i];
+      const visualColumn = datamap.propToCol(prop);
+      let cellProperties;
+
+      if (Number.isInteger(visualColumn)) {
+        cellProperties = instance.getCellMeta(row, visualColumn);
+      } else {
+        // If there's no requested visual column, we can use the table meta as the cell properties
+        cellProperties = { ...Object.getPrototypeOf(tableMeta), ...tableMeta };
+      }
+
+      if (cellProperties.type === 'numeric' && typeof newValue === 'string' && isNumericLike(newValue)) {
+        filteredChanges[i][3] = getParsedNumber(newValue);
+      }
     }
 
     return filteredChanges;
@@ -2592,7 +2602,11 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
         const currentThemeName = instance.getCurrentThemeName();
         const themeNameOptionExists = hasOwnProperty(settings, 'themeName');
 
-        if (currentThemeName && themeNameOptionExists) {
+        if (
+          currentThemeName &&
+          themeNameOptionExists &&
+          currentThemeName !== settings.themeName
+        ) {
           instance.view.getStylesHandler().removeClassNames();
           instance.view.removeClassNameFromLicenseElement(currentThemeName);
         }
@@ -5023,42 +5037,6 @@ export default function Core(rootElement, userSettings, rootInstanceSymbol = fal
    */
   this._getEditorManager = function() {
     return editorManager;
-  };
-
-  /**
-   * Check if currently it is RTL direction.
-   *
-   * @private
-   * @memberof Core#
-   * @function isRtl
-   * @returns {boolean} True if RTL.
-   */
-  this.isRtl = function() {
-    return instance.rootWindow.getComputedStyle(instance.rootElement).direction === 'rtl';
-  };
-
-  /**
-   * Check if currently it is LTR direction.
-   *
-   * @private
-   * @memberof Core#
-   * @function isLtr
-   * @returns {boolean} True if LTR.
-   */
-  this.isLtr = function() {
-    return !instance.isRtl();
-  };
-
-  /**
-   * Returns 1 for LTR; -1 for RTL. Useful for calculations.
-   *
-   * @private
-   * @memberof Core#
-   * @function getDirectionFactor
-   * @returns {number} Returns 1 for LTR; -1 for RTL.
-   */
-  this.getDirectionFactor = function() {
-    return instance.isLtr() ? 1 : -1;
   };
 
   const shortcutManager = createShortcutManager({

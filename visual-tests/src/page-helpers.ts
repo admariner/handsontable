@@ -34,6 +34,12 @@ export enum FilterConditions {
   Yesterday = 'Yesterday',
 }
 
+// eslint-disable-next-line no-shadow
+export enum LayoutDirection {
+  LTR = 'ltr',
+  RTL = 'rtl',
+}
+
 /**
  * Get the page instance.
  *
@@ -266,6 +272,17 @@ export async function selectFromDropdownMenu(option: string) {
 /**
  * @param {string} option Cell locator.
  */
+export async function selectFromContextMenu(option: string) {
+  const contextMenu = getPageInstance().locator(
+    helpers.selectors.contextMenu
+  );
+
+  await contextMenu.locator(option).click();
+}
+
+/**
+ * @param {string} option Cell locator.
+ */
 export async function selectCo(option: string) {
   const dropdownMenu = getPageInstance().locator(
     helpers.selectors.dropdownMenu
@@ -477,9 +494,9 @@ export async function redo() {
   const isMac = process.platform === 'darwin';
 
   if (isMac) {
-    await getPageInstance().keyboard.press('Meta+X');
+    await getPageInstance().keyboard.press('Meta+Y');
   } else {
-    await getPageInstance().keyboard.press('Control+X');
+    await getPageInstance().keyboard.press('Control+Y');
   }
 }
 

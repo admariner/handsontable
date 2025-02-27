@@ -349,6 +349,7 @@ export class NestedHeaders extends BasePlugin {
 
       TH.removeAttribute('colspan');
       removeClass(TH, 'hiddenHeader');
+      removeClass(TH, 'hiddenHeaderText');
 
       const {
         colspan,
@@ -364,6 +365,11 @@ export class NestedHeaders extends BasePlugin {
         const { wtOverlays } = view._wt;
         const isTopInlineStartOverlay = wtOverlays.topInlineStartCornerOverlay?.clone.wtTable.THEAD.contains(TH);
         const isInlineStartOverlay = wtOverlays.inlineStartOverlay?.clone.wtTable.THEAD.contains(TH);
+        const isTopOverlay = wtOverlays.topOverlay?.clone.wtTable.THEAD.contains(TH);
+
+        if (isTopOverlay && visualColumnIndex < fixedColumnsStart) {
+          addClass(TH, 'hiddenHeaderText');
+        }
 
         // Check if there is a fixed column enabled, if so then reduce colspan to fixed column width.
         const correctedColspan = isTopInlineStartOverlay || isInlineStartOverlay ?
@@ -854,10 +860,12 @@ export class NestedHeaders extends BasePlugin {
    * @param {Array} renderersArray Array of renderers.
    */
   #onAfterGetColumnHeaderRenderers(renderersArray) {
-    renderersArray.length = 0;
+    if (this.#stateManager.getLayersCount() > 0) {
+      renderersArray.length = 0;
 
-    for (let headerLayer = 0; headerLayer < this.#stateManager.getLayersCount(); headerLayer++) {
-      renderersArray.push(this.headerRendererFactory(headerLayer));
+      for (let headerLayer = 0; headerLayer < this.#stateManager.getLayersCount(); headerLayer++) {
+        renderersArray.push(this.headerRendererFactory(headerLayer));
+      }
     }
   }
 
