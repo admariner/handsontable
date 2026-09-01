@@ -2,11 +2,10 @@ import HyperFormula from 'hyperformula';
 
 describe('Formulas general', () => {
   const debug = false;
-  const id = 'testContainer';
 
   beforeEach(function() {
-    this.$container = $(`<div id="${id}"></div>`).appendTo('body');
-    this.$container2 = $(`<div id="${id}-2"></div>`).appendTo('body');
+    this.$container = $('<div id="testContainer"></div>').appendTo('body');
+    this.$container2 = $('<div id="testContainer-2"></div>').appendTo('body');
   });
 
   afterEach(function() {
@@ -48,7 +47,7 @@ describe('Formulas general', () => {
 
   describe('cooperation with validation', () => {
     it('should validate result of formula properly (opening and closing an editor)', async() => {
-      const hot = handsontable({
+      handsontable({
         data: [
           ['=B1+5', 2, '=D1', 'text']
         ],
@@ -58,25 +57,25 @@ describe('Formulas general', () => {
         type: 'numeric',
       });
 
-      selectCell(0, 0);
+      await selectCell(0, 0);
       // Opening an editor
-      keyDown('enter');
+      await keyDownUp('enter');
       // Closing the editor and saving changes.
-      keyDown('enter');
+      await keyDownUp('enter');
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
-      expect($(getCell(0, 0)).hasClass(hot.getSettings().invalidCellClassName)).toBe(false);
+      expect($(getCell(0, 0)).hasClass(getSettings().invalidCellClassName)).toBe(false);
 
-      selectCell(0, 2);
+      await selectCell(0, 2);
       // Opening an editor
-      keyDown('enter');
+      await keyDownUp('enter');
       // Closing the editor and saving changes.
-      keyDown('enter');
+      await keyDownUp('enter');
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
-      expect($(getCell(0, 2)).hasClass(hot.getSettings().invalidCellClassName)).toBe(true);
+      expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(true);
     });
 
     it('should validate result of formula for dependant cells properly (formula returns text)', async() => {
@@ -93,9 +92,9 @@ describe('Formulas general', () => {
         beforeValidate,
       });
 
-      setDataAtCell(0, 0, 'text');
+      await setDataAtCell(0, 0, 'text');
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledWith('text', 0, 0);
       expect(beforeValidate).toHaveBeenCalledWith('text', 0, 1);
@@ -121,9 +120,9 @@ describe('Formulas general', () => {
         beforeValidate,
       });
 
-      setDataAtCell(0, 0, '=B1+5a');
+      await setDataAtCell(0, 0, '=B1+5a');
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledWith('#ERROR!', 0, 0);
       expect(beforeValidate).toHaveBeenCalledWith('#ERROR!', 0, 2);
@@ -132,9 +131,8 @@ describe('Formulas general', () => {
       expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(true);
       expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(true);
 
-      setDataAtCell(0, 0, '=B1+5');
-
-      await sleep(100); // Validator is asynchronous.
+      await setDataAtCell(0, 0, '=B1+5');
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledWith(7, 0, 0);
       expect(beforeValidate).toHaveBeenCalledWith(7, 0, 2);
@@ -158,9 +156,8 @@ describe('Formulas general', () => {
         beforeValidate,
       });
 
-      setDataAtCell(0, 0, '=C1');
-
-      await sleep(100); // Validator is asynchronous.
+      await setDataAtCell(0, 0, '=C1');
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledWith('#CYCLE!', 0, 0);
       expect(beforeValidate).toHaveBeenCalledWith('#CYCLE!', 0, 2);
@@ -169,9 +166,8 @@ describe('Formulas general', () => {
       expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(true);
       expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(true);
 
-      setDataAtCell(0, 0, '=B1+5');
-
-      await sleep(100); // Validator is asynchronous.
+      await setDataAtCell(0, 0, '=B1+5');
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledWith(7, 0, 0);
       expect(beforeValidate).toHaveBeenCalledWith(7, 0, 2);
@@ -195,15 +191,15 @@ describe('Formulas general', () => {
         beforeValidate,
       });
 
-      alter('remove_col', 4);
-
-      await sleep(100); // Validator is asynchronous.
+      await alter('remove_col', 4);
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).not.toHaveBeenCalled();
       expect($(getCell(0, 0)).hasClass(getSettings().invalidCellClassName)).toBe(false);
       expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(false);
       expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(false);
 
+      // eslint-disable-next-line handsontable/require-await
       await new Promise(resolve => validateCells(resolve));
 
       expect(beforeValidate).toHaveBeenCalledWith('#REF!', 0, 0, 'validateCells');
@@ -214,8 +210,249 @@ describe('Formulas general', () => {
       expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(true);
     });
 
+    it('should revalidate dependant cells after undoing and redoing a change (#dev-2036)', async() => {
+      handsontable({
+        data: [
+          [1, 2, '=A1+B1', '=C1']
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+      });
+
+      await setDataAtCell(0, 0, 'text');
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+      expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      expect(getDataAtCell(0, 2)).toBe(3);
+      expect(getCellMeta(0, 2).valid).toBe(true);
+      expect(getCellMeta(0, 3).valid).toBe(true);
+      expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(false);
+      expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(false);
+
+      getPlugin('undoRedo').redo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      expect(getCellMeta(0, 2).valid).toBe(false);
+      expect(getCellMeta(0, 3).valid).toBe(false);
+      expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+      expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+    });
+
+    it('should only validate the dependant cells once when undoing a change (#dev-2036)', async() => {
+      const beforeValidate = jasmine.createSpy('beforeValidate');
+
+      handsontable({
+        data: [
+          [1, 2, '=A1+B1', '=C1']
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+        beforeValidate,
+      });
+
+      await setDataAtCell(0, 0, 'text');
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      beforeValidate.calls.reset();
+
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      const validatedColumns = beforeValidate.calls.allArgs().map(([, , column]) => column);
+
+      // The Core validates the cell restored by the undo, the plugin validates the cells that
+      // the engine recalculated. Neither cell may be validated twice.
+      expect(validatedColumns.filter(column => column === 0).length).toBe(1);
+      expect(validatedColumns.filter(column => column === 2).length).toBe(1);
+      expect(validatedColumns.filter(column => column === 3).length).toBe(1);
+    });
+
+    it('should only validate each cell once when undoing a row removal (#dev-2036)', async() => {
+      const beforeValidate = jasmine.createSpy('beforeValidate');
+
+      handsontable({
+        data: [
+          [1, 10],
+          ['=A1+B2', 0],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+        beforeValidate,
+      });
+
+      await alter('remove_row', 0);
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      beforeValidate.calls.reset();
+
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      const validatedCells = beforeValidate.calls.allArgs().map(([, row, column]) => `${row}x${column}`);
+      const duplicates = validatedCells.filter((cell, index) => validatedCells.indexOf(cell) !== index);
+
+      expect(duplicates).toEqual([]);
+    });
+
+    it('should validate the cells restored by undoing a row removal (#dev-2036)', async() => {
+      const validated = [];
+
+      handsontable({
+        data: [
+          [1, 10],
+          [2, '=A1*2'],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+        beforeValidate: (value, row, column) => {
+          validated.push(`${row}x${column}`);
+        },
+      });
+
+      await alter('remove_row', 1);
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      validated.length = 0;
+
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      // `setSourceDataAtCell` restores the row without running the Core validator, so the restored
+      // formula has to be validated by the plugin. Excluding it would leave it unvalidated by
+      // anyone, keeping whatever `valid` flag it carried before the removal.
+      expect(validated).toContain('1x1');
+      expect(getCellMeta(1, 1).valid).toBe(true);
+    });
+
+    it('should revalidate dependant cells after undoing a row removal on sorted rows (#dev-2036)', async() => {
+      const validated = [];
+
+      handsontable({
+        data: [
+          [4, 40],
+          [3, '=A2*2'],
+          [2, 20],
+          [1, 10],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+        columnSorting: true,
+        beforeValidate: (value, row, column) => {
+          validated.push(`${row}x${column}`);
+        },
+      });
+
+      // Sorting puts the physical rows in the order 3, 2, 1, 0, so the physical and visual row
+      // indexes no longer match. The dependant formula is on physical row 1.
+      getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      // Visual row 1 is physical row 2 - the row the formula reads.
+      await alter('remove_row', 1);
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      validated.length = 0;
+
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      // The dependant formula has to be revalidated. Translating the physical row of the restored
+      // data as if it were visual used to build an address that collided with the formula's own
+      // address, which silently dropped it from the validation pass.
+      expect(validated).toContain(`${toVisualRow(1)}x1`);
+    });
+
+    it('should revalidate dependant cells after undoing a row removal (#dev-2036)', async() => {
+      handsontable({
+        data: [
+          [1, 10],
+          ['=A1+B2', 0],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+      });
+
+      await alter('remove_row', 0);
+      // The formula lost its A1 reference, so it is a #REF! error at [0, 0] now.
+      await setDataAtCell(0, 1, 5);
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      expect(getDataAtCell(0, 0)).toBe('#REF!');
+      expect($(getCell(0, 0)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+
+      // Undoing the edit leaves the #REF! in place, so the cell stays invalid.
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      expect(getDataAtCell(0, 0)).toBe('#REF!');
+      expect($(getCell(0, 0)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+
+      // Undoing the removal restores the row, so the formula computes a valid number again.
+      // Restoring the data is a `setSourceDataAtCell` write, which validates dependants outside
+      // of undo too.
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      expect(getDataAtCell(1, 0)).toBe(1);
+      expect(getCellMeta(1, 0).valid).toBe(true);
+      expect($(getCell(1, 0)).hasClass(getSettings().invalidCellClassName)).toBe(false);
+    });
+
+    it('should not validate dependant cells after undoing an action that writes no data (#dev-2036)', async() => {
+      const beforeValidate = jasmine.createSpy('beforeValidate');
+
+      handsontable({
+        data: [
+          [3, '=A1*2'],
+          [1, '=A2*2'],
+          [2, '=A3*2'],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        type: 'numeric',
+        undo: true,
+        columnSorting: true,
+        beforeValidate,
+      });
+
+      getPlugin('columnSorting').sort({ column: 0, sortOrder: 'asc' });
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      beforeValidate.calls.reset();
+
+      getPlugin('undoRedo').undo();
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
+
+      // Sorting writes no cell data, so neither the sort nor its undo validates dependant cells.
+      expect(beforeValidate).not.toHaveBeenCalled();
+    });
+
     it('should not automatically validate changes when the engine is modified from the outside code', async() => {
-      const hot = handsontable({
+      handsontable({
         data: [
           ['=E1', 'text', '=A1', '=C1', 22]
         ],
@@ -225,24 +462,26 @@ describe('Formulas general', () => {
         type: 'numeric'
       });
 
-      hot.getPlugin('formulas').engine.setCellContents({ sheet: 0, row: 0, col: 0 }, '=B1');
+      getPlugin('formulas').engine.setCellContents({ sheet: 0, row: 0, col: 0 }, '=B1');
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
-      expect($(getCell(0, 0)).hasClass(hot.getSettings().invalidCellClassName)).toBe(false);
-      expect($(getCell(0, 2)).hasClass(hot.getSettings().invalidCellClassName)).toBe(false);
-      expect($(getCell(0, 3)).hasClass(hot.getSettings().invalidCellClassName)).toBe(false);
+      expect($(getCell(0, 0)).hasClass(getSettings().invalidCellClassName)).toBe(false);
+      expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(false);
+      expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(false);
 
-      await new Promise(resolve => hot.validateCells(resolve));
+      // eslint-disable-next-line handsontable/require-await
+      await new Promise(resolve => validateCells(resolve));
 
-      expect($(getCell(0, 0)).hasClass(hot.getSettings().invalidCellClassName)).toBe(true);
-      expect($(getCell(0, 2)).hasClass(hot.getSettings().invalidCellClassName)).toBe(true);
-      expect($(getCell(0, 3)).hasClass(hot.getSettings().invalidCellClassName)).toBe(true);
+      expect($(getCell(0, 0)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+      expect($(getCell(0, 2)).hasClass(getSettings().invalidCellClassName)).toBe(true);
+      expect($(getCell(0, 3)).hasClass(getSettings().invalidCellClassName)).toBe(true);
     });
 
     it('should change the value type passed to the validator only when it is a formula', async() => {
       const afterValidate = jasmine.createSpy('afterValidate');
-      const hot = handsontable({
+
+      handsontable({
         data: [
           ['=E1', 'text', '=A1', '=C1', 22, '23', '\'=A1', '12/1/2016']
         ],
@@ -253,7 +492,8 @@ describe('Formulas general', () => {
         afterValidate,
       });
 
-      await new Promise(resolve => hot.validateCells(resolve));
+      // eslint-disable-next-line handsontable/require-await
+      await new Promise(resolve => validateCells(resolve));
 
       expect(afterValidate).toHaveBeenCalledTimes(8);
       expect(afterValidate).toHaveBeenCalledWith(true, 22, 0, 0, 'validateCells');
@@ -291,9 +531,9 @@ describe('Formulas general', () => {
         validator: validator2,
       });
 
-      setDataAtCell(0, 1, 6);
+      await setDataAtCell(0, 1, 6);
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(validator1).toHaveBeenCalledTimes(2);
       expect(validator1).toHaveBeenCalledWith(6, jasmine.any(Function));
@@ -302,9 +542,9 @@ describe('Formulas general', () => {
       expect(validator2).toHaveBeenCalledWith(11, jasmine.any(Function));
       expect(validator2).toHaveBeenCalledWith(12, jasmine.any(Function));
 
-      setDataAtCell(0, 4, 'bar');
+      await setDataAtCell(0, 4, 'bar');
 
-      await sleep(100); // Validator is asynchronous.
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(validator1).toHaveBeenCalledTimes(3);
       expect(validator1).toHaveBeenCalledWith('bar', jasmine.any(Function));
@@ -313,13 +553,14 @@ describe('Formulas general', () => {
 
     it('should validate correct visual cells', async() => {
       const beforeValidate = jasmine.createSpy('beforeValidate');
-      const hot = handsontable({
+
+      handsontable({
         data: [
           ['1', 2, '=D1', 'text1', 'foo1'],
           ['2', 2, '=D2', 'text2', 'foo2'],
           ['3', 2, '=D3', 'text3', 'foo3'],
           ['4', 2, '=D4', 'text4', 'foo4'],
-          ['5', 2, '=D5', 'text5', '=A1+3'],
+          ['5', 2, '=D5', 'text5', '=B5+3'],
         ],
         formulas: {
           engine: HyperFormula
@@ -330,22 +571,22 @@ describe('Formulas general', () => {
         beforeValidate,
       });
 
-      hot.columnIndexMapper.indexesSequence.setValues([0, 2, 3, 4, 1]);
-      hot.rowIndexMapper.indexesSequence.setValues([0, 2, 3, 4, 1]);
+      columnIndexMapper().setIndexesSequence([0, 2, 3, 4, 1]);
+      rowIndexMapper().setIndexesSequence([0, 2, 3, 4, 1]);
 
-      render();
-      setDataAtCell(0, 0, 6);
-
-      await sleep(100); // Validator is asynchronous.
+      await render();
+      await setDataAtCell(3, 0, 6);
+      await waitForNextAnimationFrames(2); // Validator is asynchronous.
 
       expect(beforeValidate).toHaveBeenCalledTimes(2);
-      expect(beforeValidate).toHaveBeenCalledWith(6, 0, 0);
+      expect(beforeValidate).toHaveBeenCalledWith(6, 3, 0);
       expect(beforeValidate).toHaveBeenCalledWith(9, 3, 4);
     });
 
-    it('should not try to validate cells outside of the table boundaries', () => {
+    it('should not try to validate cells outside of the table boundaries', async() => {
       let validatorCallsCount = 0;
-      const hot = handsontable({
+
+      handsontable({
         data: [
           [100, '=A1'],
           ['=A1', '=A1', '=A1'],
@@ -361,7 +602,7 @@ describe('Formulas general', () => {
       const errorList = [];
 
       try {
-        hot.setDataAtCell(0, 0, 1);
+        await setDataAtCell(0, 0, 1);
 
       } catch (e) {
         errorList.push(e);
@@ -370,6 +611,31 @@ describe('Formulas general', () => {
       expect(errorList.length).toEqual(0);
       // 3 from the visible cells + 1 from setDataAtCell
       expect(validatorCallsCount).toEqual(4);
+    });
+
+    it('should not throw type error while validating sheets added through the HyperFormula instance', async() => {
+      const hf = HyperFormula.buildEmpty();
+
+      handsontable({
+        data: [
+          ['1', '2', '= mainSheet!A1 * mainSheet!B1']
+        ],
+        formulas: {
+          engine: hf,
+          sheetName: 'mainSheet'
+        },
+      });
+
+      const sheetId = hf.getSheetId(hf.addSheet('sheet2'));
+
+      hf.setSheetContent(sheetId, [
+        ['1', '2', '= mainSheet!A1 * mainSheet!B1']
+      ]);
+
+      expect(() => {
+        // eslint-disable-next-line handsontable/require-await
+        setDataAtCell(0, 1, 'test');
+      }).not.toThrowWithCause(undefined, { handsontable: true });
     });
   });
 });

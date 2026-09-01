@@ -20,12 +20,20 @@ describe('`registerAllRenderers`', () => {
     expect(getPluginsNames()).toEqual([]);
     expect(getRegisteredRendererNames()).toEqual([
       'text',
-      'autocomplete',
       'base',
+      'autocomplete',
       'checkbox',
+      'dropdown',
+      'handsontable',
       'html',
+      'intl-date',
+      'intl-datetime',
+      'intl-time',
       'numeric',
       'password',
+      'select',
+      'time',
+      'date',
     ]);
     expect(getRegisteredValidatorNames()).toEqual([]);
   });

@@ -13,9 +13,9 @@ describe('HiddenRows', () => {
   });
 
   describe('manualRowResize', () => {
-    it('should resize a proper row when the table contains hidden row using mouse events', () => {
+    it('should resize a proper row when the table contains hidden row using mouse events', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 2),
+        data: createSpreadsheetData(5, 2),
         rowHeaders: true,
         hiddenRows: {
           rows: [1],
@@ -24,17 +24,17 @@ describe('HiddenRows', () => {
         manualRowResize: true,
       });
 
-      expect(rowHeight(spec().$container, 1)).toEqual(23);
+      expect(rowHeight(spec().$container, 1)).toEqual(getThemeLayout().defaultDataRowHeight);
 
       // Resize renderable row index `1` (within visual index term the index at 1 is hidden).
-      resizeRow(1, 100);
+      await resizeRow(1, 100);
 
       expect(rowHeight(spec().$container, 1)).toEqual(100);
     });
 
-    it('should resize a proper row when the table contains hidden row using public API', () => {
+    it('should resize a proper row when the table contains hidden row using public API', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 2),
+        data: createSpreadsheetData(5, 2),
         rowHeaders: true,
         hiddenRows: {
           rows: [1],
@@ -43,15 +43,15 @@ describe('HiddenRows', () => {
         manualRowResize: true,
       });
 
-      expect(rowHeight(spec().$container, 1)).toEqual(23);
+      expect(rowHeight(spec().$container, 1)).toEqual(getThemeLayout().defaultDataRowHeight);
 
       getPlugin('manualRowResize').setManualSize(2, 100);
-      render();
+      await render();
 
       expect(rowHeight(spec().$container, 1)).toEqual(100);
     });
 
-    it('should display the resize handler in the proper position when the table contains hidden row', () => {
+    it('should display the resize handler in the proper position when the table contains hidden row', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right' },
@@ -68,18 +68,19 @@ describe('HiddenRows', () => {
         manualRowResize: true
       });
 
-      const $headerTH = getLeftClone().find('tbody tr:eq(1) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(1) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualRowResizer');
 
-      expect($handle.offset().top)
-        .toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+      expect($handle.offset().top).toBeCloseTo(
+        $headerTH.offset().top + $headerTH.outerHeight() - ($handle.outerHeight() / 2) - 1,
+        0);
       expect($handle.width()).toBeCloseTo($headerTH.outerWidth(), 0);
     });
 
-    it('should display the resize handler in the proper position when the table contains hidden fixed top row', () => {
+    it('should display the resize handler in the proper position when the table contains hidden fixed top row', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right' },
@@ -99,18 +100,19 @@ describe('HiddenRows', () => {
 
       // Show resize handler using the third renderable row. This row belongs to master as
       // the "fixedRowsTop" is decreased to 2.
-      const $headerTH = getLeftClone().find('tbody tr:eq(2) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(2) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualRowResizer');
 
-      expect($handle.offset().top)
-        .toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+      expect($handle.offset().top).toBeCloseTo(
+        $headerTH.offset().top + $headerTH.outerHeight() - ($handle.outerHeight() / 2) - 1,
+        0);
       expect($handle.width()).toBeCloseTo($headerTH.outerWidth(), 0);
     });
 
-    it('should display the resize handler in the proper position when the table contains hidden fixed bottom row', () => {
+    it('should display the resize handler in the proper position when the table contains hidden fixed bottom row', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right' },
@@ -130,18 +132,19 @@ describe('HiddenRows', () => {
 
       // Show resize handler using the second renderable row. This row belongs to master as
       // the "fixedRowsBottom" is decreased to 2.
-      const $headerTH = getLeftClone().find('tbody tr:eq(1) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(1) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualRowResizer');
 
-      expect($handle.offset().top)
-        .toBeCloseTo($headerTH.offset().top + $headerTH.outerHeight() - $handle.outerHeight() - 1, 0);
+      expect($handle.offset().top).toBeCloseTo(
+        $headerTH.offset().top + $headerTH.outerHeight() - ($handle.outerHeight() / 2) - 1,
+        0);
       expect($handle.width()).toBeCloseTo($headerTH.outerWidth(), 0);
     });
 
-    it('should resize a proper row using the resize handler when the table contains hidden row', () => {
+    it('should resize a proper row using the resize handler when the table contains hidden row', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right' },
@@ -158,7 +161,7 @@ describe('HiddenRows', () => {
         manualRowResize: true
       });
 
-      const $headerTH = getLeftClone().find('tbody tr:eq(1) th:eq(0)');
+      const $headerTH = getInlineStartClone().find('tbody tr:eq(1) th:eq(0)');
 
       $headerTH.simulate('mouseover');
 
@@ -171,7 +174,7 @@ describe('HiddenRows', () => {
         .simulate('mouseup')
       ;
 
-      expect(rowHeight(spec().$container, 1)).toEqual(53);
+      expect(rowHeight(spec().$container, 1)).toEqual(getThemeLayout().defaultDataRowHeight + 30);
     });
   });
 });

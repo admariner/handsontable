@@ -15,12 +15,12 @@ describe('ContextMenu', () => {
   describe('alignment', () => {
     it('should align single cell text left', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Left');
 
@@ -30,13 +30,13 @@ describe('ContextMenu', () => {
 
     it('should align multiple cells text left (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Left');
 
@@ -48,13 +48,13 @@ describe('ContextMenu', () => {
 
     it('should align multiple cells text left (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Left');
 
@@ -66,12 +66,12 @@ describe('ContextMenu', () => {
 
     it('should align single cell text center', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Center');
 
@@ -81,13 +81,13 @@ describe('ContextMenu', () => {
 
     it('should align multiple cells text center (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Center');
 
@@ -99,13 +99,13 @@ describe('ContextMenu', () => {
 
     it('should align multiple cells text center (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Center');
 
@@ -117,12 +117,12 @@ describe('ContextMenu', () => {
 
     it('should align single cell text right', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Right');
 
@@ -132,13 +132,13 @@ describe('ContextMenu', () => {
 
     it('should align multiple cells text right (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Right');
 
@@ -150,13 +150,13 @@ describe('ContextMenu', () => {
 
     it('should align multiple cells text right (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Right');
 
@@ -168,12 +168,12 @@ describe('ContextMenu', () => {
 
     it('should justify single cell text', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Justify');
 
@@ -183,13 +183,13 @@ describe('ContextMenu', () => {
 
     it('should justify multiple cells text (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Justify');
 
@@ -201,13 +201,13 @@ describe('ContextMenu', () => {
 
     it('should justify multiple cells text (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Justify');
 
@@ -219,12 +219,12 @@ describe('ContextMenu', () => {
 
     it('should vertical align text top of the single cell', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Top');
 
@@ -234,13 +234,13 @@ describe('ContextMenu', () => {
 
     it('should vertical align text top of the multiple cells (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Top');
 
@@ -252,13 +252,13 @@ describe('ContextMenu', () => {
 
     it('should vertical align text top of the multiple cells (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Top');
 
@@ -270,12 +270,12 @@ describe('ContextMenu', () => {
 
     it('should vertical align text middle of the single cell', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Middle');
 
@@ -285,13 +285,13 @@ describe('ContextMenu', () => {
 
     it('should vertical align text middle of the multiple cells (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Middle');
 
@@ -303,13 +303,13 @@ describe('ContextMenu', () => {
 
     it('should vertical align text middle of the multiple cells (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Middle');
 
@@ -321,12 +321,12 @@ describe('ContextMenu', () => {
 
     it('should vertical align text bottom of the single cell', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      contextMenu();
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Bottom');
 
@@ -336,13 +336,13 @@ describe('ContextMenu', () => {
 
     it('should vertical align text bottom of the multiple cells (selection from top-left to bottom-right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(0, 0, 1, 1);
-      contextMenu();
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Bottom');
 
@@ -354,13 +354,13 @@ describe('ContextMenu', () => {
 
     it('should vertical align text bottom of the multiple cells (selection from bottom-right to top-left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         height: 100
       });
 
-      selectCell(1, 1, 0, 0);
-      contextMenu();
+      await selectCell(1, 1, 0, 0);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Bottom');
 
@@ -374,15 +374,15 @@ describe('ContextMenu', () => {
       const afterSetCellMetaCallback = jasmine.createSpy('afterSetCellMetaCallback');
 
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         contextMenu: true,
         afterSetCellMeta: afterSetCellMetaCallback
       });
 
-      selectCell(2, 3);
-      contextMenu();
+      await selectCell(2, 3);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Right');
 
@@ -391,32 +391,68 @@ describe('ContextMenu', () => {
 
     it('should not add clasName to cell after changing alignment by context menu, if `beforeSetCellMeta` returned false', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         contextMenu: true,
         beforeSetCellMeta: () => false
       });
 
-      selectCell(2, 3);
-      contextMenu();
+      await selectCell(2, 3);
+      await contextMenu();
 
       await selectContextSubmenuOption('Alignment', 'Right');
 
-      expect(getCellMeta(2, 3).className).toBe(void 0);
+      expect(getCellMeta(2, 3).className).toBe(undefined);
+    });
+
+    it('should pass row-indexed alignment state through the `beforeCellAlignment` hook', async() => {
+      const beforeCellAlignment = jasmine.createSpy('beforeCellAlignment');
+
+      handsontable({
+        data: createSpreadsheetData(4, 4),
+        contextMenu: true,
+        beforeCellAlignment,
+        cells(row, col) {
+          if (row === 0 && col === 0) {
+            return { className: 'htCenter' };
+          }
+          if (row === 1 && col === 1) {
+            return { className: 'htTop' };
+          }
+
+          return {};
+        },
+      });
+
+      await selectCell(0, 0, 1, 1);
+      await contextMenu();
+      await selectContextSubmenuOption('Alignment', 'Right');
+
+      const [stateBefore, selectedRange, type, alignmentClass] = beforeCellAlignment.calls.argsFor(0);
+
+      expect(Array.isArray(stateBefore[0])).toBe(true);
+      expect(Array.isArray(stateBefore[1])).toBe(true);
+      expect(stateBefore[0][0]).toBe('htCenter');
+      expect(stateBefore[0][1]).toBe(undefined);
+      expect(stateBefore[1][0]).toBe(undefined);
+      expect(stateBefore[1][1]).toBe('htTop');
+      expect(selectedRange.length).toBe(1);
+      expect(type).toBe('horizontal');
+      expect(alignmentClass).toBe('htRight');
     });
 
     describe('UI', () => {
-      it('should display a disabled entry, when there\'s nothing selected', () => {
+      it('should display a disabled entry, when there\'s nothing selected', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(4, 4),
+          data: createSpreadsheetData(4, 4),
           contextMenu: true,
           beforeContextMenuShow() {
             this.deselectCell();
           }
         });
 
-        contextMenu();
+        await contextMenu();
 
         const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Alignment';
@@ -425,7 +461,73 @@ describe('ContextMenu', () => {
         expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
       });
 
-      it('should enable the item when all rows are hidden', () => {
+      it('should display a disabled entry, when the column header is selected', async() => {
+        handsontable({
+          data: createSpreadsheetData(4, 4),
+          contextMenu: true,
+          rowHeaders: true,
+          colHeaders: true,
+          navigableHeaders: true,
+          beforeContextMenuShow() {
+            this.deselectCell();
+          }
+        });
+
+        await selectCell(-1, 1);
+        await contextMenu();
+
+        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Alignment';
+        });
+
+        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should display a disabled entry, when the row header is selected', async() => {
+        handsontable({
+          data: createSpreadsheetData(4, 4),
+          contextMenu: true,
+          rowHeaders: true,
+          colHeaders: true,
+          navigableHeaders: true,
+          beforeContextMenuShow() {
+            this.deselectCell();
+          }
+        });
+
+        await selectCell(1, -1);
+        await contextMenu();
+
+        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Alignment';
+        });
+
+        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should display a disabled entry, when the corner is selected', async() => {
+        handsontable({
+          data: createSpreadsheetData(4, 4),
+          contextMenu: true,
+          rowHeaders: true,
+          colHeaders: true,
+          navigableHeaders: true,
+          beforeContextMenuShow() {
+            this.deselectCell();
+          }
+        });
+
+        await selectCell(-1, -1);
+        await contextMenu();
+
+        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Alignment';
+        });
+
+        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should enable the item when all rows are hidden', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           colHeaders: true,
@@ -435,7 +537,7 @@ describe('ContextMenu', () => {
           },
         });
 
-        contextMenu(getCell(-1, 1)); // Column header "B"
+        await contextMenu(getCell(-1, 1)); // Column header "B"
 
         const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Alignment';
@@ -444,7 +546,7 @@ describe('ContextMenu', () => {
         expect(readOnlyItem.hasClass('htDisabled')).toBe(false);
       });
 
-      it('should enable the item when all columns are hidden', () => {
+      it('should enable the item when all columns are hidden', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           rowHeaders: true,
@@ -454,7 +556,7 @@ describe('ContextMenu', () => {
           },
         });
 
-        contextMenu(getCell(1, -1)); // Row header "2"
+        await contextMenu(getCell(1, -1)); // Row header "2"
 
         const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Alignment';
@@ -463,7 +565,7 @@ describe('ContextMenu', () => {
         expect(readOnlyItem.hasClass('htDisabled')).toBe(false);
       });
 
-      it('should disable the item when all rows are trimmed', () => {
+      it('should disable the item when all rows are trimmed', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           colHeaders: true,
@@ -471,7 +573,7 @@ describe('ContextMenu', () => {
           trimRows: [0, 1, 2, 3, 4], // The TrimmingMap should be used instead of the plugin.
         });
 
-        contextMenu(getCell(-1, 1)); // Column header "B"
+        await contextMenu(getCell(-1, 1)); // Column header "B"
 
         const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Alignment';
@@ -480,7 +582,7 @@ describe('ContextMenu', () => {
         expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
       });
 
-      it('should disable the item when all columns are trimmed', () => {
+      it('should disable the item when all columns are trimmed', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           rowHeaders: true,
@@ -488,7 +590,7 @@ describe('ContextMenu', () => {
           columns: [], // The TrimmingMap should be used instead of the `columns` option.
         });
 
-        contextMenu(getCell(1, -1)); // Row header "2"
+        await contextMenu(getCell(1, -1)); // Row header "2"
 
         const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Alignment';

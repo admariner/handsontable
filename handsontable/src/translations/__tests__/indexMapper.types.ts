@@ -1,12 +1,12 @@
 import Handsontable from 'handsontable';
 
 const elem = document.createElement('div');
-const hot = new Handsontable(elem, {});
+const hot = Handsontable(elem, {});
 
 {
   const observer = hot.rowIndexMapper.createChangesObserver('hiding');
 
-  observer.subscribe((changes) => {
+  observer.subscribe((changes: { op: string; index: number; oldValue: unknown; newValue: unknown }[]) => {
     changes.forEach(({ op, index, oldValue, newValue }) => { });
   });
   observer.unsubscribe();
@@ -26,12 +26,10 @@ hot.rowIndexMapper.getVisualFromPhysicalIndex(0);
 hot.rowIndexMapper.getRenderableFromVisualIndex(0);
 hot.rowIndexMapper.getVisualFromRenderableIndex(0);
 hot.rowIndexMapper.getPhysicalFromRenderableIndex(0);
-hot.rowIndexMapper.getFirstNotHiddenIndex(3, -1);
-hot.rowIndexMapper.getFirstNotHiddenIndex(3, -1, true);
-hot.rowIndexMapper.getFirstNotHiddenIndex(3, -1, true, 4);
-hot.rowIndexMapper.getFirstNotHiddenIndex(3, 1);
-hot.rowIndexMapper.getFirstNotHiddenIndex(3, 1, true);
-hot.rowIndexMapper.getFirstNotHiddenIndex(3, 1, true, 2);
+hot.rowIndexMapper.getNearestNotHiddenIndex(3, -1);
+hot.rowIndexMapper.getNearestNotHiddenIndex(3, -1, true);
+hot.rowIndexMapper.getNearestNotHiddenIndex(3, 1);
+hot.rowIndexMapper.getNearestNotHiddenIndex(3, 1, true);
 hot.rowIndexMapper.getRenderableIndexes();
 hot.rowIndexMapper.getRenderableIndexes(false);
 hot.rowIndexMapper.getRenderableIndexes(true);
@@ -55,7 +53,7 @@ hot.rowIndexMapper.isHidden(0);
 {
   const observer = hot.columnIndexMapper.createChangesObserver('hiding');
 
-  observer.subscribe((changes) => {
+  observer.subscribe((changes: { op: string; index: number; oldValue: unknown; newValue: unknown }[]) => {
     changes.forEach(({ op, index, oldValue, newValue }) => { });
   });
   observer.unsubscribe();
@@ -75,12 +73,10 @@ hot.columnIndexMapper.getVisualFromPhysicalIndex(0);
 hot.columnIndexMapper.getRenderableFromVisualIndex(0);
 hot.columnIndexMapper.getVisualFromRenderableIndex(0);
 hot.columnIndexMapper.getPhysicalFromRenderableIndex(0);
-hot.columnIndexMapper.getFirstNotHiddenIndex(3, -1);
-hot.columnIndexMapper.getFirstNotHiddenIndex(3, -1, true);
-hot.columnIndexMapper.getFirstNotHiddenIndex(3, -1, true, 4);
-hot.columnIndexMapper.getFirstNotHiddenIndex(3, 1);
-hot.columnIndexMapper.getFirstNotHiddenIndex(3, 1, true);
-hot.columnIndexMapper.getFirstNotHiddenIndex(3, 1, true, 2);
+hot.columnIndexMapper.getNearestNotHiddenIndex(3, -1);
+hot.columnIndexMapper.getNearestNotHiddenIndex(3, -1, true);
+hot.columnIndexMapper.getNearestNotHiddenIndex(3, 1);
+hot.columnIndexMapper.getNearestNotHiddenIndex(3, 1, true);
 hot.columnIndexMapper.getRenderableIndexes();
 hot.columnIndexMapper.getRenderableIndexes(false);
 hot.columnIndexMapper.getRenderableIndexes(true);

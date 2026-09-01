@@ -1,114 +1,98 @@
 const $ = (selector, context = document) => context.querySelector(selector);
-
-/**
- * Return ASCII symbol for headers depends on what the class name HTMLTableCellElement has.
- *
- * @param {HTMLTableCellElement} cell The cell element to process.
- * @returns {string} Returns '   ', ` * ` or ' - '.
- */
-function getSelectionSymbolForHeader(cell) {
-  const hasActiveHeader = cell.classList.contains('ht__active_highlight');
-  const hasHighlight = cell.classList.contains('ht__highlight');
-
-  let symbol = '   ';
-
-  if (hasActiveHeader) {
-    symbol = ' * ';
-
-  } else if (hasHighlight) {
-    symbol = ' - ';
-  }
-
-  return symbol;
-}
+const $$ = (selector, context = document) => context.querySelectorAll(selector);
 
 /**
  * Return ASCII symbol for cells depends on what the class name HTMLTableCellElement has.
  *
  * @param {HTMLTableCellElement} cell The cell element to process.
- * @returns {string} Returns valid symbol for the pariticaul cell.
+ * @returns {string} Returns valid symbol for the particular cell.
  */
-function getSelectionSymbolForCell(cell) {
+function getSelectionSymbol(cell) {
   const hasCurrent = cell.classList.contains('current');
+  const hasRow = cell.classList.contains('row');
+  const hasColumn = cell.classList.contains('column');
+  const hasCustom = cell.classList.contains('custom');
   const hasArea = cell.classList.contains('area');
+  const hasFill = cell.classList.contains('fill');
+  const hasActiveHeader = cell.classList.contains('ht__active_highlight');
+  const hasHighlight = cell.classList.contains('ht__highlight');
+  const isMergedCellMultiple = cell.classList.contains('fullySelectedMergedCell-multiple');
   let areaLevel = new Array(7)
     .fill()
     .map((_, i, arr) => `area-${arr.length - i}`)
     .find(className => cell.classList.contains(className));
 
-  areaLevel = areaLevel ? parseInt(areaLevel.replace('area-', ''), 10) : areaLevel;
+  if (typeof areaLevel === 'string') {
+    areaLevel = parseInt(areaLevel.replace('area-', ''), 10);
+  }
+
+  let areaLevelMergedCell;
+
+  if (isMergedCellMultiple) {
+    areaLevelMergedCell = 0;
+
+  } else {
+    areaLevelMergedCell = new Array(7)
+      .fill()
+      .map((_, i, arr) => `fullySelectedMergedCell-${arr.length - i - 1}`)
+      .find(className => cell.classList.contains(className));
+
+    if (typeof areaLevelMergedCell === 'string') {
+      areaLevelMergedCell = parseInt(areaLevelMergedCell.replace('fullySelectedMergedCell-', ''), 10);
+    }
+  }
 
   let symbol = '   ';
 
-  if (hasCurrent && hasArea && areaLevel) {
+  if (hasRow) {
+    symbol = ' r ';
+
+  } else if (hasColumn) {
+    symbol = ' c ';
+
+  } else if (hasCurrent && hasArea && areaLevel) {
     symbol = ` ${String.fromCharCode(65 + areaLevel)} `;
 
-  } else if (hasCurrent && hasArea && areaLevel === void 0) {
+  } else if (hasCurrent && hasArea && areaLevel === undefined) {
     symbol = ' A ';
 
-  } else if (hasCurrent && !hasArea && areaLevel === void 0) {
+  } else if (hasCurrent && !hasArea && areaLevel === undefined) {
     symbol = ' # ';
 
-  } else if (!hasCurrent && hasArea && areaLevel === void 0) {
+  } else if (
+    cell.colSpan === 1 && cell.rowSpan === 1 && !hasCurrent && hasArea && areaLevel === undefined
+  ) {
     symbol = ' 0 ';
 
-  } else if (!hasCurrent && hasArea && areaLevel) {
+  } else if (
+    cell.colSpan === 1 && cell.rowSpan === 1 && !hasCurrent && hasArea && areaLevel
+  ) {
     symbol = ` ${areaLevel} `;
+
+  } else if (
+    (cell.colSpan > 1 || cell.rowSpan > 1) && !hasCurrent && hasArea && areaLevelMergedCell === undefined
+  ) {
+    symbol = '   ';
+
+  } else if (
+    (cell.colSpan > 1 || cell.rowSpan > 1) && !hasCurrent && hasArea && areaLevelMergedCell !== undefined
+  ) {
+    symbol = ` ${areaLevelMergedCell} `;
+
+  } else if (hasActiveHeader) {
+    symbol = ' * ';
+
+  } else if (hasHighlight) {
+    symbol = ' - ';
+
+  } else if (hasCustom) {
+    symbol = ' ? ';
+
+  } else if (hasFill) {
+    symbol = ' F ';
   }
 
   return symbol;
-}
-
-/**
- * Generate ASCII symbol for passed cell element.
- *
- * @param {HTMLTableCellElement} cell The cell element to process.
- * @returns {string}
- */
-function getSelectionSymbol(cell) {
-  if (isLeftHeader(cell) || isTopHeader(cell)) {
-    return getSelectionSymbolForHeader(cell);
-  }
-
-  return getSelectionSymbolForCell(cell);
-}
-
-/**
- * Check if passed element belong to the left header.
- *
- * @param {HTMLTableCellElement} cell The cell element to process.
- * @returns {boolean}
- */
-function isLeftHeader(cell) {
-  return cell.tagName === 'TH' && cell.parentElement.parentElement.tagName === 'TBODY';
-}
-
-/**
- * Check if passed element belong to the rop header.
- *
- * @param {HTMLTableCellElement} cell The cell element to process.
- * @returns {boolean}
- */
-function isTopHeader(cell) {
-  return cell.tagName === 'TH' && cell.parentElement.parentElement.tagName === 'THEAD';
-}
-
-/**
- * Check if the provided cell element is a table header.
- *
- * @param {HTMLTableCellElement} cell The overlay element to process.
- * @returns {boolean}
- */
-function isHeader(cell) {
-  return cell.tagName === 'TH';
-}
-
-/**
- * @param {HTMLTableElement} overlay The overlay element to process.
- * @returns {Function}
- */
-function cellFactory(overlay) {
-  return (row, column) => overlay && overlay.rows[row] && overlay.rows[row].cells[column];
 }
 
 /**
@@ -125,112 +109,92 @@ export function generateASCIITable(context) {
   const ROW_OVERLAY_SEPARATOR = '|';
   const COLUMN_OVERLAY_SEPARATOR = '---';
 
-  const cornerOverlayTable = $('.ht_clone_top_left_corner .htCore', context);
-  const leftOverlayTable = $('.ht_clone_left .htCore', context);
+  const inlineStartOverlayTable = $('.ht_clone_inline_start .htCore', context);
   const topOverlayTable = $('.ht_clone_top .htCore', context);
+  const topStartCornerOverlayTable = $('.ht_clone_top_inline_start_corner .htCore', context);
+  const bottomOverlayTable = $('.ht_clone_bottom .htCore', context);
   const masterTable = $('.ht_master .htCore', context);
-  const stringRows = [];
 
-  const cornerOverlayCells = cellFactory(cornerOverlayTable);
-  const leftOverlayCells = cellFactory(leftOverlayTable);
-  const topOverlayCells = cellFactory(topOverlayTable);
-  const masterCells = cellFactory(masterTable);
-
-  const hasTopHeader = topOverlayCells(0, 0) ? isTopHeader(topOverlayCells(0, 0)) : false;
-  const hasCornerHeader = cornerOverlayCells(0, 0) ? isHeader(cornerOverlayCells(0, 0)) : false;
-  const hasLeftHeader = (leftOverlayCells(0, 0) && isLeftHeader(leftOverlayCells(0, 0))) ||
-                        (hasTopHeader && hasCornerHeader);
-  const firstCellCoords = {
-    row: hasTopHeader ? 1 : 0,
-    column: hasLeftHeader ? 1 : 0
-  };
-  const leftOverlayFirstCell = leftOverlayCells(firstCellCoords.row, firstCellCoords.column);
-  const hasFixedLeftCells = leftOverlayFirstCell ? !isLeftHeader(leftOverlayFirstCell) : false;
-  const topOverlayFirstCell = topOverlayCells(firstCellCoords.row, firstCellCoords.column);
-  const hasFixedTopCells = topOverlayFirstCell ? !isTopHeader(topOverlayFirstCell) : false;
-
-  const consumedFlags = new Map([
-    ['hasLeftHeader', hasLeftHeader],
-    ['hasTopHeader', hasTopHeader],
-    ['hasCornerHeader', hasCornerHeader],
-    ['hasFixedLeftCells', hasFixedLeftCells],
-    ['hasFixedTopCells', hasLeftHeader],
-  ]);
-
+  const topHeadersCount = $$('thead tr', topOverlayTable).length ||
+    $$('thead tr', topStartCornerOverlayTable).length;
+  const leftHeadersCount = $$('tbody tr:first-of-type th', inlineStartOverlayTable).length ||
+    $$('thead tr:first-of-type th', topStartCornerOverlayTable).length;
+  const fixedTopCellsCount = $$('tbody tr', topOverlayTable).length;
+  const fixedLeftCellsCount = $$('tbody tr:first-of-type td', inlineStartOverlayTable).length;
   const rowsLength = masterTable.rows.length;
+  const isRtl = $('.ht_master').dir === 'rtl';
+  const stringRows = [];
+  let headerRootSymbol = '';
 
   for (let r = 0; r < rowsLength; r++) {
     const stringCells = [];
     const columnsLength = masterTable.rows[0].cells.length;
-    let isLastColumn = false;
-    let insertTopOverlayRowSeparator = false;
 
     for (let c = 0; c < columnsLength; c++) {
-      let cellSymbol;
+      const cellElement = masterTable.rows[r].cells[c];
+      const nextCellElement = masterTable.rows[r].cells[c + 1];
+      let symbol = getSelectionSymbol(cellElement);
       let separatorSymbol = COLUMN_SEPARATOR;
 
-      isLastColumn = c === columnsLength - 1;
+      // support for nested headers
+      if (
+        cellElement.nodeName === 'TH' &&
+        (cellElement.colSpan > 1 || cellElement.classList.contains('hiddenHeader') &&
+        (!nextCellElement || nextCellElement.classList.contains('hiddenHeader')))
+      ) {
+        separatorSymbol = ' ';
 
-      if (cornerOverlayCells(r, c)) {
-        const cell = cornerOverlayCells(r, c);
-        const nextCell = cornerOverlayCells(r, c + 1);
-
-        cellSymbol = getSelectionSymbol(cell);
-
-        if (isLeftHeader(cell) && (!nextCell || !isLeftHeader(nextCell))) {
-          separatorSymbol = ROW_HEADER_SEPARATOR;
-        }
-        if (!isLeftHeader(cell) && !nextCell) {
-          separatorSymbol = ROW_OVERLAY_SEPARATOR;
-        }
-        if (r === 0 && c === 0 && hasCornerHeader) { // Fix for header symbol
-          separatorSymbol = ROW_HEADER_SEPARATOR;
+        if (cellElement.colSpan > 1) {
+          headerRootSymbol = symbol;
         }
 
-      } else if (leftOverlayCells(r, c)) {
-        const cell = leftOverlayCells(r, c);
-        const nextCell = leftOverlayCells(r, c + 1);
+      } else if (
+        cellElement.nodeName === 'TD' &&
+        (cellElement.colSpan > 1 || cellElement.style.display === 'none' &&
+        (!nextCellElement || nextCellElement.style.display === 'none'))
+      ) {
+        separatorSymbol = ' ';
 
-        cellSymbol = getSelectionSymbol(cell);
-
-        if (isLeftHeader(cell) && (!nextCell || !isLeftHeader(nextCell))) {
-          separatorSymbol = ROW_HEADER_SEPARATOR;
-        }
-        if (!isLeftHeader(cell) && !nextCell) {
-          separatorSymbol = ROW_OVERLAY_SEPARATOR;
+        if (cellElement.colSpan > 1) {
+          headerRootSymbol = symbol;
         }
 
-      } else if (topOverlayCells(r, c)) {
-        const cell = topOverlayCells(r, c);
+      } else if (c === leftHeadersCount - 1) {
+        separatorSymbol = ROW_HEADER_SEPARATOR;
 
-        cellSymbol = getSelectionSymbol(cell);
-
-        if (hasFixedTopCells && isLastColumn && !topOverlayCells(r + 1, c)) {
-          insertTopOverlayRowSeparator = true;
-        }
-
-      } else if (masterCells(r, c)) {
-        const cell = masterCells(r, c);
-
-        cellSymbol = getSelectionSymbol(cell);
+      } else if (c === leftHeadersCount + fixedLeftCellsCount - 1) {
+        separatorSymbol = ROW_OVERLAY_SEPARATOR;
       }
 
-      stringCells.push(cellSymbol);
+      if (cellElement.classList.contains('hiddenHeader')) {
+        symbol = headerRootSymbol;
+      }
+
+      if (cellElement) {
+        stringCells.push(symbol);
+      }
+
+      const isLastColumn = c === columnsLength - 1;
 
       if (!isLastColumn) {
         stringCells.push(separatorSymbol);
       }
     }
 
-    stringRows.push(TABLE_EDGES_SYMBOL + stringCells.join('') + TABLE_EDGES_SYMBOL);
+    if (r === rowsLength - bottomOverlayTable.rows.length) {
+      stringRows.push(TABLE_EDGES_SYMBOL + new Array(columnsLength)
+        .fill(COLUMN_OVERLAY_SEPARATOR).join(COLUMN_SEPARATOR) + TABLE_EDGES_SYMBOL);
+    }
 
-    if (consumedFlags.get('hasTopHeader')) {
-      consumedFlags.delete('hasTopHeader');
+    const cellsStringified = (isRtl ? stringCells.reverse() : stringCells).join('');
+
+    stringRows.push(TABLE_EDGES_SYMBOL + cellsStringified + TABLE_EDGES_SYMBOL);
+
+    if (r === topHeadersCount - 1) {
       stringRows.push(TABLE_EDGES_SYMBOL + new Array(columnsLength)
         .fill(COLUMN_HEADER_SEPARATOR).join(COLUMN_SEPARATOR) + TABLE_EDGES_SYMBOL);
-    }
-    if (insertTopOverlayRowSeparator) {
-      insertTopOverlayRowSeparator = false;
+
+    } else if (r === topHeadersCount + fixedTopCellsCount - 1) {
       stringRows.push(TABLE_EDGES_SYMBOL + new Array(columnsLength)
         .fill(COLUMN_OVERLAY_SEPARATOR).join(COLUMN_SEPARATOR) + TABLE_EDGES_SYMBOL);
     }

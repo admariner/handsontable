@@ -1,9 +1,12 @@
-const moment = require('moment');
-
 module.exports = {
   HOT_FILENAME: 'handsontable',
-  HOT_VERSION: '11.0.1',
+  HOT_VERSION: '18.1.0',
   HOT_PACKAGE_NAME: 'handsontable',
-  HOT_BUILD_DATE: moment().format('DD/MM/YYYY HH:mm:ss'),
-  HOT_RELEASE_DATE: '17/11/2021',
+  HOT_BUILD_DATE: (() => {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  })(),
+  HOT_RELEASE_DATE: '01/09/2026',
 };

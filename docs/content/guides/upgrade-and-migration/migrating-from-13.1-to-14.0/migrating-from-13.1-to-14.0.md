@@ -1,0 +1,86 @@
+---
+type: how-to
+title: Migrating from 13.1 to 14.0
+metaTitle: Migrating from 13.1 to 14.0 - JavaScript Data Grid | Handsontable
+description: Migrate from Handsontable 13.1 to Handsontable 14.0, released on November 30th, 2023.
+permalink: /migration-from-13.1-to-14.0
+canonicalUrl: /migration-from-13.1-to-14.0
+pageClass: migration-guide
+react:
+  metaTitle: Migrate from 13.1 to 14.0 - React Data Grid | Handsontable
+angular:
+  metaTitle: Migrate from 13.1 to 14.0 - Angular Data Grid | Handsontable
+vue:
+  metaTitle: Migrate from 13.1 to 14.0 - Vue Data Grid | Handsontable
+searchCategory: Guides
+category: Upgrade and migration
+---
+Migrate from Handsontable 13.1 to Handsontable 14.0, released on November 30th, 2023.
+
+More information about this release can be found in the [`14.0.0` release blog post](https://handsontable.com/blog/whats-new-in-handsontable-14-improvements-to-accessibility).<br/>
+For a detailed list of changes in this release, see the [Changelog](@/guides/upgrade-and-migration/changelog/changelog.md#_14-0-0).
+
+[[toc]]
+
+### Changes to IME
+Handsontable 14.0 changes how it manages browser focus. The focus now goes to the cell/header elements, not an underlying `TEXTAREA` element as in versions <=13.1.0. This change allows screen readers to recognize the table contents correctly.
+However, this makes the IME editor not compatible with our "fast edit" functionality (the ability to start editing a cell without opening the editor first).
+
+To maintain the IME functionalities, Handsontable 14.0 introduces the [`imeFastEdit`](@/api/options.md#imefastedit) option that swaps the browser focus to the editor's editable element after a small, configurable delay.
+
+To utilize it in your implementation, set the [`imeFastEdit`](@/api/options.md#imefastedit) option to `true` in your settings object.
+
+### Adjust your application to the modified keyboard shortcuts
+The new Handsontable version comes with an updated set of keyboard shortcuts. Most of them are new additions, but some existing shortcuts also change. Make sure to adjust your application to the current specification.
+
+##### <kbd>Ctrl/Cmd</kbd> + <kbd>A</kbd>
+
+| Before  | After  |
+| ------------ | ------------ |
+| Selects all cells and headers  | Selects all cells _without_ headers  |
+| Selection highlight moves to the top-left cell of the selection  | Focused cell does not move  |
+
+##### <kbd>TAB</kbd> in the Filtering menu
+
+| Before  | After  |
+| ------------ | ------------ |
+| Iterates through the content list  | Iterates through the menu items. When focused on the search input, the arrow keys allow iterating through the content list  |
+
+##### Hover behavior in the Filtering menu
+
+| Before  | After  |
+| ------------ | ------------ |
+| After pressing <kbd>TAB</kbd> from the search input to **Select all**, hovering other menu items keeps keyboard focus on **Select all**.  | After pressing <kbd>TAB</kbd> from the search input to **Select all**, hovering a non-filter menu item (for example, **Clear column**) resets the filter-components focus order. The next <kbd>TAB</kbd> moves focus to the first filter component.  |
+
+More information: [Keyboard Shortcuts page in the documentation](@/guides/navigation/keyboard-shortcuts/keyboard-shortcuts.md)
+
+### Check if your template looks fine with the updated colors
+To make the table more accessible, this release changes the color of the invalid cells and some of the cell icons. Make sure it looks good with your application template.
+
+| Before  | After  |
+| ------------ | ------------ |
+| Cell background: `#ff4c42`  | Cell background: `#ffbeba`  |
+| Autocomplete-typed cells arrow: `#eeeeee`  | Autocomplete-typed cells arrow: `#bbbbbb`   |
+| Invalid autocomplete-typed cells arrow: `#eeeeee`  | Invalid autocomplete-typed cells arrow: `#555555`   |
+| Invalid autocomplete-typed cells arrow on hover: `#777777`   | Invalid autocomplete-typed cells arrow on hover: `#1a1a1a`    |
+
+### Update `ContextMenu.open()` and `DropdownMenu.open()` calls
+
+Handsontable 14.0 changes the accepted `position` argument for `ContextMenu.open()` and `DropdownMenu.open()`. When you open the menu programmatically with a literal position, use an object with `top` and `left` properties instead of `pageX` and `pageY`. Passing a native browser `Event` instance still works the same as before.
+
+```javascript
+const menu = hot.getPlugin('contextMenu');
+
+// Before (13.x): menu.open({ pageX: 200, pageY: 300 });
+// After (14.0+): use { top, left }:
+menu.open({ top: 300, left: 200 });
+
+// Native event -- works unchanged:
+element.addEventListener('contextmenu', (event) => {
+  menu.open(event);
+});
+```
+
+## Result
+
+Your application now runs on Handsontable 14.0.

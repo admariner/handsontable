@@ -1,110 +1,175 @@
 # Code examples
 
-This folder contains all code examples, that Handsontable uses for myriad reasons, such as documentation, blog, etc. Each code example is a separate project that uses Handsontable to present certain features.
+This folder contains all code examples used by Handsontable for documentation, blog posts, and other purposes. Each example is a self-contained project that demonstrates specific Handsontable features.
 
-Code examples are structured by Handsontable version. Inside the version directory, examples are grouped by category, which can be anything. The most important category is "docs", which is used in the Handsontable documentation website.
+Examples are organized by Handsontable version. Within a version, they are grouped by category. The most important category is `docs`, which powers the Handsontable documentation website. The `next` directory contains work-in-progress examples for the upcoming Handsontable release.
 
-To see a deployed code example you can visit its URL. See [Live on production](#live-on-production) section to learn about the URL structure.
+To see a deployed example, visit its URL. See [Live on production](#live-on-production) to learn about the URL structure.
 
-To play around with the actual code for a specific code example you can open it on CodeSandbox. See [Preview on CodeSandbox](#preview-on-codesandbox) section to learn more.
+To run an example locally, see [How to run an arbitrary code example](#how-to-run-an-arbitrary-code-example).
 
-To run arbitrary code example locally on your machine see [How to run the arbitrary code example](#how-to-run-the-arbitrary-code-example) section.
-
-### Contents
+## Contents
 
 - [Folder structure](#folder-structure)
 - [Live on production](#live-on-production)
-- [Preview on CodeSandbox](#preview-on-codesandbox)
 - [Creating new examples](#creating-new-examples)
-- [Deployment](#deployment-of-the-new-code-examples)
+- [Deployment](#deployment)
+  - [Automatic deployment](#automatic-deployment)
+  - [Manual deployment](#manual-deployment)
 - [Editing existing examples](#editing-existing-examples)
+- [Copying an example to a separate repo](#copying-an-example-to-a-separate-repo)
 - [Development](#development)
-  - [How to run the arbitrary code example](#how-to-run-the-arbitrary-code-example)
+  - [How to run an arbitrary code example](#how-to-run-an-arbitrary-code-example)
 - [Testing](#testing)
-  - [How to tun tests for arbitrary code example](#how-to-tun-tests-for-arbitrary-code-example)
+  - [How to run tests for an arbitrary code example](#how-to-run-tests-for-an-arbitrary-code-example)
   - [How to run tests for the versioned code examples locally](#how-to-run-tests-for-the-versioned-code-examples-locally)
 
-### Folder structure
+## Folder structure
 
-Within the `/examples` directory, there are all the code examples created for specific Handsontable version and the `templates` folder, which contains base projects for creating new code examples. A path to the example follow the undermentioned convention:
+Within the `/examples` directory, there are all the code examples created for specific Handsontable versions, plus the `templates` folder, which contains base projects for creating new code examples.
+
+A path to a specific example follows this convention:
 
 `/examples/<version_number>/<category>/<framework>/<example_path>`
 
-- `<version_number>` - the destributed version of the Handsontable and Handsontable's wrapper or `next` - the value provided to the NPM scripts as the last argument.
-- `<category>` - category of the code examples. The main category is `docs` which means: code examples from the documentation.
-- `<framework>` - any supported framework's name (react, angular, vue, js).
-- `<example_path>` - path to the specific code example. A folder name of the code example will identify that code example - it will be used as a URL further. The folder name of the code example should be the same across all the frameworks.
+- `<version_number>` - the distributed version of Handsontable (e.g. `13.1.0`) or `next` for the development version.
+- `<category>` - category of the code examples. The main category is `docs` (examples from the documentation). The `visual-tests` category contains examples used for visual regression testing.
+- `<framework>` - the framework name: `js`, `ts`, `react-wrapper`, `angular-wrapper`, or `vue3`.
+- `<example_path>` - path to the specific code example. The folder name identifies the example and is used as a URL segment. It should be consistent across all frameworks.
 
-An example path to the code example: `examples/8.1.0/docs/angular/custom-id`
+Example path: `examples/<version_number>/docs/js/basic-example`
 
-It's worth noting, that the `examples` directory is defined as a `npm workspace`, as well as each of the `<framework>` directories within it. This allows installing shared dependencies for all the framework-specific examples.
+The `examples` directory is defined as an npm workspace, as is each `<framework>` directory within it. This allows sharing dependencies across all framework-specific examples.
 
-### Live on production
+Dependency sharing is defined by a shared lockfile (`/examples/<version_number>/<category>/<framework>/package-lock.json`) for all examples within each framework. The `examples:install` script manages dependency versions in these shared lockfiles. An individual example can still have its own lockfile (created when running `npm install` inside the example folder), but it is ignored via `/examples/.gitignore`.
 
-All code examples are available online. The base URL for the code examples is https://examples.handsontable.com/handsontable/ and after the slash comes the path to the built project. 
+## Live on production
 
-URL to the specific project follow the undermentioned convention:
+All code examples are available online. The base URL is:
 
-`<version_number>/<category>/<framework>/<example_path>`
+`https://examples.handsontable.com/examples/`
 
-An example URL to the live example: https://examples.handsontable.com/handsontable/8.1.0/docs/js/settings
+The URL to a specific example follows the same convention as the folder structure:
 
-For more details see the [Folder structure](#folder-structure) section.
+`https://examples.handsontable.com/examples/<version_number>/<category>/<framework>/<example_path>/`
 
-### Preview on CodeSandbox
+Example URL: `https://examples.handsontable.com/examples/<version_number>/docs/js/basic-example/`
 
-To preview the arbitary code example on CodeSandbox you must get the link to the project folder in the Gihub repo. You will find all code examples in our repo https://github.com/handsontable/handsontable/tree/develop/examples.
+For more details, see the [Folder structure](#folder-structure) section.
 
-For example: if the URL to the project is: https://github.com/handsontable/handsontable/tree/develop/examples/next/docs/js/basic-example  you can preview that project on CodeSandbox by adding the "box" word right after the "github" and before the ".com". The URL to the sandboxed project would be https://githubbox.com/handsontable/handsontable/tree/develop/examples/next/docs/js/basic-example .
+**Note:** The `https://examples.handsontable.com/examples/` URL is not CORS-enabled. If that is a problem, you can use the GitHub Pages equivalent: https://handsontable.github.io/handsontable
 
-### Creating new examples
+## Creating new examples
 
-Read the [Templates Guideline](./templates/README.md) for the detailed information about new code examples creation.
+Read the [Templates Guideline](./templates/README.md) for detailed information about creating new code examples.
 
-### Deployment of the new code examples
+## Deployment
 
-After new code examples are merged into master branch and the new version of the Handsontable has been released to the NPM, you can safely deploy new examples.
+### Automatic deployment
 
-In Github Actions run a manual workflow with the `<version_number>` input for the Handsontable version. The new folder will be created: `/examples/<version_number>`. Within that folder, new code examples will be created with Handsontable version fixed to the `<version_number>`.
+Merging a feature branch to `develop` automatically triggers the CI/CD pipeline, which deploys all changed examples to GitHub Pages. The examples become available at their existing URLs immediately after the pipeline completes.
 
-The new code snippets will be deployed to the Github Pages and will be available under URL mentioned in the "Live on production" section in the [Code Examples](../README.md) README.
+This covers the most common case: publishing edits to existing examples after a code review.
 
-### Editing existing examples
+### Manual deployment
 
-Sometimes you want to edit existing code examples that is live in the `/examples/<version_number>` directory.
+You can also trigger deployment manually using the [**Code Examples Deployment**](https://github.com/handsontable/handsontable/actions/workflows/code-examples.yml) workflow in GitHub Actions.
 
-1. Edit code examples within the `/examples/<version_number>` directory.
-2. Commit and push the code examples to the repo.
-3. In Github Actions run a manual workflow with the `<version_number>` input of the Handsontable and Handsontable's wrapper version.
-4. The code examples will be deployed to the Github Pages and will be available under the same URL as they already were.
+**When to use manual deployment:**
 
-### Development
+- Deploying a brand-new set of examples for a new Handsontable release (requires the new version to already be published to npm).
+- Redeploying examples from a specific branch without merging to `develop` first.
+- Overwriting already-deployed examples to fix a mistake without creating a new commit.
+- Verifying how examples look on GitHub Pages before merging.
 
-To see code examples in action run these commands:
+**How to trigger the workflow:**
 
-1. `npm run examples:install <version_number>` - will install the dependencies of all the examples matching the `<version_number>`, utilizing the `examples`' internal workspace logic.
-2. `npm run examples:build <version_number>` - will build each code example in the `/examples/<version_number>` directory then copy each example's production output to the `/examples/tmp/<version_number>`. The path to the code example in the `/examples/tmp` follows the [Folder structure](#folder-structure) convention.
-3. `npm run examples:start` - it will start the `http-server` right in the `/examples/tmp` on PORT `8080`. So the URL to the specific code example would be `http://localhost:8080/8.1.0/docs/angular/custom-context-menu/`. The URL follows the same convention as mentioned in the [Live on production](#live-on-production) section.
+1. Open the [Code Examples Deployment](https://github.com/handsontable/handsontable/actions/workflows/code-examples.yml) workflow in GitHub Actions.
+2. Click **Run workflow**.
+3. Enter the `<version_number>` of the Handsontable version you want to deploy.
+4. Click **Run workflow** to start the deployment.
 
-**Important:** As the `next` directory of the examples uses the local builds of `handsontable` and the wrappers, for the `next` build process to work, all the root-level packages need to be built (for example, bu running `npm run all build`) before running the examples build script.
+When deploying a new version, a folder is created at `/examples/<version_number>` with Handsontable version pinned to `<version_number>`. The deployed examples are available at the URL described in the [Live on production](#live-on-production) section.
 
-#### How to run the arbitrary code example
+**Note:** Dispatching the workflow overwrites existing examples on the `gh-pages` branch, even when they originate from a branch other than `develop`.
 
-To launch only one code example, go to the project directory, run `npm install` and `npm run start`. This will instal all the project dependencies and start a development server. After this command is called visit http://localhost:8080.
+## Editing existing examples
 
-### Testing
+To edit code examples that are already live in `/examples/<version_number>`:
 
-Each code example has its own test specs, which lives in the `spec` directory.
+1. Edit the code examples within the `/examples/<version_number>` directory.
+2. Commit and push the changes to the repo.
+3. Merge your feature branch to `develop`. The [automatic deployment](#automatic-deployment) pipeline will publish the changes to GitHub Pages.
 
-> Templates have one **failing test**, which has been added to force developers to write passing tests for the next code examples.
+## Copying an example to a separate repo
 
-#### How to tun tests for arbitrary code example
+You can copy any example into a new Git repository by copying its folder. Because the monorepo workspace may place symbolic links inside `node_modules`, remove that folder before copying and regenerate it in the target location.
 
-Each code example has its own test suites which you can run using a development server:
-1. Run the `npm run start` command.
-2. After the app is launched on a server, run the `npm run test` command which will launch tests specified to this code example.
+```bash
+# Clone the repo if you haven't already
+git clone https://github.com/handsontable/handsontable.git
 
-#### How to run tests for the versioned code examples locally
+# Navigate to the example you want to copy, e.g.:
+cd examples/<version_number>/docs/js/basic-example
 
-1. Code examples **must** exist in the `examples/<version_number>` directory and be built using the command `npm run examples:build <version_number>`.
-3. `npm run examples:test <version_number>`. This command will run `npm run test` for each code example (to know what the `npm run test` command does check out the section above).
+# Remove node_modules (may contain monorepo symlinks)
+rm -rf node_modules
+
+# Copy the example to a sibling folder of the monorepo
+cp -r . ../../../../../../forked-example
+
+# Go to the copy
+cd ../../../../../../forked-example
+
+# Optionally initialize a new Git repo
+git init
+git add .
+git commit -m "initial commit"
+
+# Install dependencies and start the example
+npm install
+npm run start
+```
+
+## Development
+
+Run the following commands from the **root** of the repository (not the `examples` subdirectory):
+
+0. **`npm run examples:version <version_number>`** - Creates a new directory at `examples/<version_number>` and populates it with code examples based on `examples/next`, with the `handsontable` and `@handsontable/<framework_name>` dependencies pinned to the provided `<version_number>`.
+
+   *(Optional - only needed when creating a new set of examples for a new Handsontable version.)*
+
+1. **`npm run examples:install <version_number>`** - Installs dependencies for all examples matching `<version_number>`, using the internal workspace logic.
+
+   - For the `next` version: after installing, the script creates symlinks to the local builds needed for examples to work:
+     - All `next` examples symlink to the local `handsontable` build.
+     - Framework-based examples symlink to their respective wrapper builds (`@handsontable/<framework_name>`).
+     - Symlinks are created in `examples/next/docs/<framework_name>/node_modules`.
+     - Angular examples also require additional symlinks inside each individual example's `node_modules` directory.
+   - For a semver version: only `handsontable` and `@handsontable/angular-wrapper` are symlinked in the Angular examples' `node_modules`.
+
+2. **`npm run examples:build <version_number>`** - Builds each example in `/examples/<version_number>` and copies the production output to `/examples/tmp/<version_number>`. The path within `/examples/tmp` follows the [Folder structure](#folder-structure) convention.
+
+3. **`npm run examples:start`** - Starts `http-server` at `/examples/tmp` on port `8080`. Example URL: `http://localhost:8080/<version_number>/docs/js/basic-example/`
+
+**Important:** The `next` examples depend on local builds of `handsontable` and the wrappers. Build all root-level packages (for example, by running `npm run all build`) before running the examples build script.
+
+### How to run an arbitrary code example
+
+Navigate to the example's project directory, then run `npm install` followed by `npm run start`. This installs all dependencies and starts a development server. Open http://localhost:8080 to view the example.
+
+## Testing
+
+Each code example has its own test specs in the `spec` directory.
+
+> Templates contain one **failing test** added to prompt developers to write passing tests for new examples.
+
+### How to run tests for an arbitrary code example
+
+1. Start the development server: `npm run start`.
+2. Once the app is running, execute `npm run test` to run the tests for that example.
+
+### How to run tests for the versioned code examples locally
+
+1. Ensure examples exist in `examples/<version_number>` and are built with `npm run examples:build <version_number>`.
+2. Run `npm run examples:test <version_number>`. This runs `npm run test` for each code example.

@@ -1,0 +1,552 @@
+---
+type: explanation
+title: Events and hooks
+metaTitle: Events and hooks - JavaScript Data Grid | Handsontable
+description: Run your code before or after specific data grid actions, using Handsontable's API hooks (callbacks). For example, control what happens with the user's input.
+permalink: /events-and-hooks
+canonicalUrl: /events-and-hooks
+tags:
+- callback
+- hook
+- event
+- middleware
+- modify
+- after
+- before
+- events
+- hooks
+react:
+  metaTitle: Events and hooks - React Data Grid | Handsontable
+angular:
+  metaTitle: Events and hooks - Angular Data Grid | Handsontable
+vue:
+  metaTitle: Events and hooks - Vue Data Grid | Handsontable
+searchCategory: Guides
+category: Data management
+menuTag: updated
+---
+Run your code before or after specific data grid actions, using Handsontable's API hooks (callbacks). For example, control what happens with the user's input.
+
+[[toc]]
+
+## Overview
+
+Callbacks are used to react before or after actions occur. We refer to them as hooks. Handsontable's hooks share some characteristics with events and middleware, combining them both in a unique structure.
+
+If your logic grows beyond a single hook and needs shared state or a lifecycle, package it as a [custom plugin](@/guides/tools-and-building/custom-plugins/custom-plugins.md) instead.
+
+## Events
+
+If you only react to emitted hooks and forget about all their other features, you can treat Handsontable's hooks as pure events. You would want to limit your scope to `after` prefixed hooks, so they are emitted after something has happened and the results of the actions are already committed.
+
+::: only-for react
+
+```jsx
+<HotTable afterCreateRow={(row, amount) => {
+  console.log(`${amount} row(s) were created, starting at index ${row}`);
+}}/>
+```
+
+:::
+
+::: only-for javascript
+
+```js
+hot.addHook('afterCreateRow', (row, amount) => {
+  console.log(`${amount} row(s) were created, starting at index ${row}`);
+})
+```
+
+:::
+
+::: only-for angular
+
+```ts
+hotTable.hotInstance.addHook("afterCreateRow", (row, amount) => {
+  console.log(`${amount} row(s) were created, starting at index ${row}`);
+});
+```
+
+:::
+
+::: only-for vue
+
+```js
+const hotSettings = ref({
+  afterCreateRow(row, amount) {
+    console.log(`${amount} row(s) were created, starting at index ${row}`);
+  },
+  // ...other settings
+});
+```
+
+:::
+
+## Middleware
+
+Middleware is a concept known in the JavaScript world from Node.js frameworks such as Express or Koa. Middleware is a callback that can pipe to a process and allow the developer to modify it. We're no longer just reacting to an emitted event, but we can influence what's happening inside the component and modify the process.
+
+::: only-for react
+
+```jsx
+<HotTable modifyColWidth={(width, column) => {
+    if (column > 10) {
+      return 150;
+    }
+}}/>
+```
+
+:::
+
+::: only-for javascript
+
+```js
+hot.addHook('modifyColWidth', (width, column) => {
+  if (column > 10) {
+    return 150;
+  }
+})
+```
+
+:::
+
+::: only-for angular
+
+```ts
+import { GridSettings } from "@handsontable/angular-wrapper";
+
+gridSettings: GridSettings = {
+  modifyColWidth: (width, column) => {
+    if (column > 10) {
+      return 150;
+    }
+  },
+};
+```
+
+```html
+<hot-table [settings]="gridSettings" />
+```
+
+:::
+
+::: only-for vue
+
+```js
+const hotSettings = ref({
+  modifyColWidth(width, column) {
+    if (column > 10) {
+      return 150;
+    }
+  },
+  // ...other settings
+});
+```
+
+:::
+
+Note that the first argument is the current width that we're going to modify. Later arguments are immutable, and additional information can be used to decide whether the data should be modified.
+
+For content-aware maximum width capping, see the [Column widths](@/guides/columns/column-width/column-width.md#set-a-dynamic-maximum-column-width) guide.
+
+## Handsontable hooks
+
+We refer to all callbacks as "Handsontable hooks" because, although they share some characteristics with events and middleware, they combine them both in a unique structure. You may already be familiar with the concept as we're not the only ones that use the hooks convention.
+
+Almost all `before`-prefixed Handsontable hooks let you return `false` and, therefore, block the execution of an action. It may be used for validation, rejecting operation by the outside service, or blocking our native algorithm and replace it with a custom implementation.
+
+A great example for this is our integration with HyperFormula engine where creating a new row is only possible if the engine itself will allow it:
+
+::: only-for react
+
+```jsx
+<HotTable
+  beforeCreateRow={(row, amount) => {
+    if (!hyperFormula.isItPossibleToAddRows(0, [row, amount])) {
+      return false;
+    }
+}}/>
+```
+
+:::
+
+::: only-for javascript
+
+```js
+hot.addHook('beforeCreateRow', (row, amount) => {
+  if (!hyperFormula.isItPossibleToAddRows(0, [row, amount])) {
+    return false;
+  }
+})
+```
+
+:::
+
+::: only-for angular
+
+```ts
+import { GridSettings } from "@handsontable/angular-wrapper";
+
+gridSettings: GridSettings = {
+  beforeCreateRow: (row, amount) => {
+    if (!hyperFormula.isItPossibleToAddRows(0, [row, amount])) {
+      return false;
+    }
+  },
+};
+```
+
+```html
+<hot-table [settings]="gridSettings" />
+```
+
+:::
+
+::: only-for vue
+
+```js
+const hotSettings = ref({
+  beforeCreateRow(row, amount) {
+    if (!hyperFormula.isItPossibleToAddRows(0, [row, amount])) {
+      return false;
+    }
+  },
+  // ...other settings
+});
+```
+
+:::
+
+The first argument may be modified and passed on through the Handsontable hooks that are next in the queue. This characteristic is shared between `before` and `after` hooks but is more common with the former. Before something happens, we can run the data through a pipeline of hooks that may modify or reject the operation. This provides many possibilities to extend the default Handsontable functionality and customize it for your application.
+
+## Commonly used hooks
+
+Handsontable exposes hundreds of hooks. The ones below are the hooks you reach for most often, grouped by what they do. Unlike the [`source` argument list](#definition-for-source-argument) further down this page, this grouping is about purpose, not about which callbacks receive a `source` argument.
+
+**Lifecycle** -- run code as the grid instance starts up.
+
+<div class="boxes-list">
+
+- [beforeInit](@/api/hooks.md#beforeinit) -- fired before the Handsontable instance is initialized.
+- [afterInit](@/api/hooks.md#afterinit) -- fired after the Handsontable instance is initialized.
+
+</div>
+
+**Data changes** -- react to or alter the user's edits. Returning `false` from [`beforeChange`](@/api/hooks.md#beforechange) rejects the change.
+
+<div class="boxes-list">
+
+- [beforeChange](@/api/hooks.md#beforechange) -- fired before one or more cells change. Use it to silently alter or reject changes before the grid re-renders. See [Block changes with the beforeChange hook](#block-changes-with-the-beforechange-hook).
+- [afterChange](@/api/hooks.md#afterchange) -- fired after one or more cells change. See [Prevent feedback loops](#prevent-feedback-loops).
+
+</div>
+
+When [`columns[].data`](@/api/options.md#columns) is a function, the `prop` field in each change tuple is that accessor function. Use [`propToCol()`](@/api/core.md#proptocol) to resolve the visual column index. See [Binding to data: Identify changed columns in hooks](@/guides/getting-started/binding-to-data/binding-to-data.md#identify-changed-columns-in-hooks).
+
+**Row and column structure (CRUD)** -- track rows and columns being added or removed. Each `before` variant can return `false` to block the operation.
+
+<div class="boxes-list">
+
+- [afterCreateRow](@/api/hooks.md#aftercreaterow) -- fired after a new row is created.
+- [afterCreateCol](@/api/hooks.md#aftercreatecol) -- fired after a new column is created.
+- [afterRemoveRow](@/api/hooks.md#afterremoverow) -- fired after one or more rows are removed.
+- [afterRemoveCol](@/api/hooks.md#afterremovecol) -- fired after one or more columns are removed.
+
+</div>
+
+**Selection** -- respond to the user selecting cells.
+
+<div class="boxes-list">
+
+- [afterSelection](@/api/hooks.md#afterselection) -- fired after one or more cells are selected, for example during a mouse move.
+- [afterSelectionEnd](@/api/hooks.md#afterselectionend) -- fired after the selection ends, for example on mouse up.
+
+</div>
+
+**Mouse interaction** -- respond to mouse actions on cells.
+
+<div class="boxes-list">
+
+- [afterOnCellMouseDown](@/api/hooks.md#afteroncellmousedown) -- fired after a `mousedown` event on a cell.
+- [afterOnCellMouseUp](@/api/hooks.md#afteroncellmouseup) -- fired after a `mouseup` event on a cell.
+- [afterOnCellMouseOver](@/api/hooks.md#afteroncellmouseover) -- fired after a `mouseover` event on a cell.
+- [afterOnCellMouseOut](@/api/hooks.md#afteroncellmouseout) -- fired after a `mouseout` event on a cell.
+
+</div>
+
+**Keyboard interaction** -- respond to or override key presses. See the [`beforeKeyDown`](#the-beforekeydown-callback) section below for a demo.
+
+<div class="boxes-list">
+
+- [beforeKeyDown](@/api/hooks.md#beforekeydown) -- fired before a `keydown` event is handled. Use it to stop default key bindings.
+- [afterDocumentKeyDown](@/api/hooks.md#afterdocumentkeydown) -- fired after a `keydown` event is handled.
+
+</div>
+
+## How validation affects hook order
+
+When an edited cell has a [`validator`](@/api/options.md#validator), Handsontable runs the validation asynchronously. This applies to every validator, including one that calls its callback synchronously. It also applies to the built-in validators that cell types such as [`numeric`](@/guides/cell-types/numeric-cell-type/numeric-cell-type.md), [`date`](@/guides/cell-types/date-cell-type/date-cell-type.md), [`time`](@/guides/cell-types/time-cell-type/time-cell-type.md), [`dropdown`](@/guides/cell-types/dropdown-cell-type/dropdown-cell-type.md), and [`autocomplete`](@/guides/cell-types/autocomplete-cell-type/autocomplete-cell-type.md) use, so a cell can run a validator even without a custom `validator` function. The grid commits the change and fires the change-related hooks only after the validators for all edited cells resolve. As a result, the order in which hooks fire during an edit depends on whether the edited cell runs a validator.
+
+When the edited cell runs no validator, the hooks fire synchronously:
+
+1. [`beforeKeyDown`](@/api/hooks.md#beforekeydown)
+2. [`beforeChange`](@/api/hooks.md#beforechange)
+3. [`beforeChangeRender`](@/api/hooks.md#beforechangerender)
+4. [`afterChange`](@/api/hooks.md#afterchange)
+5. [`afterSelection`](@/api/hooks.md#afterselection)
+
+When the edited cell runs a validator, the grid defers the change until validation finishes, so [`afterSelection`](@/api/hooks.md#afterselection) fires before the change is committed:
+
+1. [`beforeKeyDown`](@/api/hooks.md#beforekeydown)
+2. [`beforeChange`](@/api/hooks.md#beforechange)
+3. [`beforeValidate`](@/api/hooks.md#beforevalidate)
+4. [`afterSelection`](@/api/hooks.md#afterselection)
+5. [`afterValidate`](@/api/hooks.md#aftervalidate)
+6. [`beforeChangeRender`](@/api/hooks.md#beforechangerender)
+7. [`afterChange`](@/api/hooks.md#afterchange)
+
+The exact sequence depends on how you confirm the edit. The lists above describe confirming an edit with <kbd>**Enter**</kbd> or <kbd>**Tab**</kbd>, which moves the selection and fires [`afterSelection`](@/api/hooks.md#afterselection) while validation is still pending.
+
+To act on a committed, validated value, use the [`afterChange`](@/api/hooks.md#afterchange) or [`afterValidate`](@/api/hooks.md#aftervalidate) hook. Don't rely on a hook firing before or after [`afterSelection`](@/api/hooks.md#afterselection), because a validator changes that order. The [`beforeValidate`](@/api/hooks.md#beforevalidate) and [`afterValidate`](@/api/hooks.md#aftervalidate) hooks fire only when a validator is defined.
+
+::: only-for react
+
+## External control
+
+::: example #example3 :react --js 1 --ts 2 --css 3
+
+@[code](@/content/guides/getting-started/events-and-hooks/react/example3.jsx)
+@[code](@/content/guides/getting-started/events-and-hooks/react/example3.tsx)
+@[code](@/content/guides/getting-started/events-and-hooks/react/example3.css)
+
+:::
+
+:::
+
+::: only-for angular
+
+::: example #example3 :angular --ts 1 --html 2
+
+@[code](@/content/guides/getting-started/events-and-hooks/angular/example3.ts)
+@[code](@/content/guides/getting-started/events-and-hooks/angular/example3.html)
+
+:::
+
+:::
+
+::: only-for vue
+
+::: example #example3 :vue --js 1
+
+@[code](@/content/guides/getting-started/events-and-hooks/vue/example3.vue)
+
+:::
+
+:::
+
+## All available Handsontable hooks example
+
+Note that some callbacks are checked on this page by default.
+
+::: example-without-tabs #example1
+
+@[code](@/content/guides/getting-started/events-and-hooks/javascript/example1.html)
+@[code](@/content/guides/getting-started/events-and-hooks/javascript/example1.js)
+
+:::
+
+## Definition for `source` argument
+
+It's worth mentioning that some Handsontable hooks are triggered from the Handsontable core and some from the plugins. In some situations, it is helpful to know what triggered the callback. Did Handsontable trigger it, or was it triggered by external code or a user action? That's why in crucial hooks, Handsontable delivers `source` as an argument informing you who triggered the action and providing detailed information about the source. Using the information retrieved in the `source`, you can create additional conditions.
+
+`source` argument is optional. It takes the following values:
+
+| Value                                              | Description                                                                                                                                                                                                            |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto`                                             | Action triggered by Handsontable, and the reason for it is related directly to the settings applied to Handsontable. For example, [`afterCreateRow`](@/api/hooks.md#aftercreaterow) will be fired with this when [`minSpareRows`](@/api/options.md#minsparerows) will be greater than 0. |
+| `edit`                                             | Action triggered by Handsontable after the data has been changed, e.g., after an edit or using [`setDataAtCell()`](@/api/core.md#setdataatcell), [`setDataAtRowProp()`](@/api/core.md#setdataatrowprop), or [`setSourceDataAtCell()`](@/api/core.md#setsourcedataatcell) methods. |
+| `loadData`                                         | Action triggered by Handsontable after the [`loadData`](@/api/core.md#loaddata) method has been called with the [`data`](@/api/options.md#data) property.
+| `updateData`                                         | Action triggered by Handsontable after the [`updateData`](@/api/core.md#updatedata) method has been called; e.g., before or after a data change.                                                                                                     |
+| `updateSettings`                                   | Action triggered by [`updateSettings()`](@/api/core.md#updatesettings) when its settings object includes the [`data`](@/api/options.md#data) option. The [`beforeUpdateData`](@/api/hooks.md#beforeupdatedata) and [`afterUpdateData`](@/api/hooks.md#afterupdatedata) hooks receive this source. |
+| `populateFromArray`                                | Action triggered by Handsontable after the [`populateFromArray()`](@/api/core.md#populatefromarray) method has been called.                                                                                            |
+| `spliceCol`                                        | Action triggered by Handsontable after the [`spliceCol()`](@/api/core.md#splicecol) method has been called.                                                                                                            |
+| `spliceRow`                                        | Action triggered by Handsontable after the [`spliceRow()`](@/api/core.md#splicerow) method has been called.                                                                                                            |
+| `timeValidate`                                     | Action triggered by Handsontable after the [time](@/guides/cell-types/time-cell-type/time-cell-type.md) validator has been called, e.g., after an edit.                                                                |
+| `dateValidate`                                     | Action triggered by Handsontable after the [date](@/guides/cell-types/date-cell-type/date-cell-type.md) validator has been called, e.g., after an edit.                                                                |
+| `validateCells`                                    | Action triggered by Handsontable after the [`validateCells()`](@/api/core.md#validatecells) method has been called.                                                                                                    |
+| [`Autofill.fill`](@/api/autofill.md)               | Action triggered by the AutoFill plugin.                                                                                                                                                                               |
+| [`ContextMenu.clearColumns`](@/api/contextMenu.md) | Action triggered by the ContextMenu plugin after the "Clear column" has been clicked.                                                                                                                                  |
+| [`ContextMenu.columnLeft`](@/api/contextMenu.md)   | Action triggered by the ContextMenu plugin after the "Insert column left" has been clicked.                                                                                                                            |
+| [`ContextMenu.columnRight`](@/api/contextMenu.md)  | Action triggered by the ContextMenu plugin after the "Insert column right" has been clicked.                                                                                                                           |
+| [`ContextMenu.removeColumn`](@/api/contextMenu.md) | Action triggered by the ContextMenu plugin after the "Remove column" has been clicked.                                                                                                                                 |
+| [`ContextMenu.removeRow`](@/api/contextMenu.md)    | Action triggered by the ContextMenu plugin after the "Remove Row" has been clicked.                                                                                                                                    |
+| [`ContextMenu.rowAbove`](@/api/contextMenu.md)     | Action triggered by the ContextMenu plugin after the "Insert row above" has been clicked.                                                                                                                              |
+| [`ContextMenu.rowBelow`](@/api/contextMenu.md)     | Action triggered by the ContextMenu plugin after the "Insert row below" has been clicked.                                                                                                                              |
+| [`CopyPaste.paste`](@/api/copyPaste.md)            | Action triggered by the CopyPaste plugin after the value has been pasted.                                                                                                                                              |
+| [`MergeCells`](@/api/mergeCells.md)                | Action triggered by the MergeCells plugin when clearing the merged cells' underlying cells. |
+| [`UndoRedo.redo`](@/api/undoRedo.md)               | Action triggered by the UndoRedo plugin after the change has been redone.                                                                                                                                              |
+| [`UndoRedo.undo`](@/api/undoRedo.md)               | Action triggered by the UndoRedo plugin after the change has been undone.                                                                                                                                              |
+| [`ColumnSummary.set`](@/api/columnSummary.md)      | Action triggered by the ColumnSummary plugin after the calculation has been done.                                                                                                                                      |
+| [`ColumnSummary.reset`](@/api/columnSummary.md)    | Action triggered by the ColumnSummary plugin after the calculation has been reset.                                                                                                                                    |
+
+### Prevent feedback loops
+
+After initialization, [`updateSettings()`](@/api/core.md#updatesettings) uses [`updateData()`](@/api/core.md#updatedata) internally when its settings object includes `data`. The [`beforeUpdateData`](@/api/hooks.md#beforeupdatedata) and [`afterUpdateData`](@/api/hooks.md#afterupdatedata) hooks receive `source === 'updateSettings'`. The resulting [`afterChange`](@/api/hooks.md#afterchange) hook receives `changes === null` and `source === 'updateData'`.
+
+Calling `updateSettings({ data })` inside `afterChange` triggers `afterChange` again. Check the source before replacing data to prevent a feedback loop. In this callback snippet, `nextData` contains the dataset supplied by your application:
+
+```javascript
+hot.addHook('afterChange', (changes, source) => {
+  if (source === 'updateData') {
+    return;
+  }
+
+  hot.updateSettings({
+    data: nextData,
+  });
+});
+```
+
+The [`beforeChange`](@/api/hooks.md#beforechange) hook doesn't run for whole-dataset replacements. Use [`beforeUpdateData`](@/api/hooks.md#beforeupdatedata) to intercept data passed through `updateSettings({ data })`.
+
+The same risk applies to a direct, single-cell write with [`setDataAtCell()`](@/api/core.md#setdataatcell): without a custom `source`, the write arrives in `afterChange` with `source === 'edit'` (see the [`source` table](#definition-for-source-argument) above), indistinguishable from a user edit, so calling `setDataAtCell()` again from inside `afterChange` re-triggers the hook. Pass a custom `source` string and check for it:
+
+```javascript
+hot.addHook('afterChange', (changes, source) => {
+  if (source === 'sync') {
+    return;
+  }
+
+  // send `changes` to the server, then write the confirmed value back:
+  hot.setDataAtCell(row, column, confirmedValue, 'sync');
+});
+```
+
+### Block changes with the beforeChange hook
+
+Use [`beforeChange`](@/api/hooks.md#beforechange) to validate or reject individual changes before they reach the grid. The hook receives the full batch of pending changes as an array of `[row, prop, oldValue, newValue]` tuples, so you can inspect and modify it in place.
+
+The example below works on object data and cancels any change to the `id` property that isn't a numeric string, using `setDataAtRowProp()`-style tuples:
+
+```javascript
+hot.addHook('beforeChange', (changes, source) => {
+  for (let i = changes.length - 1; i >= 0; i -= 1) {
+    const [row, prop, oldValue, newValue] = changes[i];
+
+    if (prop === 'id' && !/^\d+$/.test(String(newValue))) {
+      changes[i] = null; // cancel this one change
+    }
+  }
+
+  // return false; // cancels the entire batch instead
+});
+```
+
+Setting an entry in `changes` to `null` cancels only that change; the rest of the batch still applies. Returning `false` from the hook cancels the whole batch instead. A change made through [`setDataAtRowProp()`](@/api/core.md#setdataatrowprop) arrives with `source === 'edit'`, the same as any other direct edit (see the [`source` table](#definition-for-source-argument) above).
+
+List of callbacks that operate on the `source` parameter:
+
+<div class="boxes-list">
+
+- [afterChange](@/api/hooks.md#afterchange)
+- [afterCreateCol](@/api/hooks.md#aftercreatecol)
+- [afterCreateRow](@/api/hooks.md#aftercreaterow)
+- [afterLoadData](@/api/hooks.md#afterloaddata)
+- [afterSetDataAtCell](@/api/hooks.md#aftersetdataatcell)
+- [afterSetDataAtRowProp](@/api/hooks.md#aftersetdataatrowprop)
+- [afterSetSourceDataAtCell](@/api/hooks.md#aftersetsourcedataatcell)
+- [afterUpdateData](@/api/hooks.md#afterupdatedata)
+- [afterRemoveCol](@/api/hooks.md#afterremovecol)
+- [afterRemoveRow](@/api/hooks.md#afterremoverow)
+- [afterValidate](@/api/hooks.md#aftervalidate)
+- [beforeChange](@/api/hooks.md#beforechange)
+- [beforeChangeRender](@/api/hooks.md#beforechangerender)
+- [beforeCreateCol](@/api/hooks.md#beforecreatecol)
+- [beforeCreateRow](@/api/hooks.md#beforecreaterow)
+- [beforeLoadData](@/api/hooks.md#beforeloaddata)
+- [beforeRemoveCol](@/api/hooks.md#beforeremovecol)
+- [beforeRemoveRow](@/api/hooks.md#beforeremoverow)
+- [beforeUpdateData](@/api/hooks.md#beforeupdatedata)
+- [beforeValidate](@/api/hooks.md#beforevalidate)
+
+</div>
+
+## The [`beforeKeyDown`](@/api/hooks.md#beforekeydown) callback
+
+The following demo uses [`beforeKeyDown`](@/api/hooks.md#beforekeydown) callback to modify some key bindings:
+
+- Pressing <kbd>**Delete**</kbd> or <kbd>**Backspace**</kbd> on a cell deletes the cell and shifts all cells beneath it in the column up resulting in the cursor, which doesn't move, having the value previously beneath it, now in the current cell.
+- Pressing <kbd>**Enter**</kbd> in a cell where the value remains unchanged pushes all the cells in the column beneath and including the current cell down one row. This results in a blank cell under the cursor which hasn't moved.
+
+::: only-for javascript
+
+::: example #example2 --js 1 --ts 2
+
+@[code](@/content/guides/getting-started/events-and-hooks/javascript/example2.js)
+@[code](@/content/guides/getting-started/events-and-hooks/javascript/example2.ts)
+
+:::
+
+:::
+
+::: only-for react
+
+::: example #example2 :react --js 1 --ts 2
+
+@[code](@/content/guides/getting-started/events-and-hooks/react/example2.jsx)
+@[code](@/content/guides/getting-started/events-and-hooks/react/example2.tsx)
+
+:::
+
+:::
+
+::: only-for angular
+
+::: example #example2 :angular --ts 1 --html 2
+
+@[code](@/content/guides/getting-started/events-and-hooks/angular/example2.ts)
+@[code](@/content/guides/getting-started/events-and-hooks/angular/example2.html)
+
+:::
+
+:::
+
+::: only-for vue
+
+::: example #example2 :vue --js 1
+
+@[code](@/content/guides/getting-started/events-and-hooks/vue/example2.vue)
+
+:::
+
+:::
+
+## Related API reference
+
+**Core methods**
+
+<div class="boxes-list">
+
+- [addHook()](@/api/core.md#addhook)
+- [addHookOnce()](@/api/core.md#addhookonce)
+- [hasHook()](@/api/core.md#hashook)
+- [removeHook()](@/api/core.md#removehook)
+- [hasHook()](@/api/core.md#hashook)
+- [runHooks()](@/api/core.md#runhooks)
+
+</div>
+
+**Hooks**
+
+<div class="boxes-list">
+
+- [List of all Handsontable hooks](@/api/hooks.md)
+- [afterListen](@/api/hooks.md#afterlisten)
+- [afterUnlisten](@/api/hooks.md#afterunlisten)
+
+</div>
+
+## Related
+
+- [Configuration options](@/guides/getting-started/configuration-options/configuration-options.md) -- see how hooks interact with grid configuration at initialization.
+- [Saving data](@/guides/getting-started/saving-data/saving-data.md) -- a practical example of using the `afterChange` hook to persist edits to a backend.

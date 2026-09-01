@@ -15,6 +15,13 @@ describe('HiddenRows', () => {
 
   beforeEach(function() {
     this.$container = $(`<div id="${id}"></div>`).appendTo('body');
+
+    // Matchers configuration.
+    this.matchersConfig = {
+      toMatchHTML: {
+        keepAttributes: ['class']
+      }
+    };
   });
 
   afterEach(function() {
@@ -25,9 +32,9 @@ describe('HiddenRows', () => {
   });
 
   describe('fixedRowsBottom', () => {
-    it('should reduce fixed rows by the number of hidden rows (the first row from bottom overlay is hidden)', () => {
+    it('should reduce fixed rows by the number of hidden rows (the first row from bottom overlay is hidden)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         rowHeaders: true,
         hiddenRows: {
           rows: [7],
@@ -39,11 +46,11 @@ describe('HiddenRows', () => {
       expect(getBottomClone().find('tbody tr').length).toBe(2);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
         <tbody>
-          <tr>
+          <tr class="ht__row_even">
             <th class="${CSS_CLASS_AFTER_HIDDEN_ROW}">9</th>
             <td class="${CSS_CLASS_AFTER_HIDDEN_ROW}">A9</td>
           </tr>
-          <tr>
+          <tr class="ht__row_odd">
             <th class="">10</th>
             <td class="">A10</td>
           </tr>
@@ -51,9 +58,9 @@ describe('HiddenRows', () => {
         `);
     });
 
-    it('should reduce fixed rows by the number of hidden rows (the second row from bottom overlay is hidden)', () => {
+    it('should reduce fixed rows by the number of hidden rows (the second row from bottom overlay is hidden)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         rowHeaders: true,
         hiddenRows: {
           rows: [8],
@@ -65,11 +72,11 @@ describe('HiddenRows', () => {
       expect(getBottomClone().find('tbody tr').length).toBe(2);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
         <tbody>
-          <tr>
+          <tr class="ht__row_even">
             <th class="${CSS_CLASS_BEFORE_HIDDEN_ROW}">8</th>
             <td class="">A8</td>
           </tr>
-          <tr>
+          <tr class="ht__row_odd">
             <th class="${CSS_CLASS_AFTER_HIDDEN_ROW}">10</th>
             <td class="${CSS_CLASS_AFTER_HIDDEN_ROW}">A10</td>
           </tr>
@@ -77,9 +84,9 @@ describe('HiddenRows', () => {
         `);
     });
 
-    it('should reduce fixed rows by the number of hidden rows (two last rows within bottom overlay are hidden)', () => {
+    it('should reduce fixed rows by the number of hidden rows (two last rows within bottom overlay are hidden)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         rowHeaders: true,
         hiddenRows: {
           rows: [8, 9],
@@ -91,7 +98,7 @@ describe('HiddenRows', () => {
       expect(getBottomClone().find('tbody tr').length).toBe(1);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
         <tbody>
-          <tr>
+          <tr class="ht__row_even">
             <th class="${CSS_CLASS_BEFORE_HIDDEN_ROW}">8</th>
             <td class="">A8</td>
           </tr>
@@ -100,9 +107,9 @@ describe('HiddenRows', () => {
     });
 
     it('should reduce fixed rows by the number of hidden rows (total hidden rows are greater ' +
-       'than fixedRowsBottom and one row is not hidden within fixed rows range)', () => {
+       'than fixedRowsBottom and one row is not hidden within fixed rows range)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         rowHeaders: true,
         hiddenRows: {
           rows: [2, 3, 4, 5, 6, 7, 9],
@@ -114,7 +121,7 @@ describe('HiddenRows', () => {
       expect(getBottomClone().find('tbody tr').length).toBe(1);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
         <tbody>
-          <tr>
+          <tr class="ht__row_odd">
             <th class="${CSS_CLASS_AFTER_HIDDEN_ROW} ${CSS_CLASS_BEFORE_HIDDEN_ROW}">9</th>
             <td class="${CSS_CLASS_AFTER_HIDDEN_ROW}">A9</td>
           </tr>
@@ -122,9 +129,9 @@ describe('HiddenRows', () => {
         `);
     });
 
-    it('should reduce fixed rows to 0 when all rows all hidden', () => {
+    it('should reduce fixed rows to 0 when all rows all hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         rowHeaders: true,
         hiddenRows: {
           rows: [5, 6, 7, 8, 9],
@@ -140,15 +147,15 @@ describe('HiddenRows', () => {
         `);
     });
 
-    it('should not display cells after API call hiding all rows (headers disabled)', () => {
+    it('should not display cells after API call hiding all rows (headers disabled)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         hiddenRows: true,
         fixedRowsBottom: 3
       });
 
       getPlugin('hiddenRows').hideRows([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-      render();
+      await render();
 
       expect(getBottomClone().find('tbody tr').length).toBe(0);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
@@ -157,9 +164,9 @@ describe('HiddenRows', () => {
       `);
     });
 
-    it('should not display cells after API call hiding all rows (headers enabled)', () => {
+    it('should not display cells after API call hiding all rows (headers enabled)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         hiddenRows: true,
         fixedRowsBottom: 3,
         rowHeaders: true,
@@ -167,29 +174,29 @@ describe('HiddenRows', () => {
       });
 
       getPlugin('hiddenRows').hideRows([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-      render();
+      await render();
 
       expect(getBottomClone().find('tbody tr').length).toBe(0);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
         <tbody>
         </tbody>
       `);
-      expect(getBottomLeftClone().find('tbody tr').length).toBe(0);
-      expect(extractDOMStructure(getBottomLeftClone())).toMatchHTML(`
+      expect(getBottomInlineStartClone().find('tbody tr').length).toBe(0);
+      expect(extractDOMStructure(getBottomInlineStartClone())).toMatchHTML(`
         <tbody>
         </tbody>
       `);
     });
 
-    it('should not display cells after API call trimming all rows (headers disabled)', () => {
+    it('should not display cells after API call trimming all rows (headers disabled)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         trimRows: true,
         fixedRowsBottom: 3
       });
 
       getPlugin('trimRows').trimRows([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-      render();
+      await render();
 
       expect(getBottomClone().find('tbody tr').length).toBe(0);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
@@ -198,9 +205,9 @@ describe('HiddenRows', () => {
       `);
     });
 
-    it('should not display cells after API call trimming all rows (headers enabled)', () => {
+    it('should not display cells after API call trimming all rows (headers enabled)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 1),
+        data: createSpreadsheetData(10, 1),
         trimRows: true,
         fixedRowsBottom: 3,
         rowHeaders: true,
@@ -208,15 +215,15 @@ describe('HiddenRows', () => {
       });
 
       getPlugin('trimRows').trimRows([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-      render();
+      await render();
 
       expect(getBottomClone().find('tbody tr').length).toBe(0);
       expect(extractDOMStructure(getBottomClone())).toMatchHTML(`
         <tbody>
         </tbody>
       `);
-      expect(getBottomLeftClone().find('tbody tr').length).toBe(0);
-      expect(extractDOMStructure(getBottomLeftClone())).toMatchHTML(`
+      expect(getBottomInlineStartClone().find('tbody tr').length).toBe(0);
+      expect(extractDOMStructure(getBottomInlineStartClone())).toMatchHTML(`
         <tbody>
         </tbody>
       `);

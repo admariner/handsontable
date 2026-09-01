@@ -1,0 +1,103 @@
+name: Build every package in different environments.
+
+# Multi-OS/env build sanity (ubuntu, macos, windows). On develop this runs as a
+# stage of the develop pipeline (workflow_call from develop.yml); master and
+# release/** keep the direct push trigger below.
+on:
+  push:
+    branches:
+      - 'master'
+      - 'release/**'
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  # Static prefix, NOT ${{ github.workflow }} — when called from develop.yml the
+  # workflow name resolves to the CALLER's, which could collide with the caller's
+  # own concurrency group and cancel/deadlock the run.
+  group: build-all-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-on-unix:
+    name: Build all packages in ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # https://github.com/actions/checkout/releases/tag/v6.0.2
+
+      # should resolve node-gyp issue we have been having with builds
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # https://github.com/actions/setup-python/releases/tag/v6.2.0
+        with:
+         python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        name: Install pnpm
+
+      - name: Use Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # https://github.com/actions/setup-node/releases/tag/v6.2.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install the dependencies
+        run: pnpm install
+
+      - name: Build all packages
+        run: npm run all build
+
+  build-on-windows:
+    name: Build all packages in windows-2025-vs2026
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 60
+    env:
+      # Force npm operations to use the D drive (much faster)
+      npm_config_cache: D:/npm-cache
+      TEMP: D:/Temp
+      TMP: D:/Temp
+    steps:
+      # Use D drive for checkout (much faster)
+      - name: Checkout to D drive
+        run: |
+          mkdir D:/handsontable
+          git clone -b $env:GITHUB_REF_NAME https://github.com/handsontable/handsontable D:/handsontable --depth 1
+          # Pin to the exact commit of THIS run. A bare depth-1 branch clone
+          # grabs whatever the branch points at when the job starts, so a
+          # rapid follow-up push could silently make this job build a newer
+          # commit than the one the run reports (the unix jobs use
+          # actions/checkout, which always pins github.sha).
+          git -C D:/handsontable fetch --depth 1 origin $env:GITHUB_SHA
+          git -C D:/handsontable checkout $env:GITHUB_SHA
+
+      # Create temp and cache directories on D drive
+      - name: Setup D drive directories
+        run: |
+          mkdir D:/Temp -Force
+          mkdir D:/npm-cache -Force
+
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+        name: Install pnpm
+        with:
+          version: 10 # On Windows the `packageManager` field of `package.json` seems to not be recognized.
+
+      - name: Use Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # https://github.com/actions/setup-node/releases/tag/v6.2.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install the dependencies
+        working-directory: D:/handsontable
+        run: pnpm install
+
+      - name: Build all packages
+        working-directory: D:/handsontable
+        run: npm run all build

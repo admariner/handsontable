@@ -1,0 +1,352 @@
+---
+/**
+ * Versions dropdown for the site header.
+ *
+ * Fetches the published versions list from handsontable.com at render time and
+ * renders a dropdown showing the current version. Each item links to the
+ * corresponding version of the documentation on handsontable.com.
+ *
+ * - Versions with major < 9 are hidden (mirrors the VuePress VersionsDropdown).
+ * - The current version is marked "latest" when it matches latestVersion.
+ * - The "next" (dev) build is displayed as "dev".
+ */
+
+import { createRequire } from 'module';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+
+import { computeVersionsDisplay } from '../lib/versions-menu.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+// Determine the current library version from the handsontable package.
+// Fall back to 'next' when the root package.json cannot be resolved (e.g., CI).
+let rawVersion = 'next';
+
+try {
+  const pkg = require(join(__dirname, '../../..', 'handsontable', 'package.json'));
+  rawVersion = pkg.version ?? 'next';
+} catch {
+  // Vite may transform import.meta.url during SSG build, breaking require().
+  // Fall back to reading from process.cwd() which is the docs/ directory.
+  try {
+    const pkg = JSON.parse(readFileSync(resolve(process.cwd(), '..', 'handsontable', 'package.json'), 'utf-8'));
+    rawVersion = pkg.version ?? 'next';
+  } catch {
+    // Use 'next' fallback
+  }
+}
+
+// Convert patch version (e.g. "17.0.0") to minor version (e.g. "17.0").
+const currentMinor =
+  rawVersion === 'next'
+    ? 'next'
+    : rawVersion.split('.').slice(0, 2).join('.');
+
+// Fetch the shared docs metadata that lists all published versions.
+interface DocsData {
+  latestVersion: string;
+  versionsWithPatches: [string, string[]][];
+}
+
+let docsData: DocsData | null = null;
+
+// Prefer locally-generated common.json (written by commonJsonIntegration at build
+// start) which merges GitHub release data with the local package version. This
+// ensures pre-release versions not yet on handsontable.com are reflected correctly.
+try {
+  const localJson = readFileSync(resolve(process.cwd(), 'public', 'data', 'common.json'), 'utf-8');
+  docsData = JSON.parse(localJson);
+} catch {
+  // Local file not available -- fall back to remote.
+}
+
+if (!docsData) {
+  try {
+    const res = await fetch('https://handsontable.com/docs/data/common.json');
+    if (res.ok) docsData = await res.json();
+  } catch {
+    // Offline / network unavailable — render with minimal fallback.
+  }
+}
+
+const { buttonLabel, isLatest, latestVersion, versionItems } =
+  computeVersionsDisplay(docsData, currentMinor, rawVersion);
+---
+
+<div class="versions-dropdown" data-current-minor={currentMinor} data-raw-version={rawVersion}>
+  <button
+    class="versions-trigger"
+    aria-haspopup="menu"
+    aria-expanded="false"
+    id="versions-trigger"
+    type="button"
+  >
+    <span id="versions-trigger-label">
+      {isLatest
+        ? (
+          <>
+            <span class="versions-trigger__version">
+              {buttonLabel.replace(' latest', '')}
+            </span>
+            {' '}
+            <span class="versions-tag">latest</span>
+          </>
+        )
+        : buttonLabel
+      }
+    </span>
+    <svg class="versions-chevron" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6"/></svg>
+  </button>
+
+  <ul class="versions-menu" role="menu" aria-labelledby="versions-trigger" hidden>
+    {versionItems.map(({ minor, display, href, isCurrent }) => (
+      <li role="none">
+        <a
+          href={href}
+          class:list={['versions-item', { 'versions-item--current': isCurrent }]}
+          role="menuitem"
+          tabindex="-1"
+          aria-current={isCurrent ? 'page' : undefined}
+          rel={minor === latestVersion ? undefined : 'nofollow'}
+          target="_self"
+        >
+          {display}
+          {minor === latestVersion && <span class="versions-tag">latest</span>}
+        </a>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<script>
+  import { attachDropdownKeyboardNav } from '../scripts/a11y-utils';
+  import { computeVersionsDisplay } from '../lib/versions-menu.mjs';
+
+  const wrapper = document.querySelector('.versions-dropdown') as HTMLElement | null;
+  const trigger = document.getElementById('versions-trigger') as HTMLButtonElement | null;
+  const menu = document.querySelector('.versions-menu') as HTMLElement | null;
+  const triggerLabel = document.getElementById('versions-trigger-label') as HTMLElement | null;
+
+  // ── Live refresh ─────────────────────────────────────────────────────────
+  // The markup above is rendered from data baked in at this page's own build
+  // time, which goes stale on old, frozen doc versions once a newer version
+  // ships (that old branch is never rebuilt just because production moved
+  // on). Re-fetch the always-current production data at page load and
+  // re-render if it disagrees with what was baked in.
+  if (wrapper && trigger && menu && triggerLabel) {
+    const currentMinor = wrapper.dataset.currentMinor ?? '';
+    const rawVersion = wrapper.dataset.rawVersion ?? currentMinor;
+
+    // Astro scopes this component's <style> block by appending a unique
+    // hashed class (e.g. "astro-xzzq4es2") to every element it renders, and
+    // rewriting the CSS selectors to require that class too. Elements built
+    // with document.createElement() don't carry it, so the styles below
+    // would silently not apply to them unless we tag them with it ourselves.
+    const scopeClass = [...wrapper.classList].find((c) => c.startsWith('astro-'));
+    const withScope = (className: string) => (scopeClass ? `${className} ${scopeClass}` : className);
+
+    fetch('https://handsontable.com/docs/data/common.json')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((docsData) => {
+        if (!docsData?.versionsWithPatches) return;
+
+        const { buttonLabel, isLatest, latestVersion, versionItems } =
+          computeVersionsDisplay(docsData, currentMinor, rawVersion);
+
+        // Rebuild the trigger label.
+        triggerLabel.replaceChildren();
+        if (isLatest) {
+          const versionSpan = document.createElement('span');
+          versionSpan.className = withScope('versions-trigger__version');
+          versionSpan.textContent = buttonLabel.replace(' latest', '');
+          const tag = document.createElement('span');
+          tag.className = withScope('versions-tag');
+          tag.textContent = 'latest';
+          triggerLabel.append(versionSpan, ' ', tag);
+        } else {
+          triggerLabel.textContent = buttonLabel;
+        }
+
+        // Rebuild the menu items.
+        menu.replaceChildren();
+        for (const { minor, display, href, isCurrent } of versionItems) {
+          const li = document.createElement('li');
+          li.setAttribute('role', 'none');
+
+          const a = document.createElement('a');
+          a.href = href;
+          a.className = withScope(isCurrent ? 'versions-item versions-item--current' : 'versions-item');
+          a.setAttribute('role', 'menuitem');
+          a.setAttribute('tabindex', '-1');
+          if (isCurrent) a.setAttribute('aria-current', 'page');
+          if (minor !== latestVersion) a.setAttribute('rel', 'nofollow');
+          a.target = '_self';
+          a.append(display);
+
+          if (minor === latestVersion) {
+            const tag = document.createElement('span');
+            tag.className = withScope('versions-tag');
+            tag.textContent = 'latest';
+            a.append(tag);
+          }
+
+          li.append(a);
+          menu.append(li);
+        }
+      })
+      .catch(() => {
+        // Offline / network unavailable — keep the build-time rendered state.
+      });
+  }
+
+  if (wrapper && trigger && menu) {
+    function openMenu() {
+      menu!.hidden = false;
+      trigger!.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeMenu() {
+      menu!.hidden = true;
+      trigger!.setAttribute('aria-expanded', 'false');
+    }
+
+    trigger.addEventListener('click', () => {
+      const isOpen = !menu.hidden;
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrapper.contains(e.target as Node)) {
+        closeMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) {
+        closeMenu();
+        trigger.focus();
+      }
+    });
+
+    attachDropdownKeyboardNav(trigger, menu, {
+      itemSelector: 'a[role="menuitem"]',
+      onOpen: openMenu,
+      onClose: closeMenu,
+      isOpen: () => !menu.hidden,
+    });
+  }
+</script>
+
+<style>
+  .versions-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .versions-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    border-right: 1px solid var(--sl-color-gray-5);
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+    font-size: var(--sl-text-sm);
+    font-weight: 500;
+    padding: 0.5rem 0.625rem;
+    transition: color 0.15s, background-color 0.15s;
+    white-space: nowrap;
+  }
+
+  .versions-trigger:hover {
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-7, var(--sl-color-gray-6));
+  }
+
+  .versions-trigger__version {
+    /* Prevent layout shift when "latest" badge appears/disappears */
+  }
+
+  .versions-tag {
+    background: var(--sl-color-accent);
+    border: 1px solid var(--sl-color-accent);
+    border-radius: 99px;
+    color: #fff;
+    font-family: var(--sl-font-system, system-ui, sans-serif);
+    font-size: 0.65rem;
+    font-weight: 400;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    text-transform: capitalize;
+    vertical-align: middle;
+  }
+
+  .versions-chevron {
+    flex-shrink: 0;
+    margin-inline-start: 0.15rem;
+    transition: transform 0.15s;
+  }
+
+  .versions-trigger[aria-expanded='true'] .versions-chevron {
+    transform: rotate(180deg);
+  }
+
+  .versions-menu {
+    background: var(--sl-color-bg-nav);
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0;
+    box-shadow: none;
+    inset-inline-end: 0;
+    list-style: none;
+    margin: 0;
+    max-height: 18rem;
+    min-width: 10rem;
+    overflow-y: auto;
+    padding: 0;
+    position: absolute;
+    top: 100%;
+    z-index: 100;
+  }
+
+  .versions-menu[hidden] {
+    display: none;
+  }
+
+  .versions-item {
+    align-items: center;
+    color: var(--sl-color-text);
+    display: flex;
+    font-size: var(--sl-text-sm);
+    gap: 0.4rem;
+    padding: 0.5rem 0.75rem;
+    text-decoration: none;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+    transition: background 0.1s, color 0.1s;
+    white-space: nowrap;
+  }
+
+  .versions-item:last-child {
+    border-bottom: none;
+  }
+
+  .versions-item:hover,
+  .versions-item:focus-visible {
+    background: var(--sl-color-hover-bg, var(--sl-color-gray-6));
+    color: var(--sl-color-white);
+    outline: none;
+  }
+
+  .versions-item--current {
+    color: var(--sl-color-white);
+    box-shadow: inset 0 0 0 1px var(--sl-color-accent);
+  }
+</style>

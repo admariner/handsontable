@@ -1,0 +1,10 @@
+contact_links:
+  - name: Feature requests
+    url: https://forum.handsontable.com/c/feature-requests/
+    about: Submit feature requests and vote on ideas on our forum.
+  - name: Questions and discussions
+    url: https://forum.handsontable.com/c/questions/
+    about: Ask questions and discuss ideas on our forum.
+  - name: Support request
+    url: https://handsontable.com/contact?category=technical_support
+    about: Report your issue to our technical support team.

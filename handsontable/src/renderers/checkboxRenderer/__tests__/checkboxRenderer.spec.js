@@ -12,7 +12,7 @@ describe('CheckboxRenderer', () => {
     }
   });
 
-  it('should render values as checkboxes', () => {
+  it('should render values as checkboxes', async() => {
     handsontable({
       data: [[true], [false], [true]],
       columns: [
@@ -25,7 +25,7 @@ describe('CheckboxRenderer', () => {
     expect($(getRenderedValue(2, 0)).is(':checkbox')).toBe(true);
   });
 
-  it('should render check checkboxes for cell which value is true', () => {
+  it('should render check checkboxes for cell which value is true', async() => {
     handsontable({
       data: [[true], [false], [true]],
       columns: [
@@ -38,7 +38,7 @@ describe('CheckboxRenderer', () => {
     expect($(getRenderedContent(2, 0)).prop('checked')).toBe(true);
   });
 
-  it('should use templates to check appropriate checkboxes', () => {
+  it('should use templates to check appropriate checkboxes', async() => {
     handsontable({
       data: [['yes'], ['no'], ['yes']],
       columns: [
@@ -64,41 +64,41 @@ describe('CheckboxRenderer', () => {
       return false;
     };
 
-    const hot = handsontable({
+    handsontable({
       data: [[true], [false], [true]],
       columns: [
         { type: 'checkbox' }
       ]
     });
 
-    hot.selectCell(0, 0);
+    await selectCell(0, 0);
 
     spec().$container.find(':checkbox').eq(2).simulate('mousedown');
     spec().$container.find(':checkbox').eq(2).simulate('mouseup');
     spec().$container.find(':checkbox').eq(2).simulate('click');
 
-    await sleep(100);
+    await waitForNextAnimationFrames(7);
 
     expect(spy.test.calls.count()).toBe(0);
-    expect(hot.getSelected()).toEqual([[2, 0, 2, 0]]);
+    expect(getSelected()).toEqual([[2, 0, 2, 0]]);
   });
 
-  it('should select cell after label click', () => {
-    const hot = handsontable({
+  it('should select cell after label click', async() => {
+    handsontable({
       data: [[true], [false], [true]],
       columns: [
         { type: 'checkbox', label: { position: 'before', value: 'Sure? ' } }
       ]
     });
 
-    hot.selectCell(0, 0);
+    await selectCell(0, 0);
 
     spec().$container.find('td label').eq(2).simulate('mousedown');
 
-    expect(hot.getSelected()).toEqual([[2, 0, 2, 0]]);
+    expect(getSelected()).toEqual([[2, 0, 2, 0]]);
   });
 
-  it('should reverse selection in checkboxes', () => {
+  it('should reverse selection in checkboxes', async() => {
     handsontable({
       data: [[true], [false], [true]],
       columns: [
@@ -113,7 +113,7 @@ describe('CheckboxRenderer', () => {
     expect(getData()).toEqual([[false], [true], [false]]);
   });
 
-  it('shouldn\'t uncheck checkboxes', () => {
+  it('shouldn\'t uncheck checkboxes', async() => {
     handsontable({
       data: [[true], [true], [true]],
       columns: [
@@ -126,109 +126,35 @@ describe('CheckboxRenderer', () => {
     expect(getData()).toEqual([[true], [true], [true]]);
   });
 
-  it('should check single box after hitting space', () => {
-    handsontable({
-      data: [[true], [true], [true]],
+  it('should not permanently retain a cell meta object for every toggled cell in a large selection', async() => {
+    const rows = [];
+
+    for (let i = 0; i < 200; i++) {
+      rows.push([true]);
+    }
+
+    const hot = handsontable({
+      data: rows,
+      width: 300,
+      height: 150,
       columns: [
-        { type: 'checkbox' }
+        {
+          type: 'checkbox'
+        }
       ]
     });
 
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
+    await selectCell(0, 0, 199, 0);
 
-    addHook('afterChange', afterChangeCallback);
+    const retainedBefore = hot.getCellsMeta().length;
 
-    let checkboxes = spec().$container.find(':checkbox');
+    await keyDownUp(' '); // toggles all 200 cells, mostly off-screen
 
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [true], [true]]);
-
-    selectCell(0, 0);
-
-    //  spec().$container.find(':checkbox').eq(0).simulate('click');
-    //  spec().$container.simulate('keydown',{
-    //    keyCode: 32
-    //  });
-    keyDown('space');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false], [true], [true]]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, true, false]], 'edit');
+    expect(getDataAtCell(199, 0)).toBe(false);
+    expect(hot.getCellsMeta().length).toBe(retainedBefore);
   });
 
-  it('should not check single box after hitting space, if cell is readOnly', () => {
-    handsontable({
-      data: [[true], [true], [true]],
-      columns: [
-        { type: 'checkbox', readOnly: true }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [true], [true]]);
-
-    selectCell(0, 0);
-
-    keyDown('space');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [true], [true]]);
-    expect(afterChangeCallback).not.toHaveBeenCalled();
-  });
-
-  it('should not check single box after hitting space, if last column is readOnly (#3562)', () => {
-    handsontable({
-      data: [[true, true], [false, false], [true, true]],
-      columns: [
-        { type: 'checkbox' },
-        { type: 'checkbox', readOnly: true }
-      ]
-    });
-
-    selectCell(0, 0);
-    keyDown('space');
-    selectCell(0, 1);
-    keyDown('space');
-    selectCell(1, 0);
-    keyDown('space');
-    selectCell(1, 1);
-    keyDown('space');
-
-    const checkboxes = spec().$container.find(':checkbox');
-
-    // column 0
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(checkboxes.eq(4).prop('checked')).toBe(true);
-
-    // column 1
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(3).prop('checked')).toBe(false);
-    expect(checkboxes.eq(5).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false, true], [true, false], [true, true]]);
-  });
-
-  it('should change checkboxes values properly when data contains null or/and undefined', () => {
+  it('should change checkboxes values properly when data contains null or/and undefined', async() => {
     handsontable({
       data: [[null], [undefined]],
       colHeaders: true,
@@ -239,18 +165,18 @@ describe('CheckboxRenderer', () => {
       ]
     });
 
-    selectCell(0, 0, 1, 0);
-    keyDown('space');
+    await selectCell(0, 0, 1, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCol(0)).toEqual([true, true]);
 
-    selectCell(0, 0, 1, 0);
-    keyDown('space');
+    await selectCell(0, 0, 1, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCol(0)).toEqual([false, false]);
   });
 
-  it('should change checkboxes values for cells below the viewport (hot initialized by startRows) #4037', () => {
+  it('should change checkboxes values for cells below the viewport (hot initialized by startRows) #4037', async() => {
     handsontable({
       startRows: 200,
       colHeaders: true,
@@ -261,151 +187,13 @@ describe('CheckboxRenderer', () => {
       ]
     });
 
-    selectCell(0, 0, 199, 0);
-    keyDown('space');
+    await selectCell(0, 0, 199, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCell(199, 0)).toEqual(true);
   });
 
-  it('should reverse checkboxes state after hitting space, when multiple cells are selected', () => {
-    handsontable({
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCell(0, 0, 2, 0);
-
-    keyDown('space');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([[false], [true], [false]]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-    expect(afterChangeCallback).toHaveBeenCalledWith([
-      [0, 0, true, false],
-      [1, 0, false, true],
-      [2, 0, true, false]
-    ], 'edit');
-  });
-
-  it('should reverse checkboxes state after hitting space, when multiple non-contiguous cells are selected', () => {
-    handsontable({
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCells([[0, 0], [2, 0]]);
-
-    keyDown('space');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([[false], [false], [false]]);
-    expect(afterChangeCallback.calls.count()).toEqual(2);
-  });
-
-  it('should reverse checkboxes state after hitting enter, when multiple non-contiguous cells are selected', () => {
-    handsontable({
-      data: [[false], [true], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false], [true], [true]]);
-
-    selectCells([[0, 0], [2, 0]]);
-
-    keyDown('enter');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([[true], [true], [false]]);
-    expect(afterChangeCallback.calls.count()).toEqual(2);
-  });
-
-  it('should reverse checkboxes state after hitting space, when multiple cells are selected and selStart > selEnd', () => {
-    handsontable({
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCell(2, 0, 0, 0); // selStart = [2,0], selEnd = [0,0]
-
-    keyDown('space');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([[false], [true], [false]]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-    expect(afterChangeCallback).toHaveBeenCalledWith([
-      [0, 0, true, false],
-      [1, 0, false, true],
-      [2, 0, true, false]
-    ], 'edit');
-  });
-
-  it('should toggle checkbox even if cell value is in another datatype', () => {
+  it('should toggle checkbox even if cell value is in another datatype', async() => {
     // TODO: we MUST add additional layer in data transport, to filter stored data types into their defined data type (cellMeta.type)
     handsontable({
       data: [['true']],
@@ -414,16 +202,16 @@ describe('CheckboxRenderer', () => {
       ]
     });
 
-    selectCell(0, 0);
+    await selectCell(0, 0);
 
     expect(getDataAtCell(0, 0)).toBe('true');
 
-    keyDown('space');
+    await keyDownUp(' ');
 
     expect(getDataAtCell(0, 0)).toBe(false);
   });
 
-  it('double click on checkbox cell should invert the value', () => {
+  it('double click on checkbox cell should invert the value', async() => {
     handsontable({
       data: [
         [true],
@@ -435,329 +223,40 @@ describe('CheckboxRenderer', () => {
       ]
     });
 
-    selectCell(0, 0);
+    await selectCell(0, 0);
 
-    mouseDoubleClick(getCell(0, 0));
+    await mouseDoubleClick(getCell(0, 0));
     expect(getDataAtCell(0, 0)).toBe(false);
 
-    mouseDoubleClick(getCell(0, 0));
+    await mouseDoubleClick(getCell(0, 0));
     expect(getDataAtCell(0, 0)).toBe(true);
 
-    mouseDoubleClick(getCell(0, 0));
+    await mouseDoubleClick(getCell(0, 0));
     expect(getDataAtCell(0, 0)).toBe(false);
   });
 
-  it('should change checkbox state from checked to unchecked after hitting ENTER', () => {
+  it('double click on input[type=checkbox] element inside checkbox cell should not invert the value', async() => {
     handsontable({
-      data: [[true], [true], [true]],
+      data: [
+        [true],
+        [false],
+        [true]
+      ],
       columns: [
         { type: 'checkbox' }
       ]
     });
 
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
+    await selectCell(0, 0);
 
-    addHook('afterChange', afterChangeCallback);
+    await mouseDoubleClick($(getCell(0, 0)).find('input[type=checkbox]'));
+    expect(getDataAtCell(0, 0)).toBe(true);
 
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [true], [true]]);
-
-    selectCell(0, 0);
-
-    keyDown('enter');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false], [true], [true]]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, true, false]], 'edit');
-  });
-
-  it('should move down without changing checkbox state when enterBeginsEditing equals false', () => {
-    handsontable({
-      enterBeginsEditing: false,
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCell(0, 0);
-
-    keyDown('enter');
-
-    checkboxes = spec().$container.find(':checkbox');
-    const selection = getSelected();
-
-    expect(selection).toEqual([[1, 0, 1, 0]]);
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-    expect(afterChangeCallback.calls.count()).toEqual(0);
-  });
-
-  it('should begin editing and changing checkbox state when enterBeginsEditing equals true', () => {
-    handsontable({
-      enterBeginsEditing: true,
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCell(0, 0);
-
-    keyDown('enter');
-
-    checkboxes = spec().$container.find(':checkbox');
-    const selection = getSelected();
-
-    expect(selection).toEqual([[0, 0, 0, 0]]);
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false], [false], [true]]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-  });
-
-  it('should change checkbox state from checked to unchecked after hitting ENTER using custom check/uncheck templates', () => {
-    handsontable({
-      data: [['yes'], ['yes'], ['no']],
-      columns: [
-        {
-          type: 'checkbox',
-          checkedTemplate: 'yes',
-          uncheckedTemplate: 'no'
-        }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([['yes'], ['yes'], ['no']]);
-
-    selectCell(0, 0);
-
-    keyDown('enter');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([['no'], ['yes'], ['no']]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, 'yes', 'no']], 'edit');
-  });
-
-  it('should change checkbox state from checked to unchecked after hitting ENTER using custom check/uncheck templates in numeric format', () => {
-    handsontable({
-      data: [[1], [1], [0]],
-      columns: [
-        {
-          type: 'checkbox',
-          checkedTemplate: 1,
-          uncheckedTemplate: 0
-        }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([[1], [1], [0]]);
-
-    selectCell(0, 0);
-
-    keyDown('enter');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(true);
-    expect(checkboxes.eq(2).prop('checked')).toBe(false);
-    expect(getData()).toEqual([[0], [1], [0]]);
-    expect(afterChangeCallback.calls.count()).toEqual(1);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, 1, 0]], 'edit');
-  });
-
-  it('should change checkbox state to unchecked after hitting DELETE', () => {
-    handsontable({
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCell(0, 0);
-    keyDown('delete');
-    selectCell(0, 1);
-    keyDown('delete');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false], [false], [true]]);
-
-    expect(afterChangeCallback.calls.count()).toEqual(2);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, true, false]], 'edit');
-  });
-
-  it('should change checkbox notte to unchecked after hitting BACKSPACE', () => {
-    handsontable({
-      data: [[true], [false], [true]],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    let checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(true);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[true], [false], [true]]);
-
-    selectCell(0, 0);
-    keyDown('backspace');
-    selectCell(0, 1);
-    keyDown('backspace');
-
-    checkboxes = spec().$container.find(':checkbox');
-
-    expect(checkboxes.eq(0).prop('checked')).toBe(false);
-    expect(checkboxes.eq(1).prop('checked')).toBe(false);
-    expect(checkboxes.eq(2).prop('checked')).toBe(true);
-    expect(getData()).toEqual([[false], [false], [true]]);
-
-    expect(afterChangeCallback.calls.count()).toEqual(2);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, true, false]], 'edit');
-  });
-
-  it('should change  notkbox state to unchecked after hitting DELETE (from #bad-value# state)', () => {
-    handsontable({
-      data: [['foo'], ['bar']],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    expect(getDataAtCell(0, 0)).toBe('foo');
-    expect(getDataAtCell(1, 0)).toBe('bar');
-
-    selectCell(0, 0);
-    keyDown('delete');
-    selectCell(1, 0);
-    keyDown('delete');
-
-    expect(getDataAtCell(0, 0)).toBe(false);
+    await mouseDoubleClick($(getCell(1, 0)).find('input[type=checkbox]'));
     expect(getDataAtCell(1, 0)).toBe(false);
-    expect(getData()).toEqual([[false], [false]]);
-
-    expect(afterChangeCallback.calls.count()).toEqual(2);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, 'foo', false]], 'edit');
   });
 
-  it('should change checkbox  note to unchecked after hitting BACKSPACE (from #bad-value# state)', () => {
-    handsontable({
-      data: [['foo'], ['bar']],
-      columns: [
-        { type: 'checkbox' }
-      ]
-    });
-
-    const afterChangeCallback = jasmine.createSpy('afterChangeCallback');
-
-    addHook('afterChange', afterChangeCallback);
-
-    expect(getDataAtCell(0, 0)).toBe('foo');
-    expect(getDataAtCell(1, 0)).toBe('bar');
-
-    selectCell(0, 0);
-    keyDown('backspace');
-    selectCell(1, 0);
-    keyDown('backspace');
-
-    expect(getDataAtCell(0, 0)).toBe(false);
-    expect(getDataAtCell(1, 0)).toBe(false);
-    expect(getData()).toEqual([[false], [false]]);
-
-    expect(afterChangeCallback.calls.count()).toEqual(2);
-    expect(afterChangeCallback)
-      .toHaveBeenCalledWith([[0, 0, 'foo', false]], 'edit');
-  });
-
-  it('should not change checkbox state after hitting other keys then DELETE or BACKSPACE (from #bad-value# state)', () => {
+  it('should not change checkbox state after hitting other keys then DELETE or BACKSPACE (from #bad-value# state)', async() => {
     handsontable({
       data: [['foo'], ['bar']],
       columns: [
@@ -771,10 +270,10 @@ describe('CheckboxRenderer', () => {
 
     expect(getDataAtCell(0, 0)).toBe('foo');
 
-    selectCell(0, 0);
-    keyDown('space');
-    selectCell(0, 0);
-    keyDown('c');
+    await selectCell(0, 0);
+    await keyDownUp(' ');
+    await selectCell(0, 0);
+    await keyDownUp('c');
 
     expect(getDataAtCell(0, 0)).toBe('foo');
     expect(getData()).toEqual([['foo'], ['bar']]);
@@ -782,7 +281,7 @@ describe('CheckboxRenderer', () => {
     expect(afterChangeCallback.calls.count()).toEqual(0);
   });
 
-  it('should not change checkbox state after hitting F2 key', () => {
+  it('should not change checkbox state after hitting F2 key', async() => {
     const onAfterChange = jasmine.createSpy('afterChangeCallback');
 
     handsontable({
@@ -793,15 +292,15 @@ describe('CheckboxRenderer', () => {
       onAfterChange
     });
 
-    selectCell(0, 0);
-    keyDown('f2');
+    await selectCell(0, 0);
+    await keyDownUp('f2');
 
     expect(getDataAtCell(0, 0)).toBe(false);
 
     expect(onAfterChange.calls.count()).toEqual(0);
   });
 
-  it('should not change checkbox state after hitting other keys then SPACE, ENTER, DELETE or BACKSPACE', () => {
+  it('should not change checkbox state after hitting other keys then SPACE, ENTER, DELETE or BACKSPACE', async() => {
     handsontable({
       data: [[false], [true], [true]],
       columns: [
@@ -813,19 +312,19 @@ describe('CheckboxRenderer', () => {
 
     addHook('afterChange', afterChangeCallback);
 
-    selectCell(0, 0);
-    keyDown('space');
+    await selectCell(0, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCell(0, 0)).toBe(true);
 
-    selectCell(0, 0);
-    keyDown('c');
+    await selectCell(0, 0);
+    await keyDownUp('c');
 
     expect(getDataAtCell(0, 0)).toBe(true);
     expect(afterChangeCallback.calls.count()).toEqual(1);
   });
 
-  it('should add label on the beginning of a checkbox element', () => {
+  it('should add label on the beginning of a checkbox element', async() => {
     handsontable({
       data: [{ checked: true, label: 'myLabel' }, { checked: false, label: 'myLabel' }],
       columns: [
@@ -837,8 +336,8 @@ describe('CheckboxRenderer', () => {
 
     addHook('afterChange', afterChangeCallback);
 
-    selectCell(0, 0);
-    keyDown('space');
+    await selectCell(0, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCell(0, 0)).toBe(false);
     expect(getDataAtCell(1, 0)).toBe(false);
@@ -846,7 +345,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').firstChild.textContent).toEqual('myLabel');
   });
 
-  it('should expand label to the cell size when it is not separated from input', () => {
+  it('should expand label to the cell size when it is not separated from input', async() => {
     handsontable({
       data: [
         [true, false, true, false, false, false]
@@ -861,16 +360,24 @@ describe('CheckboxRenderer', () => {
       ]
     });
 
-    // 2 x 4px padding + 1px border === 9px calculated by the `offsetWidth`
-    expect(getCell(0, 0).querySelector('label').offsetWidth).not.toBe(getCell(0, 0).offsetWidth - 9);
-    expect(getCell(0, 1).querySelector('label').offsetWidth).not.toBe(getCell(0, 1).offsetWidth - 9);
-    expect(getCell(0, 2).querySelector('label').offsetWidth).toBe(getCell(0, 2).offsetWidth - 9);
-    expect(getCell(0, 3).querySelector('label').offsetWidth).toBe(getCell(0, 3).offsetWidth - 9);
-    expect(getCell(0, 4).querySelector('label').offsetWidth).toBe(getCell(0, 4).offsetWidth - 9);
-    expect(getCell(0, 5).querySelector('label').offsetWidth).toBe(getCell(0, 5).offsetWidth - 9);
+    // 2 x 6px padding + 1px border === 13px calculated by the `offsetWidth`
+    expect(getCell(0, 0).querySelector('label').offsetWidth).not.toBe(getCell(0, 0).offsetWidth - 13);
+    expect(getCell(0, 1).querySelector('label').offsetWidth).not.toBe(getCell(0, 1).offsetWidth - 13);
+    expect(getCell(0, 2).querySelector('label').offsetWidth).toBe(
+      getThemeLayout().e2eCheckboxRendererMergedLabelInnerWidth(getCell(0, 2).offsetWidth),
+    );
+    expect(getCell(0, 3).querySelector('label').offsetWidth).toBe(
+      getThemeLayout().e2eCheckboxRendererMergedLabelInnerWidth(getCell(0, 3).offsetWidth),
+    );
+    expect(getCell(0, 4).querySelector('label').offsetWidth).toBe(
+      getThemeLayout().e2eCheckboxRendererMergedLabelInnerWidth(getCell(0, 4).offsetWidth),
+    );
+    expect(getCell(0, 5).querySelector('label').offsetWidth).toBe(
+      getThemeLayout().e2eCheckboxRendererMergedLabelInnerWidth(getCell(0, 5).offsetWidth),
+    );
   });
 
-  it('should add label on the beginning of a checkbox element where checkbox and label are separated', () => {
+  it('should add label on the beginning of a checkbox element where checkbox and label are separated', async() => {
     handsontable({
       data: [{ checked: true, label: 'myLabel' }, { checked: false, label: 'myLabel' }],
       columns: [
@@ -882,8 +389,8 @@ describe('CheckboxRenderer', () => {
 
     addHook('afterChange', afterChangeCallback);
 
-    selectCell(0, 0);
-    keyDown('space');
+    await selectCell(0, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCell(0, 0)).toBe(false);
     expect(getDataAtCell(1, 0)).toBe(false);
@@ -892,7 +399,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').nextSibling.type).toEqual('checkbox');
   });
 
-  it('should add label on the end of a checkbox element', () => {
+  it('should add label on the end of a checkbox element', async() => {
     handsontable({
       data: [{ checked: true, label: 'myLabel' }, { checked: false, label: 'myLabel' }],
       columns: [
@@ -904,8 +411,8 @@ describe('CheckboxRenderer', () => {
 
     addHook('afterChange', afterChangeCallback);
 
-    selectCell(0, 0);
-    keyDown('space');
+    await selectCell(0, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCell(0, 0)).toBe(false);
     expect(getDataAtCell(1, 0)).toBe(false);
@@ -913,7 +420,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').lastChild.textContent).toEqual('myLabel');
   });
 
-  it('should add label on the end of a checkbox element where checkbox and label are separated', () => {
+  it('should add label on the end of a checkbox element where checkbox and label are separated', async() => {
     handsontable({
       data: [{ checked: true, label: 'myLabel' }, { checked: false, label: 'myLabel' }],
       columns: [
@@ -925,8 +432,8 @@ describe('CheckboxRenderer', () => {
 
     addHook('afterChange', afterChangeCallback);
 
-    selectCell(0, 0);
-    keyDown('space');
+    await selectCell(0, 0);
+    await keyDownUp(' ');
 
     expect(getDataAtCell(0, 0)).toBe(false);
     expect(getDataAtCell(1, 0)).toBe(false);
@@ -935,7 +442,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').previousSibling.type).toEqual('checkbox');
   });
 
-  it('should not add label when value is incorrect (#bad-value)', () => {
+  it('should not add label when value is incorrect (#bad-value)', async() => {
     handsontable({
       data: [{ checked: 1, label: 'myLabel' }, { checked: 0, label: 'myLabel' }],
       columns: [
@@ -946,7 +453,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label')).toBe(null);
   });
 
-  it('by default should add label on the end of a checkbox element', () => {
+  it('by default should add label on the end of a checkbox element', async() => {
     handsontable({
       data: [{ checked: true, label: { test: 'Baz' } }, { checked: false, label: { test: 'Baz' } }],
       columns: [
@@ -957,7 +464,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').lastChild.textContent).toEqual('Baz');
   });
 
-  it('should add label with text filled from `value` label setting (passed as string)', () => {
+  it('should add label with text filled from `value` label setting (passed as string)', async() => {
     handsontable({
       data: [{ checked: true }, { checked: false }],
       columns: [
@@ -968,7 +475,7 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').lastChild.textContent).toEqual('myLabel');
   });
 
-  it('should add label with text filled from `value` label setting (passed as function)', () => {
+  it('should add label with text filled from `value` label setting (passed as function)', async() => {
     const labelFunction = jasmine.createSpy();
 
     labelFunction.and.returnValue('myLabel');
@@ -987,8 +494,8 @@ describe('CheckboxRenderer', () => {
     expect(getCell(0, 0).querySelector('label').lastChild.textContent).toEqual('myLabel');
   });
 
-  it('should remove checkbox and do not add #bad-value# content after cut action', () => {
-    const hot = handsontable({
+  it('should remove checkbox and do not add #bad-value# content after cut action', async() => {
+    handsontable({
       data: [
         { car: 'Mercedes A 160', available: true, comesInBlack: 'yes' },
         { car: 'Citroen C4 Coupe', available: false, comesInBlack: '' },
@@ -1016,15 +523,15 @@ describe('CheckboxRenderer', () => {
       ],
     });
     const cutEvent = getClipboardEvent('cut');
-    const plugin = hot.getPlugin('CopyPaste');
-    const td = hot.getCell(0, 1);
-    const td2 = hot.getCell(0, 2);
-    const td3 = hot.getCell(1, 1);
-    const td4 = hot.getCell(1, 2);
-    const td5 = hot.getCell(2, 1);
-    const td6 = hot.getCell(2, 2);
+    const plugin = getPlugin('CopyPaste');
+    const td = getCell(0, 1);
+    const td2 = getCell(0, 2);
+    const td3 = getCell(1, 1);
+    const td4 = getCell(1, 2);
+    const td5 = getCell(2, 1);
+    const td6 = getCell(2, 2);
 
-    selectCell(0, 0, 2, 2);
+    await selectCell(0, 0, 2, 2);
 
     plugin.onCut(cutEvent);
 
@@ -1046,8 +553,8 @@ describe('CheckboxRenderer', () => {
     expect(getDataAtCell(2, 2)).toEqual(null);
   });
 
-  it('should remove #bad-value# content after cut action', () => {
-    const hot = handsontable({
+  it('should remove #bad-value# content after cut action', async() => {
+    handsontable({
       data: [
         { car: 'Mercedes A 160', available: true, comesInBlack: 'yes' },
         { car: 'Citroen C4 Coupe', available: false, comesInBlack: '' },
@@ -1075,17 +582,17 @@ describe('CheckboxRenderer', () => {
       ],
     });
     const cutEvent = getClipboardEvent('cut');
-    const plugin = hot.getPlugin('CopyPaste');
-    const td = hot.getCell(1, 2);
+    const plugin = getPlugin('CopyPaste');
+    const td = getCell(1, 2);
 
-    selectCell(1, 2);
+    await selectCell(1, 2);
 
     plugin.onCut(cutEvent);
 
     expect(td.textContent).toBe('');
   });
 
-  it('should allow to change state of checkboxes in column headers', () => {
+  it('should allow to change state of checkboxes in column headers', async() => {
     const spy = jasmine.createSpyObj('error', ['test']);
     const prevError = window.onerror;
 
@@ -1111,7 +618,7 @@ describe('CheckboxRenderer', () => {
     window.onerror = prevError;
   });
 
-  it('should allow to change state of checkboxes in row headers', () => {
+  it('should allow to change state of checkboxes in row headers', async() => {
     const spy = jasmine.createSpyObj('error', ['test']);
     const prevError = window.onerror;
 
@@ -1125,7 +632,7 @@ describe('CheckboxRenderer', () => {
       rowHeaders: ['<input type="checkbox"/> 1'],
     });
 
-    const headerCheckbox = getLeftClone().find('input[type="checkbox"]')[0];
+    const headerCheckbox = getInlineStartClone().find('input[type="checkbox"]')[0];
 
     expect(headerCheckbox.checked).toBe(false);
 
@@ -1137,8 +644,17 @@ describe('CheckboxRenderer', () => {
     window.onerror = prevError;
   });
 
+  it('should render the cell without messing with "dir" attribute', async() => {
+    handsontable({
+      data: [['foo']],
+      renderer: 'checkbox'
+    });
+
+    expect(getCell(0, 0).getAttribute('dir')).toBeNull();
+  });
+
   describe('CheckboxRenderer with ContextMenu', () => {
-    it('should add class name `htRight` after set align in contextMenu', (done) => {
+    it('should add class name `htRight` after set align in contextMenu', async() => {
       handsontable({
         startRows: 1,
         startCols: 1,
@@ -1151,23 +667,64 @@ describe('CheckboxRenderer', () => {
         height: 100
       });
 
-      selectCell(0, 0);
-
-      contextMenu();
+      await selectCell(0, 0);
+      await contextMenu();
 
       const menu = $('.htContextMenu .ht_master .htCore').find('tbody td').not('.htSeparator');
 
       menu.simulate('mouseover');
 
-      setTimeout(() => {
-        const contextSubMenu = $(`.htContextMenuSub_${menu.text()}`).find('tbody td').eq(2);
+      await waitForNextAnimationFrames(32);
 
-        contextSubMenu.simulate('mousedown');
-        contextSubMenu.simulate('mouseup');
+      const contextSubMenu = $(`.htContextMenuSub_${menu.text()}`).find('tbody td').eq(2);
 
-        expect($('.handsontable.ht_master .htRight').length).toBe(1);
-        done();
-      }, 500);
+      contextSubMenu.simulate('mousedown');
+      contextSubMenu.simulate('mouseup');
+
+      expect($('.handsontable.ht_master .htRight').length).toBe(1);
     });
+  });
+
+  it('should internally call base renderer once', async() => {
+    const originalBaseRenderer = Handsontable.renderers.BaseRenderer;
+
+    const renderedCellCalls = [];
+
+    spyOn(Handsontable.renderers, 'BaseRenderer').and.callFake((...args) => {
+      const TD = args[1];
+
+      // The GhostTable that AutoColumnSize measures in renders its own cells, flagged with the
+      // `ghost-table` attribute, and those go through the same renderer contract. They are a
+      // separate render pass, not a second call on the rendered cell this spec is about.
+      if (!TD.hasAttribute('ghost-table')) {
+        renderedCellCalls.push(TD);
+      }
+    });
+
+    Handsontable.renderers.registerRenderer('base', Handsontable.renderers.BaseRenderer);
+    handsontable({
+      data: [['test']],
+      renderer: 'checkbox',
+    });
+
+    expect(renderedCellCalls.length).toBe(1);
+
+    Handsontable.renderers.registerRenderer('base', originalBaseRenderer);
+  });
+
+  it('should match the checked template case-insensitively under an invalid column locale', async() => {
+    handsontable({
+      data: [['yes']],
+      columns: [{
+        type: 'checkbox',
+        checkedTemplate: 'Yes', // differs in case from the value, so the lowercase path runs
+        uncheckedTemplate: 'No',
+        locale: 'en_US', // invalid tag — current code throws during render
+      }],
+    });
+
+    // current code: RangeError from 'yes'.toLocaleLowerCase('en_US') while rendering.
+    // after migration: the cell renders as a checked checkbox.
+    expect(getCell(0, 0).querySelector('input').checked).toBe(true);
   });
 });

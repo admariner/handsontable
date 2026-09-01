@@ -1,120 +1,62 @@
 /**
  * Config responsible for building Handsontable `dist/` minified files:
  *  - handsontable.min.js
- *  - handsontable.min.css
  *  - handsontable.full.min.js
- *  - handsontable.full.min.css
  */
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
+const rspack = require('@rspack/core');
 const configFactory = require('./development');
-const { getClosest }  = require('./helper/path');
+const { getClosest } = require('./helper/path');
+const { getLicenseBody } = require('./helper/license');
+const postBuildBanner = require('./plugin/rspack/post-build-banner');
 
-const PACKAGE_FILENAME = process.env.HOT_FILENAME;
+const licenseBody = getLicenseBody();
 
 module.exports.create = function create(envArgs) {
   const config = configFactory.create(envArgs);
 
-  // Add uglifyJs plugin for each configuration
+  // Enable minification for each configuration
   config.forEach(function(c) {
     const isFullBuild = /\.full\.js$/.test(c.output.filename);
     c.devtool = false;
     c.output.filename = c.output.filename.replace(/\.js$/, '.min.js');
 
+    c.mode = 'production';
     c.optimization = {
       minimize: true,
+      minimizer: [
+        new rspack.SwcJsMinimizerRspackPlugin({
+          extractComments: false,
+          minimizerOptions: {
+            format: {
+              comments: false,
+            },
+          },
+        }),
+      ],
     };
-    // Remove all 'MiniCssExtractPlugin' instances
-    c.plugins = c.plugins.filter(function(plugin) {
-      return !(plugin instanceof MiniCssExtractPlugin);
-    });
 
-    c.plugins.push(
-      new MiniCssExtractPlugin({
-          filename: `${PACKAGE_FILENAME}${isFullBuild ? '.full' : ''}.min.css`,
-      }
-        ),
-      new OptimizeCssAssetsPlugin({
-        assetNameRegExp: isFullBuild ? /\.full\.min\.css$/ : /\.min\.css$/,
-        cssProcessorOptions: { zindex: false },
-      })
-    );
+    // Remove the dev BannerPlugin (runs before minimization, gets corrupted by SWC)
+    // and add a post-build banner that writes to the file after all processing.
+    c.plugins = c.plugins.filter(p => !(p instanceof rspack.BannerPlugin));
+    c.plugins.push(postBuildBanner(licenseBody, /handsontable\.(full\.)?min\.js$/));
 
     if (isFullBuild) {
       c.plugins.push(
-        new CopyWebpackPlugin({
+        new rspack.CopyRspackPlugin({
           patterns: [
-            { // moment
-              from: `${getClosest('node_modules/moment/')}@(moment.js|LICENSE)`,
-              to: 'moment',
-              flatten: true,
-              force: true,
-            },
-            {
-              from: `${getClosest('node_modules/moment/')}locale/*.js`,
-              to: 'moment/locale',
-              flatten: true,
-              force: true,
-            },
-            { // numbro
-              from: `${getClosest('node_modules/numbro/')}@(LICENSE-Numeraljs|LICENSE)`,
-              to: 'numbro',
-              flatten: true,
-              force: true,
-            },
-            {
-              from: `${getClosest('node_modules/numbro/')}dist/@(numbro.js|languages.min.js)`,
-              to: 'numbro',
-              flatten: true,
-              force: true,
-            },
-            {
-              from: `${getClosest('node_modules/numbro/')}dist/languages/*.js`,
-              to: 'numbro/languages',
-              flatten: true,
-              force: true,
-            },
-            { // pikaday
-              from: `${getClosest('node_modules/pikaday/')}@(LICENSE|pikaday.js)`,
-              to: 'pikaday',
-              flatten: true,
-              force: true,
-            },
-            {
-              from: `${getClosest('node_modules/pikaday/')}css/pikaday.css`,
-              to: 'pikaday',
-              flatten: true,
-              force: true,
-            },
-            { // dompurify
-              from: `${getClosest('node_modules/dompurify/')}@(LICENSE)`,
-              to: 'dompurify',
-              flatten: true,
-              force: true,
-            },
-            {
-              from: `${getClosest('node_modules/dompurify/')}dist/@(purify.js|purify.js.map)`,
-              to: 'dompurify',
-              flatten: true,
-              force: true,
-            },
             {
               from: `${getClosest('node_modules/hyperformula/')}dist/hyperformula.full.min.js`,
-              to: 'hyperformula',
-              flatten: true,
+              to: 'hyperformula/[name][ext]',
               force: true,
             },
             {
               from: `${getClosest('node_modules/hyperformula/')}dist/languages/*.js`,
-              to: 'hyperformula/languages',
-              flatten: true,
+              to: 'hyperformula/languages/[name][ext]',
               force: true,
             },
             {
               from: `${getClosest('node_modules/hyperformula/')}LICENSE.txt`,
-              to: 'hyperformula',
-              flatten: true,
+              to: 'hyperformula/[name][ext]',
               force: true,
             },
           ]

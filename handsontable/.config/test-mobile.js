@@ -6,42 +6,38 @@
 const path = require('path');
 const configFactory = require('./test-e2e');
 const JasmineHtml = require('./plugin/jasmine-html');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const fsExtra = require('fs-extra');
+const { getClosest }  = require('./helper/path');
 
 module.exports.create = function create(envArgs) {
   const config = configFactory.create(envArgs);
 
   config.forEach(function(c) {
-
-    // Remove all 'JasmineHtml' instances
+    // Remove all 'JasmineHtmlPlugin' instances
     c.plugins = c.plugins.filter(function(plugin) {
-      return !(plugin instanceof HtmlWebpackPlugin);
+      return !plugin.__isJasmineHtmlPlugin;
     });
 
     c.plugins.push(
       new JasmineHtml({
         filename: path.resolve(__dirname, '../test/MobileRunner.html'),
-        baseJasminePath: `${
-          fsExtra.pathExistsSync('./node_modules/jasmine-core') ? '../' : '../../'
-        }`,
+        baseJasminePath: '../../',
         externalCssFiles: [
           'lib/normalize.css',
-          '../dist/handsontable.css',
-          'helpers/common.css',
+          'helpers/common-themes.css',
+        ],
+        hotCssFiles: [
+          `../styles/ht-theme-${envArgs.HOT_THEME}.css`,
         ],
         externalJsFiles: [
           'helpers/jasmine-bridge-reporter.js',
           'lib/jquery.min.js',
           'lib/jquery.simulate.js',
-          '../node_modules/numbro/dist/numbro.js',
-          '../node_modules/numbro/dist/languages.min.js',
-          '../dist/moment/moment.js',
-          '../dist/pikaday/pikaday.js',
-          '../node_modules/dompurify/dist/purify.js',
-          '../dist/handsontable.js',
-          '../dist/languages/all.js',
         ],
+        hotJsFiles: [
+          `../dist/handsontable.js`,
+          `../dist/languages/all.js`,
+        ],
+        hotTheme: envArgs.HOT_THEME,
       })
     );
   });

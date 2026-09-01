@@ -1,18 +1,22 @@
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const ProgressBarPlugin = require('progress-bar-webpack-plugin');
 const path = require('path');
-const fs = require('fs');
-const webpack = require('webpack');
+const rspack = require('@rspack/core');
+const compilationDoneMarker = require('./plugin/rspack/compilation-done-marker');
+const { BROWSERS_LIST } = require('../../browser-targets.js');
+const { getLicenseBody } = require('./helper/license');
 
-let licenseBody = fs.readFileSync(path.resolve(__dirname, '../../LICENSE.txt'), 'utf8');
-
-licenseBody += '\nVersion: ' + process.env.HOT_VERSION;
-licenseBody += '\nRelease date: ' + process.env.HOT_RELEASE_DATE + ' (built at ' + process.env.HOT_BUILD_DATE + ')';
+const licenseBody = getLicenseBody();
 
 module.exports.create = function create(envArgs) {
   const config = {
+    // Keep rspack's AMD dependency parsing ON (webpack's default; rspack
+    // defaults it to `false`). Without it, a vendored dependency's UMD wrapper
+    // (regexp-to-ast inside the full bundle) survives verbatim and calls the
+    // host page's global `define` when an AMD loader (RequireJS, SharePoint)
+    // is present, leaving its exports empty and crashing the bundle at load
+    // time with `RegExpParser is not a constructor` (DEV-2502).
+    amd: {},
     devtool: false,
-    entry: ['./src/index.js'],
+    entry: [],
     performance: {
       maxEntrypointSize: 2000000,
       maxAssetSize: 2000000,
@@ -27,55 +31,64 @@ module.exports.create = function create(envArgs) {
     },
     resolve: {
       alias: {},
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     },
     mode: 'none',
     module: {
       rules: [
         {
-          test: /\.css$/,
-          use: [
-            { loader: MiniCssExtractPlugin.loader },
-            { loader: 'css-loader' },
-          ]
-        },
-        {
-          test: [
-            // Disable loading languages from numbro and moment into final bundle
-            /numbro\/languages/,
-            /moment\/locale/,
-          ],
-          loader: path.resolve(__dirname, 'loader/empty-loader.js'),
-        },
-        {
           test: /\.js$/,
-          loader: 'babel-loader',
+          loader: 'builtin:swc-loader',
           exclude: [
             /node_modules/,
           ],
           options: {
-            cacheDirectory: false, // Disable cache. Necessary for injected variables into source code via hot.config.js
+            env: {
+              targets: BROWSERS_LIST.join(', '),
+            },
+            jsc: {
+              parser: {
+                syntax: 'ecmascript',
+                jsx: true,
+              },
+            },
+          },
+        },
+        {
+          test: /\.(ts|tsx)$/,
+          loader: 'builtin:swc-loader',
+          exclude: [
+            /node_modules/,
+          ],
+          options: {
+            env: {
+              targets: BROWSERS_LIST.join(', '),
+            },
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+                tsx: true,
+                decorators: true,
+              },
+            },
           },
         },
       ]
     },
     plugins: [
-      new ProgressBarPlugin({
-        format: '  build [:bar] \u001b[32m:percent\u001b[0m (:elapsed seconds)',
-        summary: false,
-      }),
-      // This helps ensure the builds are consistent if source code hasn't changed
-      new webpack.optimize.OccurrenceOrderPlugin(),
-      new webpack.BannerPlugin(licenseBody),
-      new webpack.DefinePlugin({
+      new rspack.BannerPlugin({ banner: licenseBody }),
+      new rspack.DefinePlugin({
         '__ENV_ARGS__': JSON.stringify(envArgs),
+        'process.env.HOT_VERSION': JSON.stringify(process.env.HOT_VERSION),
+        'process.env.HOT_BUILD_DATE': JSON.stringify(process.env.HOT_BUILD_DATE),
+        'process.env.HOT_RELEASE_DATE': JSON.stringify(process.env.HOT_RELEASE_DATE),
+        'process.env.HOT_PACKAGE_NAME': JSON.stringify(process.env.HOT_PACKAGE_NAME),
+        'process.env.HOT_FILENAME': JSON.stringify(process.env.HOT_FILENAME),
+        'process.env.JEST_WORKER_ID': JSON.stringify(''),
       }),
+      compilationDoneMarker(),
     ],
-    node: {
-      global: false,
-      process: false,
-      Buffer: false,
-      setImmediate: false,
-    },
+    node: false,
   };
 
   return [config];

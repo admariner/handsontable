@@ -1,5 +1,8 @@
 require('jasmine-co').install();
 
+// Needs to be loaded after `jasmine-co`'s `install`, to avoid being handled by its `wrapFn` logic for globals.
+require('../helpers/it-themes-extension');
+
 let testPathRegExp = null;
 
 if (typeof __ENV_ARGS__ === 'object' && __ENV_ARGS__.testPathPattern) {
@@ -12,9 +15,20 @@ if (typeof __ENV_ARGS__ === 'object' && __ENV_ARGS__.testPathPattern) {
   }
 }
 
+// Allow filtering test files at runtime via URL query parameter (e.g., ?spec=i18n).
+// This enables running a subset of tests without rebuilding the webpack bundle.
+if (!testPathRegExp && typeof window !== 'undefined' && window.location) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const specPattern = urlParams.get('spec');
+
+  if (specPattern) {
+    testPathRegExp = new RegExp(specPattern, 'i');
+  }
+}
+
 [
-  require.context('.', true, /^(?:(?!mobile).)*\.spec\.js$/),
-  require.context('./../../src/', true, /^(?:(?!3rdparty).)*\.spec\.js$/),
+  require.context('.', true, /^(?:(?!\/mobile\/).)*\.spec\.js$/),
+  require.context('./../../src/', true, /^(?:(?!\/(3rdparty|mobile)\/).)*\.spec\.js$/),
 ].forEach((req) => {
   req.keys().forEach((filePath) => {
     if (testPathRegExp === null || (testPathRegExp instanceof RegExp && testPathRegExp.test(filePath))) {

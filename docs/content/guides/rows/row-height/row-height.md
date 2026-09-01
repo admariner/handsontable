@@ -1,0 +1,276 @@
+---
+type: how-to
+title: Row heights
+metaTitle: Row heights - JavaScript Data Grid | Handsontable
+description: Configure row heights, using a number, an array or a function. Let your users manually change row heights using Handsontable's interface.
+permalink: /row-height
+canonicalUrl: /row-height
+tags:
+  - resizing rows
+  - wrap content
+  - overflow
+  - crop content
+  - row size
+  - height
+  - max-height
+  - min-height
+  - row dimensions
+  - manual resize
+react:
+  metaTitle: Row heights - React Data Grid | Handsontable
+angular:
+  metaTitle: Row heights - Angular Data Grid | Handsontable
+vue:
+  metaTitle: Row heights - Vue Data Grid | Handsontable
+searchCategory: Guides
+category: Rows
+menuTag: updated
+---
+Configure row heights, using a number, an array or a function. Let your users manually change row heights using Handsontable's interface.
+
+[[toc]]
+
+## Overview
+
+The default (and minimum) row height is calculated based on the used theme's line height, vertical padding and cell border values and in the `main` theme it's 29px, in the `horizon` it's 37px and in the `classic` styles it's 26 px. Unless configured otherwise, Handsontable assumes that your cell contents fit in this default row height.
+
+If your cell contents require heights greater than default (because you use multiline text, or [custom renderers](@/guides/cell-functions/cell-renderer/cell-renderer.md), or custom styles), use one of the following configurations to avoid potential layout problems:
+  - Configure your row heights in advance: set the [`minRowHeights`](@/api/options.md#minrowheights) option to a [number](#set-row-heights-to-a-number), or an [array](#set-row-heights-with-an-array), or a [function](#set-row-heights-with-a-function). This requires you to know the heights beforehand, but results in the best runtime performance.
+  - Set the [`manualRowResize`](@/api/options.md#manualrowresize) option to an array, to configure initial row heights and let your users [adjust the row heights manually](#adjust-row-heights-manually).
+  - Enable the [`AutoRowSize`](@/api/autoRowSize.md) plugin, by setting `autoRowSize: true`. This tells Handsontable to measure the actual row heights in the DOM. It impacts runtime performance but is accurate. Also enable `AutoRowSize` if you call [`scrollViewportTo()`](@/api/core.md#scrollviewportto) -- the method relies on accurate row height measurements to scroll to the correct position.
+
+## Set row heights to a number
+
+We set the same height of `40px` for all rows across the entire grid in this example.
+
+::: only-for javascript
+
+::: example #example1 --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/javascript/example1.js)
+@[code](@/content/guides/rows/row-height/javascript/example1.ts)
+
+:::
+
+:::
+
+::: only-for react
+
+::: example #example1 :react --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/react/example1.jsx)
+@[code](@/content/guides/rows/row-height/react/example1.tsx)
+
+:::
+
+:::
+
+::: only-for angular
+
+::: example #example1 :angular --ts 1 --html 2
+
+@[code](@/content/guides/rows/row-height/angular/example1.ts)
+@[code](@/content/guides/rows/row-height/angular/example1.html)
+
+:::
+
+:::
+
+::: only-for vue
+
+::: example #example1 :vue3
+
+@[code](@/content/guides/rows/row-height/vue/example1.vue)
+
+:::
+
+:::
+
+## Set row heights with an array
+
+In this example, the height is only set for the first rows. Each additional row would be automatically adjusted to the content.
+
+::: only-for javascript
+
+::: example #example2 --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/javascript/example2.js)
+@[code](@/content/guides/rows/row-height/javascript/example2.ts)
+
+:::
+
+:::
+
+::: only-for react
+
+::: example #example2 :react --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/react/example2.jsx)
+@[code](@/content/guides/rows/row-height/react/example2.tsx)
+
+:::
+
+:::
+
+::: only-for angular
+
+::: example #example2 :angular --ts 1 --html 2
+
+@[code](@/content/guides/rows/row-height/angular/example2.ts)
+@[code](@/content/guides/rows/row-height/angular/example2.html)
+
+:::
+
+:::
+
+::: only-for vue
+
+::: example #example2 :vue3
+
+@[code](@/content/guides/rows/row-height/vue/example2.vue)
+
+:::
+
+:::
+
+## Set row heights with a function
+
+The row height can be set using a function. In this example, the size of all rows is set using a function that takes a row `index` (1, 2 ...) and multiplies it by `20px` for each consecutive row.
+
+::: only-for javascript
+
+::: example #example3 --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/javascript/example3.js)
+@[code](@/content/guides/rows/row-height/javascript/example3.ts)
+
+:::
+
+:::
+
+::: only-for react
+
+::: example #example3 :react --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/react/example3.jsx)
+@[code](@/content/guides/rows/row-height/react/example3.tsx)
+
+:::
+
+:::
+
+::: only-for angular
+
+::: example #example3 :angular --ts 1 --html 2
+
+@[code](@/content/guides/rows/row-height/angular/example3.ts)
+@[code](@/content/guides/rows/row-height/angular/example3.html)
+
+:::
+
+:::
+
+::: only-for vue
+
+::: example #example3 :vue3
+
+@[code](@/content/guides/rows/row-height/vue/example3.vue)
+
+:::
+
+:::
+
+## Adjust row heights manually
+
+Set the option [`manualRowResize`](@/api/options.md#manualrowresize) to `true` to allow users to manually resize the row height by dragging the handle between the adjacent row headers. Don't forget to enable row headers by setting [`rowHeaders`](@/api/options.md#rowheaders) to `true`.
+
+You can adjust the size of one or multiple rows simultaneously, even if the selected rows are not placed next to each other.
+
+::: tip
+
+When you set a row height programmatically with [`ManualRowResize#setManualSize()`](@/api/manualRowResize.md#setmanualsize), call `hot.render()` after the method call to repaint the grid. Values below the theme's default row height are stored as the default row height.
+
+:::
+
+::: only-for javascript
+
+::: example #example4 --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/javascript/example4.js)
+@[code](@/content/guides/rows/row-height/javascript/example4.ts)
+
+:::
+
+:::
+
+::: only-for react
+
+::: example #example4 :react --js 1 --ts 2
+
+@[code](@/content/guides/rows/row-height/react/example4.jsx)
+@[code](@/content/guides/rows/row-height/react/example4.tsx)
+
+:::
+
+:::
+
+::: only-for angular
+
+::: example #example4 :angular --ts 1 --html 2
+
+@[code](@/content/guides/rows/row-height/angular/example4.ts)
+@[code](@/content/guides/rows/row-height/angular/example4.html)
+
+:::
+
+:::
+
+::: only-for vue
+
+::: example #example4 :vue3
+
+@[code](@/content/guides/rows/row-height/vue/example4.vue)
+
+:::
+
+:::
+
+## Related API reference
+
+**Configuration options**
+
+<div class="boxes-list">
+
+- [autoRowSize](@/api/options.md#autorowsize)
+- [manualRowResize](@/api/options.md#manualrowresize)
+- [minRowHeights](@/api/options.md#minRowHeights)
+
+</div>
+
+**Core methods**
+
+<div class="boxes-list">
+
+- [getRowHeight()](@/api/core.md#getrowheight)
+- [scrollViewportTo()](@/api/core.md#scrollviewportto)
+
+</div>
+
+**Hooks**
+
+<div class="boxes-list">
+
+- [afterRowResize](@/api/hooks.md#afterrowresize)
+- [beforeRowResize](@/api/hooks.md#beforerowresize)
+- [modifyRowHeight](@/api/hooks.md#modifyrowheight)
+
+</div>
+
+**Plugins**
+
+<div class="boxes-list">
+
+- [AutoRowSize](@/api/autoRowSize.md)
+- [ManualRowResize](@/api/manualRowResize.md)
+
+</div>

@@ -1,0 +1,222 @@
+{
+  "version": "17.1.0",
+  "measuredAt": "2026-06-24",
+  "base": {
+    "full": {
+      "raw": 1160560,
+      "gzip": 278816
+    },
+    "base": {
+      "raw": 629143,
+      "gzip": 138756
+    }
+  },
+  "cellTypes": {
+    "AutocompleteCellType": {
+      "raw": 15505,
+      "gzip": 4436
+    },
+    "CheckboxCellType": {
+      "raw": 6168,
+      "gzip": 2036
+    },
+    "DateCellType": {
+      "raw": 2286,
+      "gzip": 919
+    },
+    "DropdownCellType": {
+      "raw": 16117,
+      "gzip": 4616
+    },
+    "HandsontableCellType": {
+      "raw": 6369,
+      "gzip": 1561
+    },
+    "IntlDateCellType": {
+      "raw": 2575,
+      "gzip": 1013
+    },
+    "IntlTimeCellType": {
+      "raw": 2312,
+      "gzip": 956
+    },
+    "MultiSelectCellType": {
+      "raw": 24455,
+      "gzip": 6379
+    },
+    "NumericCellType": {
+      "raw": 2592,
+      "gzip": 927
+    },
+    "PasswordCellType": {
+      "raw": 4655,
+      "gzip": 1134
+    },
+    "SelectCellType": {
+      "raw": 3404,
+      "gzip": 726
+    },
+    "TextCellType": {
+      "raw": 7,
+      "gzip": 11
+    },
+    "TimeCellType": {
+      "raw": 2044,
+      "gzip": 864
+    }
+  },
+  "plugins": {
+    "AutoColumnSize": {
+      "raw": 20636,
+      "gzip": 5716
+    },
+    "AutoRowSize": {
+      "raw": 20940,
+      "gzip": 5706
+    },
+    "Autofill": {
+      "raw": 19533,
+      "gzip": 5700
+    },
+    "BindRowsWithHeaders": {
+      "raw": 8462,
+      "gzip": 2499
+    },
+    "CollapsibleColumns": {
+      "raw": 15281,
+      "gzip": 4373
+    },
+    "ColumnSorting": {
+      "raw": 21444,
+      "gzip": 6303
+    },
+    "ColumnSummary": {
+      "raw": 19436,
+      "gzip": 5304
+    },
+    "Comments": {
+      "raw": 34347,
+      "gzip": 8438
+    },
+    "ContextMenu": {
+      "raw": 40483,
+      "gzip": 10705
+    },
+    "CopyPaste": {
+      "raw": 27841,
+      "gzip": 7774
+    },
+    "CustomBorders": {
+      "raw": 16305,
+      "gzip": 4814
+    },
+    "Dialog": {
+      "raw": 19883,
+      "gzip": 5645
+    },
+    "DragToScroll": {
+      "raw": 17522,
+      "gzip": 4739
+    },
+    "DropdownMenu": {
+      "raw": 43721,
+      "gzip": 11670
+    },
+    "EmptyDataState": {
+      "raw": 18401,
+      "gzip": 5163
+    },
+    "ExportFile": {
+      "raw": 38791,
+      "gzip": 12533
+    },
+    "Filters": {
+      "raw": 90878,
+      "gzip": 22960
+    },
+    "Formulas": {
+      "raw": 34504,
+      "gzip": 9132
+    },
+    "HiddenColumns": {
+      "raw": 23593,
+      "gzip": 5874
+    },
+    "HiddenRows": {
+      "raw": 23239,
+      "gzip": 5812
+    },
+    "Loading": {
+      "raw": 9759,
+      "gzip": 2954
+    },
+    "ManualColumnFreeze": {
+      "raw": 9747,
+      "gzip": 2785
+    },
+    "ManualColumnMove": {
+      "raw": 16737,
+      "gzip": 4755
+    },
+    "ManualColumnResize": {
+      "raw": 16371,
+      "gzip": 4460
+    },
+    "ManualRowMove": {
+      "raw": 15598,
+      "gzip": 4423
+    },
+    "ManualRowResize": {
+      "raw": 16256,
+      "gzip": 4429
+    },
+    "MergeCells": {
+      "raw": 51904,
+      "gzip": 13222
+    },
+    "MultiColumnSorting": {
+      "raw": 23719,
+      "gzip": 6744
+    },
+    "MultipleSelectionHandles": {
+      "raw": 10435,
+      "gzip": 2921
+    },
+    "NestedHeaders": {
+      "raw": 42667,
+      "gzip": 12100
+    },
+    "NestedRows": {
+      "raw": 31048,
+      "gzip": 7893
+    },
+    "Notification": {
+      "raw": 24968,
+      "gzip": 6760
+    },
+    "Pagination": {
+      "raw": 27353,
+      "gzip": 7297
+    },
+    "Search": {
+      "raw": 9503,
+      "gzip": 2831
+    },
+    "StretchColumns": {
+      "raw": 13417,
+      "gzip": 3696
+    },
+    "TouchScroll": {
+      "raw": 9040,
+      "gzip": 2586
+    },
+    "TrimRows": {
+      "raw": 9116,
+      "gzip": 2623
+    },
+    "UndoRedo": {
+      "raw": 22508,
+      "gzip": 5769
+    }
+  }
+}

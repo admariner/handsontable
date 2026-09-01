@@ -19,13 +19,13 @@ describe('ConditionUpdateObserver', () => {
     }
   });
 
-  it('should be initialized and accessible from the plugin', () => {
+  it('should be initialized and accessible from the plugin', async() => {
     const conditionObserver = getConditionUpdateObserver();
 
     expect(conditionObserver).toBeDefined();
   });
 
-  it('should create properties and setup default values to them', () => {
+  it('should create properties and setup default values to them', async() => {
     const conditionObserver = getConditionUpdateObserver();
 
     expect(conditionObserver.conditionCollection).toBeDefined();
@@ -36,7 +36,7 @@ describe('ConditionUpdateObserver', () => {
     expect(conditionObserver.latestOrderStack).toEqual([]);
   });
 
-  it('should fire `update` hook on every modified condition', () => {
+  it('should fire `update` hook on every modified condition', async() => {
     const conditionObserver = getConditionUpdateObserver();
     const updateSpy = jasmine.createSpy('update');
 
@@ -79,7 +79,7 @@ describe('ConditionUpdateObserver', () => {
   });
 
   describe('groupChanges', () => {
-    it('should fire `update` hook only once on `flush` method call when groupChanges is enabled', () => {
+    it('should fire `update` hook only once on `flush` method call when groupChanges is enabled', async() => {
       const conditionObserver = getConditionUpdateObserver();
       const updateSpy = jasmine.createSpy('update');
 
@@ -116,8 +116,77 @@ describe('ConditionUpdateObserver', () => {
     });
   });
 
+  describe('column data memoization', () => {
+    it('should read the full data map of each column at most once per state update', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 5),
+        colHeaders: true,
+        dropdownMenu: true,
+        filters: true,
+      });
+
+      const filtersPlugin = getPlugin('filters');
+
+      filtersPlugin.addCondition(1, 'by_value', [['B1', 'B2', 'B3', 'B4']]);
+      filtersPlugin.filter();
+      filtersPlugin.addCondition(2, 'by_value', [['C1', 'C2', 'C3']]);
+      filtersPlugin.filter();
+
+      const dataMapSpy = spyOn(filtersPlugin, 'getDataMapAtColumn').and.callThrough();
+
+      // updating the first filtered column refreshes both its own state and the dependent
+      // column's state - without memoization column 1 would be fully re-read for each
+      filtersPlugin.conditionUpdateObserver.updateStatesAtColumn(1);
+
+      const fullColumnReads = dataMapSpy.calls.allArgs().filter(args => args[1] === undefined);
+      const readsPerColumn = new Map();
+
+      fullColumnReads.forEach(([column]) => {
+        readsPerColumn.set(column, (readsPerColumn.get(column) ?? 0) + 1);
+      });
+
+      expect(fullColumnReads.length).toBeGreaterThan(0);
+
+      readsPerColumn.forEach((readsCount) => {
+        expect(readsCount).toBe(1);
+      });
+    });
+
+    it('should read the full data map of each column at most once per flushed batch', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 5),
+        colHeaders: true,
+        dropdownMenu: true,
+        filters: true,
+      });
+
+      const filtersPlugin = getPlugin('filters');
+      const conditionObserver = filtersPlugin.conditionUpdateObserver;
+
+      const dataMapSpy = spyOn(filtersPlugin, 'getDataMapAtColumn').and.callThrough();
+
+      conditionObserver.groupChanges();
+      conditionObserver.conditionCollection.addCondition(1, { name: 'by_value', args: [['B1', 'B2']] });
+      conditionObserver.conditionCollection.addCondition(2, { name: 'by_value', args: [['C1', 'C2']] });
+      conditionObserver.flush();
+
+      const fullColumnReads = dataMapSpy.calls.allArgs().filter(args => args[1] === undefined);
+      const readsPerColumn = new Map();
+
+      fullColumnReads.forEach(([column]) => {
+        readsPerColumn.set(column, (readsPerColumn.get(column) ?? 0) + 1);
+      });
+
+      expect(fullColumnReads.length).toBeGreaterThan(0);
+
+      readsPerColumn.forEach((readsCount) => {
+        expect(readsCount).toBe(1);
+      });
+    });
+  });
+
   describe('destroy', () => {
-    it('should nullable all properties', () => {
+    it('should nullable all properties', async() => {
       const conditionObserver = getConditionUpdateObserver();
 
       conditionObserver.conditionCollection = {};

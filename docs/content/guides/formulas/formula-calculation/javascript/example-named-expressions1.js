@@ -1,0 +1,54 @@
+import Handsontable from 'handsontable/base';
+import { registerAllModules } from 'handsontable/registry';
+import { HyperFormula } from 'hyperformula';
+
+// Register all Handsontable's modules.
+registerAllModules();
+
+const data = [
+  ['Travel ID', 'Destination', 'Base price', 'Price with extra cost'],
+  ['154', 'Rome', 400, '=ROUND(ADDITIONAL_COST+C2,0)'],
+  ['155', 'Athens', 300, '=ROUND(ADDITIONAL_COST+C3,0)'],
+  ['156', 'Warsaw', 150, '=ROUND(ADDITIONAL_COST+C4,0)'],
+];
+
+const container = document.querySelector('#example-named-expressions1');
+const hot = new Handsontable(container, {
+  data,
+  colHeaders: true,
+  rowHeaders: true,
+  height: 'auto',
+  formulas: {
+    engine: HyperFormula,
+    namedExpressions: [
+      {
+        name: 'ADDITIONAL_COST',
+        expression: 100,
+      },
+    ],
+  },
+  autoWrapRow: true,
+  autoWrapCol: true,
+  licenseKey: 'non-commercial-and-evaluation',
+});
+
+const input = document.getElementById('named-expressions-input');
+const formulasPlugin = hot.getPlugin('formulas');
+const button = document.getElementById('named-expressions-button');
+const statusOutput = document.getElementById('named-expressions-status');
+
+button.addEventListener('click', () => {
+  try {
+    formulasPlugin.engine?.changeNamedExpression('ADDITIONAL_COST', input.value);
+  } catch (error) {
+    // HyperFormula rejects some expressions, for example relative references such as `Sheet1!A2`.
+    statusOutput.textContent = error instanceof Error ? error.message : String(error);
+    statusOutput.classList.add('is-error');
+
+    return;
+  }
+
+  statusOutput.textContent = '';
+  statusOutput.classList.remove('is-error');
+  hot.render();
+});
