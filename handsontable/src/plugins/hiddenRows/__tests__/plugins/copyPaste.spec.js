@@ -2,37 +2,13 @@ describe('HiddenRows', () => {
   const id = 'testContainer';
 
   function getMultilineData(rows, cols) {
-    const data = Handsontable.helper.createSpreadsheetData(rows, cols);
+    const data = createSpreadsheetData(rows, cols);
 
     // Column C
     data[0][2] += '\nline';
     data[1][2] += '\nline\nline';
 
     return data;
-  }
-
-  class DataTransferObject {
-    constructor() {
-      this.data = {
-        'text/plain': '',
-        'text/html': ''
-      };
-    }
-    getData(type) {
-      return this.data[type];
-    }
-    setData(type, value) {
-      this.data[type] = value;
-    }
-  }
-
-  function getClipboardEventMock() {
-    const event = {};
-
-    event.clipboardData = new DataTransferObject();
-    event.preventDefault = () => {};
-
-    return event;
   }
 
   beforeEach(function() {
@@ -47,18 +23,18 @@ describe('HiddenRows', () => {
   });
 
   describe('copy-paste functionality', () => {
-    it('should allow to copy hidden cell', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+    it('should allow to copy hidden cell', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
         hiddenRows: {
           rows: [2, 4]
         }
       });
 
-      const copyEvent = getClipboardEventMock('copy');
-      const plugin = hot.getPlugin('CopyPaste');
+      const copyEvent = getClipboardEvent('copy');
+      const plugin = getPlugin('CopyPaste');
 
-      selectCell(4, 0);
+      await selectCell(4, 0);
 
       plugin.setCopyableText();
       plugin.onCopy(copyEvent);
@@ -66,8 +42,8 @@ describe('HiddenRows', () => {
       expect(copyEvent.clipboardData.getData('text/plain')).toEqual('A5');
     });
 
-    it('should allow to copy hidden rows, when "copyPasteEnabled" property is not set', () => {
-      const hot = handsontable({
+    it('should allow to copy hidden rows, when "copyPasteEnabled" property is not set', async() => {
+      handsontable({
         data: getMultilineData(10, 5),
         hiddenRows: {
           rows: [2, 4]
@@ -76,10 +52,10 @@ describe('HiddenRows', () => {
         height: 300,
       });
 
-      const copyEvent = getClipboardEventMock('copy');
-      const plugin = hot.getPlugin('CopyPaste');
+      const copyEvent = getClipboardEvent('copy');
+      const plugin = getPlugin('CopyPaste');
 
-      selectCell(0, 0, 9, 4);
+      await selectCell(0, 0, 9, 4);
 
       plugin.setCopyableText();
       plugin.onCopy(copyEvent);
@@ -102,8 +78,8 @@ describe('HiddenRows', () => {
       );
     });
 
-    it('should allow to copy hidden rows, when "copyPasteEnabled" property is set to true', () => {
-      const hot = handsontable({
+    it('should allow to copy hidden rows, when "copyPasteEnabled" property is set to true', async() => {
+      handsontable({
         data: getMultilineData(10, 5),
         hiddenRows: {
           rows: [2, 4],
@@ -113,10 +89,10 @@ describe('HiddenRows', () => {
         height: 300
       });
 
-      const copyEvent = getClipboardEventMock('copy');
-      const plugin = hot.getPlugin('CopyPaste');
+      const copyEvent = getClipboardEvent('copy');
+      const plugin = getPlugin('CopyPaste');
 
-      selectCell(0, 0, 9, 4);
+      await selectCell(0, 0, 9, 4);
 
       plugin.setCopyableText();
       plugin.onCopy(copyEvent);
@@ -139,7 +115,7 @@ describe('HiddenRows', () => {
       );
     });
 
-    it('should skip hidden rows, while copying data, when "copyPasteEnabled" property is set to false', () => {
+    it('should skip hidden rows, while copying data, when "copyPasteEnabled" property is set to false', async() => {
       handsontable({
         data: getMultilineData(10, 5),
         hiddenRows: {
@@ -150,10 +126,10 @@ describe('HiddenRows', () => {
         height: 300
       });
 
-      const copyEvent = getClipboardEventMock('copy');
+      const copyEvent = getClipboardEvent();
       const plugin = getPlugin('CopyPaste');
 
-      selectCell(0, 0, 9, 4);
+      await selectCell(0, 0, 9, 4);
 
       plugin.setCopyableText();
       plugin.onCopy(copyEvent);
@@ -169,7 +145,7 @@ describe('HiddenRows', () => {
       );
     });
 
-    it('should not skip hidden rows, while pasting data, when "copyPasteEnabled" property is set to true', () => {
+    it('should not skip hidden rows, while pasting data, when "copyPasteEnabled" property is set to true', async() => {
       handsontable({
         data: createSpreadsheetData(8, 3),
         hiddenRows: {
@@ -180,7 +156,7 @@ describe('HiddenRows', () => {
         height: 300
       });
 
-      selectCell(0, 0);
+      await selectCell(0, 0);
       getPlugin('CopyPaste').paste('a\tb\nc\td\ne\tf\ng\th\ni\tj');
 
       expect(getData()).toEqual([
@@ -203,9 +179,9 @@ describe('HiddenRows', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should skip hidden rows, while pasting data, when "copyPasteEnabled" property is set to false', () => {
+    it('should skip hidden rows, while pasting data, when "copyPasteEnabled" property is set to false', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(8, 3),
+        data: createSpreadsheetData(8, 3),
         hiddenRows: {
           rows: [2, 4],
           copyPasteEnabled: false
@@ -214,7 +190,7 @@ describe('HiddenRows', () => {
         height: 300
       });
 
-      selectCell(0, 0);
+      await selectCell(0, 0);
       getPlugin('CopyPaste').paste('a\tb\nc\td\ne\tf\ng\th\ni\tj');
 
       expect(getData()).toEqual([
@@ -237,7 +213,7 @@ describe('HiddenRows', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should paste data properly when populating data within a selection in specific case #6743', () => {
+    it('should paste data properly when populating data within a selection in specific case #6743', async() => {
       handsontable({
         data: createSpreadsheetData(5, 5),
         hiddenRows: {
@@ -249,11 +225,11 @@ describe('HiddenRows', () => {
       const copyEvent = getClipboardEvent();
       const plugin = getPlugin('CopyPaste');
 
-      selectCell(0, 0, 0, 0);
+      await selectCell(0, 0, 0, 0);
 
       plugin.onCopy(copyEvent);
 
-      selectCell(0, 0, 2, 0);
+      await selectCell(0, 0, 2, 0);
 
       plugin.onPaste(copyEvent);
 
@@ -274,7 +250,106 @@ describe('HiddenRows', () => {
       expect(getSelectedRangeLast().to.col).toBe(0);
     });
 
-    it('should keep same number of rows if all rows are hidden', () => {
+    it('should clear the `skipRowOnPaste` meta after a hidden row is shown again, when ' +
+      '"copyPasteEnabled" property is set to false', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        hiddenRows: {
+          copyPasteEnabled: false,
+        },
+      });
+
+      const plugin = getPlugin('hiddenRows');
+
+      plugin.hideRows([2]);
+      await render();
+
+      // Reading the meta while the row is hidden caches `skipRowOnPaste: true` on the cell.
+      expect(getCellMeta(2, 0).skipRowOnPaste).toBe(true);
+
+      plugin.showRows([2]);
+      await render();
+
+      expect(getCellMeta(2, 0).skipRowOnPaste).toBe(false);
+    });
+
+    it('should not overwrite the user-defined `skipRowOnPaste: true` on a non-hidden row, when ' +
+      '"copyPasteEnabled" property is set to false', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 2),
+        hiddenRows: {
+          copyPasteEnabled: false,
+          rows: [2],
+        },
+        cells(row) {
+          if (row === 3) {
+            return { skipRowOnPaste: true };
+          }
+        },
+      });
+
+      expect(getCellMeta(3, 0).skipRowOnPaste).toBe(true);
+      expect(getCellMeta(0, 0).skipRowOnPaste).toBe(false);
+      expect(getCellMeta(2, 0).skipRowOnPaste).toBe(true);
+
+      getPlugin('hiddenRows').showRows([2]);
+      await render();
+
+      expect(getCellMeta(3, 0).skipRowOnPaste).toBe(true);
+      expect(getCellMeta(2, 0).skipRowOnPaste).toBe(false);
+    });
+
+    it('should preserve the user-defined `skipRowOnPaste: true` on a row that is hidden and ' +
+      'then shown again, when "copyPasteEnabled" property is set to false', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 2),
+        hiddenRows: {
+          copyPasteEnabled: false,
+          rows: [3],
+        },
+        cells(row) {
+          if (row === 3) {
+            return { skipRowOnPaste: true };
+          }
+        },
+      });
+
+      // Force the meta to be cached while the row is hidden.
+      expect(getCellMeta(3, 0).skipRowOnPaste).toBe(true);
+
+      getPlugin('hiddenRows').showRows([3]);
+      await render();
+
+      // The user-defined `skipRowOnPaste: true` must survive after the row is shown again.
+      expect(getCellMeta(3, 0).skipRowOnPaste).toBe(true);
+    });
+
+    it('should paste data into a row that was hidden and then shown again, when ' +
+      '"copyPasteEnabled" property is set to false', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 1),
+        hiddenRows: {
+          copyPasteEnabled: false,
+        },
+      });
+
+      const plugin = getPlugin('hiddenRows');
+
+      plugin.hideRows([2]);
+      await render();
+      // Force the skip flag to be cached on the hidden row.
+      getCellMeta(2, 0);
+      plugin.showRows([2]);
+      await render();
+
+      await selectCell(0, 0);
+      getPlugin('CopyPaste').paste('v\nw\nx\ny\nz');
+
+      expect(getDataAtCell(2, 0)).toBe('x');
+      expect(getData().map(([cell]) => cell)).toEqual(['v', 'w', 'x', 'y', 'z']);
+    });
+
+    it('should keep same number of rows if all rows are hidden', async() => {
       handsontable({
         data: createSpreadsheetData(2, 1),
         colHeaders: true,
@@ -286,8 +361,8 @@ describe('HiddenRows', () => {
       const copyEvent = getClipboardEvent();
       const copyPastePlugin = getPlugin('copyPaste');
 
-      selectColumns(0);
-      listen(); // unlike selectCell behaviour, selectColumns will not call `listen` under the hood
+      await selectColumns(0);
+      await listen(); // unlike selectCell behaviour, selectColumns will not call `listen` under the hood
 
       copyPastePlugin.onCopy(copyEvent);
       copyPastePlugin.onPaste(copyEvent);

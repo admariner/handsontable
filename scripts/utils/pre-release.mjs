@@ -1,6 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import moment from 'moment';
+import { readFileSync } from 'fs';
 import replace from 'replace-in-file';
 import inquirer from 'inquirer';
 import semver from 'semver';
@@ -9,12 +9,19 @@ import {
   displayConfirmationMessage
 } from './index.mjs';
 
-import mainPackageJson from '../../package.json';
+import mainPackageJson from '../../package.json' with { type: 'json' };
 import hotConfig from '../../hot.config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const workspacePackages = mainPackageJson.workspaces;
+
+/**
+ * Current version of the monorepo (before updating).
+ *
+ * @type {string}
+ */
+export const CURRENT_VERSION = hotConfig.HOT_VERSION;
 
 /**
  * Check if the provided version number is a valid semver version number.
@@ -34,18 +41,23 @@ export function isVersionValid(version) {
  * string}`.
  */
 export function validateReleaseDate(date) {
-  const dateObj = moment(date, 'DD/MM/YYYY', true);
-  const now = moment();
-  const returnObj = {
-    valid: true,
-    error: null
-  };
+  const returnObj = { valid: true, error: null };
 
-  if (!dateObj.isValid()) {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
     returnObj.valid = false;
     returnObj.error = 'The provided date is invalid.';
 
-  } else if (!dateObj.isAfter(now)) {
+    return returnObj;
+  }
+
+  const [day, month, year] = date.split('/').map(Number);
+  const dateObj = new Date(year, month - 1, day);
+
+  if (dateObj.getFullYear() !== year || dateObj.getMonth() !== month - 1 || dateObj.getDate() !== day) {
+    returnObj.valid = false;
+    returnObj.error = 'The provided date is invalid.';
+
+  } else if (dateObj <= new Date()) {
     returnObj.valid = false;
     returnObj.error = 'The release date has to be a future date.';
   }
@@ -71,6 +83,10 @@ export function setVersion(version, packages = workspacePackages) {
 
   // Set the new version number to all the packages.
   packages.forEach((packagesLocation) => {
+    if (packagesLocation.includes('examples') || packagesLocation === 'docs') {
+      return;
+    }
+
     validateReplacementStatus(replace.sync({
       files: `${packagesLocation}${packagesLocation === '.' ? '' : '*'}/package.json`,
       from: [/"version": "(.*)"/, /"handsontable": "([^\d]*)((\d+)\.(\d+).(\d+)(.*))"/g],
@@ -80,10 +96,20 @@ export function setVersion(version, packages = workspacePackages) {
           return `"version": "${version}"`;
 
         } else {
-          const maxSatisfyingVersion = `${semver.major(semver.maxSatisfying([version, previousVersion], '*'))}.0.0`;
+          const isPreRelease = version.includes('-next-');
+          const isMajorRC = !isPreRelease && /^\d+\.0\.0-/.test(version);
+          let newVersion;
+
+          if (isPreRelease) {
+            newVersion = version;
+          } else if (isMajorRC) {
+            newVersion = `^${semver.major(version)}.0.0`;
+          } else {
+            newVersion = `${semverPrefix}${semver.major(semver.maxSatisfying([version, previousVersion], '*'))}.0.0`;
+          }
 
           // Replace the `handsontable` dependency with the current major (or previous major, if it's a prerelease).
-          return `"handsontable": "${semverPrefix}${maxSatisfyingVersion}"`;
+          return `"handsontable": "${newVersion}"`;
         }
       },
       ignore: [
@@ -102,13 +128,12 @@ export function setVersion(version, packages = workspacePackages) {
  */
 export function setReleaseDate(date) {
   const hotConfigPath = path.resolve(__dirname, '../../hot.config.js');
-  const replacementStatus = replace.sync({
+
+  replace.sync({
     files: hotConfigPath,
     from: /HOT_RELEASE_DATE: '(.*)'/,
     to: `HOT_RELEASE_DATE: '${date}'`,
   });
-
-  validateReplacementStatus(replacementStatus, date);
 }
 
 /**
@@ -229,13 +254,16 @@ Are the version number and release date above correct?`,
 
   } else {
     const answers = await inquirer.prompt(questions);
-    const releaseDateObj = moment(answers.releaseDate, 'DD/MM/YYYY', true);
+    const [rDay, rMonth, rYear] = answers.releaseDate.split('/').map(Number);
+    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    const formattedReleaseDate = `${String(rDay).padStart(2, '0')} ${MONTHS[rMonth - 1]} ${rYear}`;
     const newVersion =
       answers.changeType !== 'custom' ?
         getVersionFromReleaseType(answers.changeType, currentVersion) :
         answers.customVersion;
     const confirmationAnswers = await inquirer.prompt(
-      getConfirmationQuestion(newVersion, releaseDateObj.format('DD MMMM YYYY'))
+      getConfirmationQuestion(newVersion, formattedReleaseDate)
     );
 
     if (confirmationAnswers.isReleaseDateConfirmed) {
@@ -268,9 +296,14 @@ function validateReplacementStatus(replacementStatus, replacedString) {
     const filePath = infoObj.file.replace('./', '');
 
     if (!infoObj.hasChanged) {
-      displayErrorMessage(`${filePath} was not modified.`);
-      versionReplaced = false;
+      const alreadySet = readFileSync(infoObj.file, 'utf8').includes(replacedString);
 
+      if (alreadySet) {
+        displayConfirmationMessage(`- '${replacedString}' already set in ${path.relative(process.cwd(), filePath)}.`);
+      } else {
+        displayErrorMessage(`${filePath} was not modified.`);
+        versionReplaced = false;
+      }
     } else {
       displayConfirmationMessage(`- Saved '${replacedString}' to ${path.relative(process.cwd(), filePath)}.`);
     }

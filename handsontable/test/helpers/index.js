@@ -11,8 +11,8 @@ const exportToWindow = (helpersHolder) => {
       return;
     }
 
-    if (window[key] !== void 0) {
-      throw Error(`Cannot export "${key}" helper because this name is already assigned.`);
+    if (window[key] !== undefined) {
+      throw new Error(`Cannot export "${key}" helper because this name is already assigned.`);
     }
 
     window[key] = helpersHolder[key];
@@ -24,10 +24,11 @@ exportToWindow(mouseEvents);
 exportToWindow(keyboardEvents);
 exportToWindow(common);
 
-// Include all js files within the "helper/" folder for all plugins. That files can export some additional
-// functions, helpers which provides a different dataset for different test cases.
+// Include all js files within the "helper/" folder for all plugins and editors. Those files can export
+// additional functions/helpers that provide test-specific data or domain-local utilities.
 [
   require.context('./../../src/plugins', true, /^\.\/.*\/helpers\/.*\.js$/),
+  require.context('./../../src/editors', true, /^\.\/.*\/helpers\/.*\.js$/),
 ].forEach((req) => {
   req.keys().forEach((key) => {
     const helpers = req(key);

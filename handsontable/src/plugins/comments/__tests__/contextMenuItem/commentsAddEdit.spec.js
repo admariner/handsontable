@@ -13,8 +13,79 @@ describe('ContextMenu', () => {
   });
 
   describe('add/edit comment', () => {
+    it('should keep the cell focus untouched after adding a new comment', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        comments: true,
+        colHeaders: true,
+        contextMenu: true,
+      });
+
+      await selectCell(1, 1);
+      await contextMenu(getCell(1, 1));
+      await selectContextMenuOption('Add comment');
+
+      expect(getSelected()).toEqual([[1, 1, 1, 1]]);
+    });
+
+    it('should keep the cell focus untouched after editing a comment', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        comments: true,
+        cell: [
+          { row: 1, col: 1, comment: { value: 'Hello world!' } }
+        ],
+        colHeaders: true,
+        contextMenu: true,
+      });
+
+      await selectCell(1, 1);
+      await contextMenu(getCell(1, 1));
+      await selectContextMenuOption('Edit comment');
+
+      expect(getSelected()).toEqual([[1, 1, 1, 1]]);
+    });
+
     describe('UI', () => {
-      it('should disable the item when all rows are hidden', () => {
+      it('should disable the item when all cells are selected (using keyboard shortcut)', async() => {
+        handsontable({
+          data: createSpreadsheetData(5, 5),
+          comments: true,
+          colHeaders: true,
+          contextMenu: true,
+        });
+
+        await selectCell(1, 1);
+        await keyDownUp(['control/meta', 'a']);
+        await contextMenu(getCell(1, 1));
+
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Add comment';
+        });
+
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should disable the item when all cells are selected (using `selectAll` method)', async() => {
+        handsontable({
+          data: createSpreadsheetData(5, 5),
+          comments: true,
+          colHeaders: true,
+          contextMenu: true,
+        });
+
+        await selectCell(1, 1);
+        await selectAll();
+        await contextMenu(getCell(1, 1));
+
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Add comment';
+        });
+
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should disable the item when all rows are hidden', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           comments: true,
@@ -25,16 +96,16 @@ describe('ContextMenu', () => {
           },
         });
 
-        contextMenu(getCell(-1, 1)); // Column header "B"
+        await contextMenu(getCell(-1, 1)); // Column header "B"
 
-        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Add comment';
         });
 
-        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
       });
 
-      it('should disable the item when all columns are hidden', () => {
+      it('should disable the item when all columns are hidden', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           comments: true,
@@ -45,16 +116,16 @@ describe('ContextMenu', () => {
           },
         });
 
-        contextMenu(getCell(1, -1)); // Row header "2"
+        await contextMenu(getCell(1, -1)); // Row header "2"
 
-        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Add comment';
         });
 
-        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
       });
 
-      it('should disable the item when all rows are trimmed', () => {
+      it('should disable the item when all rows are trimmed', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           comments: true,
@@ -63,16 +134,16 @@ describe('ContextMenu', () => {
           trimRows: [0, 1, 2, 3, 4], // The TrimmingMap should be used instead of the plugin.
         });
 
-        contextMenu(getCell(-1, 1)); // Column header "B"
+        await contextMenu(getCell(-1, 1)); // Column header "B"
 
-        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Add comment';
         });
 
-        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
       });
 
-      it('should disable the item when all columns are trimmed', () => {
+      it('should disable the item when all columns are trimmed', async() => {
         handsontable({
           data: createSpreadsheetData(5, 5),
           comments: true,
@@ -81,13 +152,73 @@ describe('ContextMenu', () => {
           columns: [], // The TrimmingMap should be used instead of the `columns` option.
         });
 
-        contextMenu(getCell(1, -1)); // Row header "2"
+        await contextMenu(getCell(1, -1)); // Row header "2"
 
-        const readOnlyItem = $('.htContextMenu tbody tr td').filter(function() {
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
           return this.textContent === 'Add comment';
         });
 
-        expect(readOnlyItem.hasClass('htDisabled')).toBe(true);
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should be disabled when the single row header is selected', async() => {
+        handsontable({
+          data: createSpreadsheetData(5, 5),
+          rowHeaders: true,
+          colHeaders: true,
+          contextMenu: true,
+          comments: true,
+          navigableHeaders: true,
+        });
+
+        await selectCell(1, -1);
+        getPlugin('contextMenu').open($(getCell(1, -1)).offset());
+
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Add comment';
+        });
+
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should be disabled when the single column header is selected', async() => {
+        handsontable({
+          data: createSpreadsheetData(5, 5),
+          rowHeaders: true,
+          colHeaders: true,
+          contextMenu: true,
+          comments: true,
+          navigableHeaders: true,
+        });
+
+        await selectCell(-1, 1);
+        getPlugin('contextMenu').open($(getCell(-1, 1)).offset());
+
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Add comment';
+        });
+
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
+      });
+
+      it('should be disabled when the single corner is selected', async() => {
+        handsontable({
+          data: createSpreadsheetData(5, 5),
+          rowHeaders: true,
+          colHeaders: true,
+          contextMenu: true,
+          comments: true,
+          navigableHeaders: true,
+        });
+
+        await selectCell(-1, -1);
+        getPlugin('contextMenu').open($(getCell(-1, -1)).offset());
+
+        const menuItem = $('.htContextMenu tbody tr td').filter(function() {
+          return this.textContent === 'Add comment';
+        });
+
+        expect(menuItem.hasClass('htDisabled')).toBe(true);
       });
     });
   });

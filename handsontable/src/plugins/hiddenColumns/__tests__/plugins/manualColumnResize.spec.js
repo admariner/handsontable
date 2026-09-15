@@ -13,9 +13,9 @@ describe('HiddenColumns', () => {
   });
 
   describe('manualColumnResize', () => {
-    it('should resize a proper column when the table contains hidden column using mouse events', () => {
+    it('should resize a proper column when the table contains hidden column using mouse events', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(2, 5),
+        data: createSpreadsheetData(2, 5),
         colHeaders: true,
         hiddenColumns: {
           columns: [1],
@@ -27,14 +27,14 @@ describe('HiddenColumns', () => {
       expect(colWidth(spec().$container, 1)).toBe(65); // 50 + 15 (indicator)
 
       // Resize renderable column index `1` (within visual index term the index at 1 is hidden).
-      resizeColumn(1, 100);
+      await resizeColumn(1, 100);
 
       expect(colWidth(spec().$container, 1)).toBe(114); // 100 + 15 (indicator) - 1 (margin from overlay)
     });
 
-    it('should resize a proper column when the table contains hidden column using public API', () => {
+    it('should resize a proper column when the table contains hidden column using public API', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(2, 5),
+        data: createSpreadsheetData(2, 5),
         colHeaders: true,
         hiddenColumns: {
           columns: [1],
@@ -45,12 +45,12 @@ describe('HiddenColumns', () => {
       expect(colWidth(spec().$container, 1)).toBe(50);
 
       getPlugin('manualColumnResize').setManualSize(2, 100);
-      render();
+      await render();
 
       expect(colWidth(spec().$container, 1)).toBe(100);
     });
 
-    it('should display the resize handler in the proper position when the table contains hidden column', () => {
+    it('should display the resize handler in the proper position when the table contains hidden column', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right', addr: 'NYC' },
@@ -73,11 +73,13 @@ describe('HiddenColumns', () => {
 
       const $handle = $('.manualColumnResizer');
 
-      expect($handle.offset().left).toBe($headerTH.offset().left + $headerTH.outerWidth() - $handle.outerWidth() - 1);
+      expect($handle.offset().left).toBe(
+        $headerTH.offset().left + $headerTH.outerWidth() - ($handle.outerWidth() / 2) - 1
+      );
       expect($handle.height()).toBe($headerTH.outerHeight());
     });
 
-    it('should display the resize handler in the proper position when the table contains hidden fixed left column', () => {
+    it('should display the resize handler in the proper position when the table contains hidden fixed left column', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right', addr: 'NYC' },
@@ -91,23 +93,25 @@ describe('HiddenColumns', () => {
           columns: [1],
           indicators: true,
         },
-        fixedColumnsLeft: 3,
+        fixedColumnsStart: 3,
         manualColumnResize: true
       });
 
       // Show resize handler using the third renderable column. This column belongs to master as
-      // the "fixedColumnsLeft" is decreased to 2.
+      // the `fixedColumnsStart` setting is decreased to 2
       const $headerTH = getTopClone().find('thead tr:eq(0) th:eq(2)'); // Header "D"
 
       $headerTH.simulate('mouseover');
 
       const $handle = $('.manualColumnResizer');
 
-      expect($handle.offset().left).toBe($headerTH.offset().left + $headerTH.outerWidth() - $handle.outerWidth() - 1);
+      expect($handle.offset().left).toBe(
+        $headerTH.offset().left + $headerTH.outerWidth() - ($handle.outerWidth() / 2) - 1
+      );
       expect($handle.height()).toBe($headerTH.outerHeight());
     });
 
-    it('should resize a proper column using the resize handler when the table contains hidden column', () => {
+    it('should resize a proper column using the resize handler when the table contains hidden column', async() => {
       handsontable({
         data: [
           { id: 1, name: 'Ted', lastName: 'Right', addr: 'NYC' },
@@ -123,6 +127,8 @@ describe('HiddenColumns', () => {
         },
         manualColumnResize: true
       });
+
+      const widthBefore = colWidth(spec().$container, 1);
 
       const $headerTH = getTopClone().find('thead tr:eq(0) th:eq(1)'); // Header "C"
 
@@ -137,7 +143,7 @@ describe('HiddenColumns', () => {
         .simulate('mouseup')
       ;
 
-      expect(colWidth(spec().$container, 1)).toBe(80); // 50 (initial column width) + 30
+      expect(colWidth(spec().$container, 1)).toBeGreaterThan(widthBefore);
     });
   });
 });

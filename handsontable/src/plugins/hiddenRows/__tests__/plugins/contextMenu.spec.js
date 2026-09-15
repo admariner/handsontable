@@ -28,16 +28,16 @@ describe('HiddenRows', () => {
   describe('context-menu', () => {
     describe('items', () => {
       describe('hiding', () => {
-        it('should not render context menu item for hiding if no row is selected', () => {
+        it('should not render context menu item for hiding if no row is selected', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_HIDE],
             hiddenRows: true,
           });
 
-          selectCell(0, 0);
-          contextMenu();
+          await selectCell(0, 0);
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -45,9 +45,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toBe(MENU_NO_ITEMS);
         });
 
-        it('should render proper context menu item for hiding if only one row is selected', () => {
+        it('should render proper context menu item for hiding if only one row is selected', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_HIDE],
             hiddenRows: true,
@@ -57,7 +57,7 @@ describe('HiddenRows', () => {
 
           $header.simulate('mousedown');
           $header.simulate('mouseup');
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -65,9 +65,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toEqual(MENU_ITEM_HIDE_ROW);
         });
 
-        it('should render proper context menu item for hiding a few selected rows', () => {
+        it('should render proper context menu item for hiding a few selected rows', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_HIDE],
             hiddenRows: true,
@@ -76,11 +76,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(2, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -90,16 +90,16 @@ describe('HiddenRows', () => {
       });
 
       describe('unhiding', () => {
-        it('should not render context menu item for unhiding if no row is selected', () => {
+        it('should not render context menu item for unhiding if no row is selected', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: true,
           });
 
-          selectCell(0, 0);
-          contextMenu();
+          await selectCell(0, 0);
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -107,9 +107,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toBe(MENU_NO_ITEMS);
         });
 
-        it('should not render context menu item for unhiding if the first visible row is selected and no row before is hidden', () => {
+        it('should not render context menu item for unhiding if the first visible row is selected and no row before is hidden', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -119,9 +119,9 @@ describe('HiddenRows', () => {
 
           const header = getCell(0, -1);
 
-          mouseDown(header);
-          mouseUp(header);
-          contextMenu(header);
+          await mouseDown(header);
+          await mouseUp(header);
+          await contextMenu(header);
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -129,9 +129,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toBe(MENU_NO_ITEMS);
         });
 
-        it('should not render context menu item for unhiding if the last visible row is selected and no row after is hidden', () => {
+        it('should not render context menu item for unhiding if the last visible row is selected and no row after is hidden', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -141,9 +141,9 @@ describe('HiddenRows', () => {
 
           const header = getCell(4, -1);
 
-          mouseDown(header);
-          mouseUp(header);
-          contextMenu(header);
+          await mouseDown(header);
+          await mouseUp(header);
+          await contextMenu(header);
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -151,9 +151,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toBe(MENU_NO_ITEMS);
         });
 
-        it('should not render context menu item for unhiding if selected row is not the first one and is not the last one', () => {
+        it('should not render context menu item for unhiding if selected row is not the first one and is not the last one', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -163,9 +163,9 @@ describe('HiddenRows', () => {
 
           const header = getCell(2, -1);
 
-          mouseDown(header);
-          mouseUp(header);
-          contextMenu(header);
+          await mouseDown(header);
+          await mouseUp(header);
+          await contextMenu(header);
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -173,9 +173,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toBe(MENU_NO_ITEMS);
         });
 
-        it('should render proper context menu item for unhiding if the first visible row is selected and every row before is hidden', () => {
+        it('should render proper context menu item for unhiding if the first visible row is selected and every row before is hidden', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -187,7 +187,7 @@ describe('HiddenRows', () => {
 
           $header.simulate('mousedown');
           $header.simulate('mouseup');
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -195,9 +195,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toEqual(MENU_ITEM_SHOW_ROWS);
         });
 
-        it('should render proper context menu item for unhiding if the last visible row is selected and every row after is hidden', () => {
+        it('should render proper context menu item for unhiding if the last visible row is selected and every row after is hidden', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -209,7 +209,7 @@ describe('HiddenRows', () => {
 
           $header.simulate('mousedown');
           $header.simulate('mouseup');
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -217,9 +217,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toEqual(MENU_ITEM_SHOW_ROWS);
         });
 
-        it('should render proper context menu item for unhiding if all rows are hidden', () => {
+        it('should render proper context menu item for unhiding if all rows are hidden', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             colHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
@@ -228,18 +228,18 @@ describe('HiddenRows', () => {
             },
           });
 
-          const $header = getTopLeftClone().find('thead tr th');
+          const $header = getTopInlineStartClone().find('thead tr th');
 
-          contextMenu($header);
+          await contextMenu($header);
 
           const actions = $('.htContextMenu tbody td').not('.htSeparator');
 
           expect(actions.text()).toEqual(MENU_ITEM_SHOW_ROWS);
         });
 
-        it('should render proper context menu item for unhiding a few rows', () => {
+        it('should render proper context menu item for unhiding a few rows', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -250,11 +250,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(4, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -262,9 +262,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toEqual(MENU_ITEM_SHOW_ROWS);
         });
 
-        it('should render proper context menu item for unhiding only one row', () => {
+        it('should render proper context menu item for unhiding only one row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -275,11 +275,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(4, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -287,9 +287,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toEqual(MENU_ITEM_SHOW_ROW);
         });
 
-        it('should render proper context menu item for unhiding one row placed before trimmed row', () => {
+        it('should render proper context menu item for unhiding one row placed before trimmed row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -301,11 +301,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(2, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -313,9 +313,9 @@ describe('HiddenRows', () => {
           expect(actions.text()).toEqual(MENU_ITEM_SHOW_ROW);
         });
 
-        it('should render proper context menu item for unhiding one row placed after trimmed row', () => {
+        it('should render proper context menu item for unhiding one row placed after trimmed row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -327,11 +327,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(2, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
 
           const items = $('.htContextMenu tbody td');
           const actions = items.not('.htSeparator');
@@ -345,15 +345,15 @@ describe('HiddenRows', () => {
       describe('hiding', () => {
         describe('should hide selected rows', () => {
           describe('(selected from the left to the right)', () => {
-            it('hiding from a row "at the start" to the next row', () => {
+            it('hiding from a row "at the start" to the next row', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(0, 1);
+              await selectRows(0, 1);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -365,15 +365,15 @@ describe('HiddenRows', () => {
               expect(getCell(4, 0).innerText).toBe('A5');
             });
 
-            it('hiding from a row "in the middle" to the next row', () => {
+            it('hiding from a row "in the middle" to the next row', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(2, 3);
+              await selectRows(2, 3);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -385,15 +385,15 @@ describe('HiddenRows', () => {
               expect(getCell(4, 0).innerText).toBe('A5');
             });
 
-            it('hiding rows at the end', () => {
+            it('hiding rows at the end', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(3, 4);
+              await selectRows(3, 4);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -405,15 +405,15 @@ describe('HiddenRows', () => {
               expect(getCell(4, 0)).toBe(null);
             });
 
-            it('hiding all rows', () => {
+            it('hiding all rows', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(0, 4);
+              await selectRows(0, 4);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -427,15 +427,15 @@ describe('HiddenRows', () => {
           });
 
           describe('(selected from the right to the left)', () => {
-            it('hiding from row "at the end" to the previous row', () => {
+            it('hiding from row "at the end" to the previous row', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(4, 3);
+              await selectRows(4, 3);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -447,15 +447,15 @@ describe('HiddenRows', () => {
               expect(getCell(4, 0)).toBe(null);
             });
 
-            it('hiding from a row "in the middle" to the previous row', () => {
+            it('hiding from a row "in the middle" to the previous row', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(3, 2);
+              await selectRows(3, 2);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -467,15 +467,15 @@ describe('HiddenRows', () => {
               expect(getCell(4, 0).innerText).toBe('A5');
             });
 
-            it('hiding rows at the start', () => {
+            it('hiding rows at the start', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(1, 0);
+              await selectRows(1, 0);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -487,15 +487,15 @@ describe('HiddenRows', () => {
               expect(getCell(4, 0).innerText).toBe('A5');
             });
 
-            it('hiding all rows', () => {
+            it('hiding all rows', async() => {
               handsontable({
-                data: Handsontable.helper.createSpreadsheetData(5, 5),
+                data: createSpreadsheetData(5, 5),
                 rowHeaders: true,
                 contextMenu: [CONTEXTMENU_ITEM_HIDE],
                 hiddenRows: true,
               });
 
-              selectRows(4, 0);
+              await selectRows(4, 0);
 
               getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -510,26 +510,20 @@ describe('HiddenRows', () => {
         });
 
         describe('should select row below after hide action when below is visible row and', () => {
-          it('when there is no hidden row', () => {
+          it('when there is no hidden row', async() => {
             handsontable({
-              data: Handsontable.helper.createSpreadsheetData(5, 2),
+              data: createSpreadsheetData(5, 2),
               colHeaders: true,
               rowHeaders: true,
               contextMenu: [CONTEXTMENU_ITEM_HIDE],
               hiddenRows: true,
             });
 
-            selectRows(1, 2);
+            await selectRows(1, 2);
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
-            expect(getSelected()).toEqual([[3, -1, 3, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(3);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(3);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 3,0 from: 3,-1 to: 3,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -539,9 +533,9 @@ describe('HiddenRows', () => {
             `).toBeMatchToSelectionPattern();
           });
 
-          it('when there are hidden rows', () => {
+          it('when there are hidden rows', async() => {
             handsontable({
-              data: Handsontable.helper.createSpreadsheetData(10, 2),
+              data: createSpreadsheetData(10, 2),
               colHeaders: true,
               rowHeaders: true,
               contextMenu: [CONTEXTMENU_ITEM_HIDE],
@@ -550,17 +544,11 @@ describe('HiddenRows', () => {
               }
             });
 
-            selectRows(3, 4);
+            await selectRows(3, 4);
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
-            expect(getSelected()).toEqual([[8, -1, 8, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(8);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(8);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(8);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 8,0 from: 8,-1 to: 8,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -572,26 +560,19 @@ describe('HiddenRows', () => {
         });
 
         describe('should select row above after hide action when below is no more visible row and', () => {
-          it('there is no hidden row', () => {
+          it('there is no hidden row', async() => {
             handsontable({
-              data: Handsontable.helper.createSpreadsheetData(5, 2),
+              data: createSpreadsheetData(5, 2),
               colHeaders: true,
               rowHeaders: true,
               contextMenu: [CONTEXTMENU_ITEM_HIDE],
               hiddenRows: true,
             });
 
-            selectRows(3, 4);
+            await selectRows(3, 4);
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
-
-            expect(getSelected()).toEqual([[2, -1, 2, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(2);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(2);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(2);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 2,0 from: 2,-1 to: 2,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -601,9 +582,9 @@ describe('HiddenRows', () => {
             `).toBeMatchToSelectionPattern();
           });
 
-          it('there are hidden rows', () => {
+          it('there are hidden rows', async() => {
             handsontable({
-              data: Handsontable.helper.createSpreadsheetData(10, 2),
+              data: createSpreadsheetData(10, 2),
               colHeaders: true,
               rowHeaders: true,
               contextMenu: [CONTEXTMENU_ITEM_HIDE],
@@ -612,17 +593,11 @@ describe('HiddenRows', () => {
               }
             });
 
-            selectRows(8, 9);
+            await selectRows(8, 9);
 
             getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
-            expect(getSelected()).toEqual([[4, -1, 4, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(4);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(4);
-            expect(getSelectedRangeLast().from.col).toBe(-1);
-            expect(getSelectedRangeLast().to.row).toBe(4);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 4,0 from: 4,-1 to: 4,1']);
             expect(`
               |   ║ - : - |
               |===:===:===|
@@ -633,9 +608,9 @@ describe('HiddenRows', () => {
           });
         });
 
-        it('should not preserve selection after hiding all rows', () => {
+        it('should not preserve selection after hiding all rows', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(10, 2),
+            data: createSpreadsheetData(10, 2),
             colHeaders: true,
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_HIDE],
@@ -644,7 +619,7 @@ describe('HiddenRows', () => {
             }
           });
 
-          selectAll();
+          await selectAll();
 
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_HIDE);
 
@@ -657,9 +632,9 @@ describe('HiddenRows', () => {
       });
 
       describe('unhiding', () => {
-        it('should unhide hidden rows in selection', () => {
+        it('should unhide hidden rows in selection', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 2),
+            data: createSpreadsheetData(5, 2),
             colHeaders: true,
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
@@ -675,9 +650,9 @@ describe('HiddenRows', () => {
           expect(getCell(3, 0)).toBe(null);
           expect(getCell(4, 0).innerText).toBe('A5');
 
-          selectRows(0, 4);
+          await selectRows(0, 4);
 
-          contextMenu();
+          await contextMenu();
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(6); // + column header
@@ -686,13 +661,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[0, -1, 4, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(4);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 4,1']);
           expect(`
             |   ║ - : - |
             |===:===:===|
@@ -704,9 +673,9 @@ describe('HiddenRows', () => {
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should unhide hidden rows before the first visible and selected row', () => {
+        it('should unhide hidden rows before the first visible and selected row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 2),
+            data: createSpreadsheetData(5, 2),
             colHeaders: true,
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
@@ -722,9 +691,9 @@ describe('HiddenRows', () => {
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
 
-          selectRows(2);
+          await selectRows(2);
 
-          contextMenu();
+          await contextMenu();
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(6); // + column header
@@ -733,13 +702,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[0, -1, 2, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,1']);
           expect(`
             |   ║ - : - |
             |===:===:===|
@@ -751,9 +714,9 @@ describe('HiddenRows', () => {
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should unhide hidden rows after the last visible and selected row', () => {
+        it('should unhide hidden rows after the last visible and selected row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 2),
+            data: createSpreadsheetData(5, 2),
             colHeaders: true,
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
@@ -769,9 +732,9 @@ describe('HiddenRows', () => {
           expect(getCell(3, 0)).toBe(null);
           expect(getCell(4, 0)).toBe(null);
 
-          selectRows(2);
+          await selectRows(2);
 
-          contextMenu();
+          await contextMenu();
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(6); // + column header
@@ -780,13 +743,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[2, -1, 4, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(2);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(2);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(4);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 2,0 from: 2,-1 to: 4,1']);
           expect(`
             |   ║ - : - |
             |===:===:===|
@@ -798,9 +755,9 @@ describe('HiddenRows', () => {
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should unhide all rows when they had been hidden previously', () => {
+        it('should unhide all rows when they had been hidden previously', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 2),
+            data: createSpreadsheetData(5, 2),
             colHeaders: true,
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
@@ -816,9 +773,9 @@ describe('HiddenRows', () => {
           expect(getCell(3, 0)).toBe(null);
           expect(getCell(4, 0)).toBe(null);
 
-          const header = getTopLeftClone().find('thead th:eq(0)');
+          const header = getTopInlineStartClone().find('thead th:eq(0)');
 
-          contextMenu(header);
+          await contextMenu(header);
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(6); // + column header
@@ -827,27 +784,21 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A3');
           expect(getCell(3, 0).innerText).toBe('A4');
           expect(getCell(4, 0).innerText).toBe('A5');
-          expect(getSelected()).toEqual([[-1, -1, 4, 1]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(-1);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(4);
-          expect(getSelectedRangeLast().to.col).toBe(1);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,-1 to: 4,1']);
           expect(`
-            |   ║ * : * |
+            |   ║ - : - |
             |===:===:===|
-            | * ║ A : 0 |
-            | * ║ 0 : 0 |
-            | * ║ 0 : 0 |
-            | * ║ 0 : 0 |
-            | * ║ 0 : 0 |
+            | - ║ A : 0 |
+            | - ║ 0 : 0 |
+            | - ║ 0 : 0 |
+            | - ║ 0 : 0 |
+            | - ║ 0 : 0 |
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should unhide all hidden rows when some of the rows was hidden', () => {
+        it('should unhide all hidden rows when some of the rows was hidden', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -866,11 +817,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(2, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(4);
@@ -879,13 +830,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A4');
           expect(getCell(3, 0).innerText).toBe('A5');
           expect(getCell(4, 0)).toBe(null);
-          expect(getSelected()).toEqual([[0, -1, 2, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,4']);
           expect(`
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -894,9 +839,9 @@ describe('HiddenRows', () => {
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should unhide all rows when the hidden row is placed before trimmed row', () => {
+        it('should unhide all rows when the hidden row is placed before trimmed row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -915,11 +860,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(2, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(4);
@@ -928,13 +873,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A4');
           expect(getCell(3, 0).innerText).toBe('A5');
           expect(getCell(4, 0)).toBe(null);
-          expect(getSelected()).toEqual([[0, -1, 2, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,4']);
           expect(`
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -943,9 +882,9 @@ describe('HiddenRows', () => {
           `).toBeMatchToSelectionPattern();
         });
 
-        it('should unhide all rows when the hidden row is placed after trimmed row', () => {
+        it('should unhide all rows when the hidden row is placed after trimmed row', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             contextMenu: [CONTEXTMENU_ITEM_SHOW],
             hiddenRows: {
@@ -964,11 +903,11 @@ describe('HiddenRows', () => {
           const start = getCell(0, -1);
           const end = getCell(2, -1);
 
-          mouseDown(start);
-          mouseOver(end);
-          mouseUp(end);
+          await mouseDown(start);
+          await mouseOver(end);
+          await mouseUp(end);
 
-          contextMenu();
+          await contextMenu();
           getPlugin('contextMenu').executeCommand(CONTEXTMENU_ITEM_SHOW);
 
           expect(spec().$container.find('.ht_master tr').length).toBe(4);
@@ -977,13 +916,7 @@ describe('HiddenRows', () => {
           expect(getCell(2, 0).innerText).toBe('A4');
           expect(getCell(3, 0).innerText).toBe('A5');
           expect(getCell(4, 0)).toBe(null);
-          expect(getSelected()).toEqual([[0, -1, 2, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(2);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 2,4']);
           expect(`
             | * ║ A : 0 : 0 : 0 : 0 |
             | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -997,7 +930,7 @@ describe('HiddenRows', () => {
     describe('Changing selection after alter actions from context-menu', () => {
       describe('should keep the row selection in the same position as before inserting the row', () => {
         describe('above the selected row', () => {
-          it('when the first row is hidden', () => {
+          it('when the first row is hidden', async() => {
             handsontable({
               data: createSpreadsheetData(4, 4),
               contextMenu: true,
@@ -1010,23 +943,10 @@ describe('HiddenRows', () => {
 
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
-            simulateClick(header, 'RMB');
-            contextMenu(header);
+            await simulateClick(header, 'RMB');
+            await selectContextMenuOption('Insert column left');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(2)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column left
-
-            expect(getSelected()).toEqual([[-1, 1, 3, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(1);
-            expect(getSelectedRangeLast().highlight.col).toBe(1);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(1);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 1,1 from: -1,1 to: 3,1']);
             expect(`
               |   ║   : * :   :   :   |
               |===:===:===:===:===:===|
@@ -1036,7 +956,7 @@ describe('HiddenRows', () => {
             `).toBeMatchToSelectionPattern();
           });
 
-          it('when all rows are hidden', () => {
+          it('when all rows are hidden', async() => {
             handsontable({
               data: createSpreadsheetData(4, 4),
               contextMenu: true,
@@ -1049,23 +969,10 @@ describe('HiddenRows', () => {
 
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
-            simulateClick(header, 'RMB');
-            contextMenu(header);
+            await simulateClick(header, 'RMB');
+            await selectContextMenuOption('Insert column left');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(2)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column left
-
-            expect(getSelected()).toEqual([[-1, 1, 3, 1]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(0);
-            expect(getSelectedRangeLast().highlight.col).toBe(1);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(1);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(1);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 3,1']);
             expect(`
               |   ║   : * :   :   :   |
               |===:===:===:===:===:===|
@@ -1074,7 +981,7 @@ describe('HiddenRows', () => {
         });
 
         describe('below the selected row', () => {
-          it('the first row is hidden', () => {
+          it('the first row is hidden', async() => {
             handsontable({
               data: createSpreadsheetData(4, 4),
               contextMenu: true,
@@ -1087,23 +994,10 @@ describe('HiddenRows', () => {
 
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
-            simulateClick(header, 'RMB');
-            contextMenu(header);
+            await simulateClick(header, 'RMB');
+            await selectContextMenuOption('Insert column right');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(3)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column right
-
-            expect(getSelected()).toEqual([[-1, 0, 3, 0]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(1);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(0);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(0);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 1,0 from: -1,0 to: 3,0']);
             expect(`
               |   ║ * :   :   :   :   |
               |===:===:===:===:===:===|
@@ -1113,7 +1007,7 @@ describe('HiddenRows', () => {
             `).toBeMatchToSelectionPattern();
           });
 
-          it('when all rows are hidden', () => {
+          it('when all rows are hidden', async() => {
             handsontable({
               data: createSpreadsheetData(4, 4),
               contextMenu: true,
@@ -1126,23 +1020,10 @@ describe('HiddenRows', () => {
 
             const header = $('.ht_clone_top .htCore thead tr th').eq(1); // The first column
 
-            simulateClick(header, 'RMB');
-            contextMenu(header);
+            await simulateClick(header, 'RMB');
+            await selectContextMenuOption('Insert column right');
 
-            $('.htContextMenu .ht_master .htCore')
-              .find('tbody td')
-              .not('.htSeparator')
-              .eq(3)
-              .simulate('mousedown')
-              .simulate('mouseup'); // Insert column right
-
-            expect(getSelected()).toEqual([[-1, 0, 3, 0]]);
-            expect(getSelectedRangeLast().highlight.row).toBe(0);
-            expect(getSelectedRangeLast().highlight.col).toBe(0);
-            expect(getSelectedRangeLast().from.row).toBe(-1);
-            expect(getSelectedRangeLast().from.col).toBe(0);
-            expect(getSelectedRangeLast().to.row).toBe(3);
-            expect(getSelectedRangeLast().to.col).toBe(0);
+            expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,0 to: 3,0']);
             expect(`
               |   ║ * :   :   :   :   |
               |===:===:===:===:===:===|

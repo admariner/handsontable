@@ -29,7 +29,7 @@ describe('TrimRows', () => {
   describe('fixedRowsTop', () => {
     it('should render top overlay with the same amount of rows than a master overlay', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 2),
+        data: createSpreadsheetData(5, 2),
         rowHeaders: true,
         fixedRowsTop: 2,
         trimRows: [0, 1, 2],
@@ -38,24 +38,24 @@ describe('TrimRows', () => {
       expect(extractDOMStructure(getTopClone())).toMatchHTML(`
         <tbody>
           <tr>
-            <th class="">1</th>
-            <td class="">A4</td>
-            <td class="">B4</td>
+            <th>1</th>
+            <td>A4</td>
+            <td>B4</td>
           </tr>
           <tr>
-            <th class="">2</th>
-            <td class="">A5</td>
-            <td class="">B5</td>
+            <th>2</th>
+            <td>A5</td>
+            <td>B5</td>
           </tr>
         </tbody>
         `);
-      expect(extractDOMStructure(getTopLeftClone())).toMatchHTML(`
+      expect(extractDOMStructure(getTopInlineStartClone())).toMatchHTML(`
         <tbody>
           <tr>
-            <th class="">1</th>
+            <th>1</th>
           </tr>
           <tr>
-            <th class="">2</th>
+            <th>2</th>
           </tr>
         </tbody>
         `);
@@ -63,7 +63,7 @@ describe('TrimRows', () => {
 
     it('should shrink top overlay to a master overlay when defined overlay size is higher than total amount of rows', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 2),
+        data: createSpreadsheetData(5, 2),
         rowHeaders: true,
         fixedRowsTop: 2,
         trimRows: [0, 1, 2, 3],
@@ -72,16 +72,16 @@ describe('TrimRows', () => {
       expect(extractDOMStructure(getTopClone())).toMatchHTML(`
         <tbody>
           <tr>
-            <th class="">1</th>
-            <td class="">A5</td>
-            <td class="">B5</td>
+            <th>1</th>
+            <td>A5</td>
+            <td>B5</td>
           </tr>
         </tbody>
         `);
-      expect(extractDOMStructure(getTopLeftClone())).toMatchHTML(`
+      expect(extractDOMStructure(getTopInlineStartClone())).toMatchHTML(`
         <tbody>
           <tr>
-            <th class="">1</th>
+            <th>1</th>
           </tr>
         </tbody>
         `);
@@ -89,7 +89,7 @@ describe('TrimRows', () => {
 
     it('should shrink top overlay to a master overlay when all rows are trimmed', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 2),
+        data: createSpreadsheetData(5, 2),
         rowHeaders: true,
         fixedRowsTop: 2,
         trimRows: [0, 1, 2, 3, 4],
@@ -98,7 +98,7 @@ describe('TrimRows', () => {
       expect(extractDOMStructure(getTopClone())).toMatchHTML(`
         <tbody></tbody>
         `);
-      expect(extractDOMStructure(getTopLeftClone())).toMatchHTML(`
+      expect(extractDOMStructure(getTopInlineStartClone())).toMatchHTML(`
         <tbody></tbody>
         `);
     });
@@ -106,13 +106,13 @@ describe('TrimRows', () => {
     it('should resize the container after trimming rows using the `trimRows` API method, when there are fixed rows' +
       ' declared', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(50, 2),
+        data: createSpreadsheetData(50, 2),
         rowHeaders: true,
         fixedRowsTop: 2,
         trimRows: true,
       });
 
-      selectCell(1, 1);
+      await selectCell(1, 1);
 
       const initialHeight = spec().$container.height();
 

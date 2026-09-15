@@ -1,3 +1,5 @@
+import { waitOnScroll } from './utils';
+import { pressedModifierKeys } from './keyboardEvents';
 
 const MOUSE_BUTTONS = new Map();
 
@@ -24,7 +26,7 @@ function getMouseButton(buttonKey) {
  * @returns {Function}
  */
 export function handsontableMouseTriggerFactory(type, defaultButtonKey = getMouseButton('LMB')) {
-  return function(element, buttonKey = defaultButtonKey, eventProps = {}) {
+  return function(element, buttonKey = defaultButtonKey, eventProps = pressedModifierKeys) {
     let handsontableElement = element;
 
     if (!(handsontableElement instanceof jQuery)) {
@@ -54,9 +56,9 @@ export const contextMenuEvent = handsontableMouseTriggerFactory('contextmenu');
  *
  * @param {Element} element An element on which there will be performed mouse events.
  * @param {number} [buttonKey] Number representing mouse button key.
- * @param {object} [eventProps] Addional object with props to merge with the event.
+ * @param {object} [eventProps] Additional object with props to merge with the event.
  */
-export function simulateClick(element, buttonKey = 'LMB', eventProps = {}) {
+export const simulateClick = waitOnScroll((element, buttonKey = 'LMB', eventProps = pressedModifierKeys) => {
   const mouseButton = getMouseButton(buttonKey);
 
   mouseDown(element, mouseButton, eventProps);
@@ -65,26 +67,36 @@ export function simulateClick(element, buttonKey = 'LMB', eventProps = {}) {
   // Only left click generates "click" events.
   if (mouseButton === getMouseButton('LMB')) {
     mouseClick(element, mouseButton, eventProps);
+
+    if (element instanceof jQuery) {
+      element[0].focus({
+        preventScroll: true
+      });
+    } else {
+      element.focus({
+        preventScroll: true
+      });
+    }
   }
 
   // Only right click generates "contextmenu" events.
   if (mouseButton === getMouseButton('RMB')) {
     contextMenuEvent(element, mouseButton, eventProps);
   }
-}
+});
 
 /**
  * Simulate double click (all mouse events).
  *
  * @param {Element} element An element on which there will be performed mouse events.
- * @param {object} [eventProps] Addional object with props to merge with the event.
+ * @param {object} [eventProps] Additional object with props to merge with the event.
  */
-export function mouseDoubleClick(element, eventProps) {
+export const mouseDoubleClick = waitOnScroll((element, eventProps = pressedModifierKeys) => {
   mouseDown(element, eventProps);
   mouseUp(element, eventProps);
   mouseDown(element, eventProps);
   mouseUp(element, eventProps);
-}
+});
 
-export const mouseRightDown = handsontableMouseTriggerFactory('mousedown', getMouseButton('RMB'));
-export const mouseRightUp = handsontableMouseTriggerFactory('mouseup', getMouseButton('RMB'));
+export const mouseRightDown = waitOnScroll(handsontableMouseTriggerFactory('mousedown', getMouseButton('RMB')));
+export const mouseRightUp = waitOnScroll(handsontableMouseTriggerFactory('mouseup', getMouseButton('RMB')));

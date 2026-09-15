@@ -21,7 +21,7 @@ describe('columnHeaders option', () => {
     this.wotInstance.destroy();
   });
 
-  it('should not add class `htColumnHeaders` when column headers are disabled', () => {
+  it('should not add class `htColumnHeaders` when column headers are disabled', async() => {
     const wt = walkontable({
       data: getData,
       totalRows: getTotalRows,
@@ -33,7 +33,7 @@ describe('columnHeaders option', () => {
     expect(spec().$wrapper.hasClass('htColumnHeaders')).toBe(false);
   });
 
-  it('should add class `htColumnHeaders` when column headers are enabled', () => {
+  it('should add class `htColumnHeaders` when column headers are enabled', async() => {
     const wt = walkontable({
       data: getData,
       totalRows: getTotalRows,
@@ -48,7 +48,7 @@ describe('columnHeaders option', () => {
     expect(spec().$wrapper.hasClass('htColumnHeaders')).toBe(true);
   });
 
-  it('should create table with column headers', () => {
+  it('should create table with column headers', async() => {
     const wt = walkontable({
       data: getData,
       totalRows: getTotalRows,
@@ -60,9 +60,9 @@ describe('columnHeaders option', () => {
 
     wt.draw();
 
-    expect(spec().$wrapper.find('.ht_clone_left colgroup col').length).toBe(0);
-    expect(spec().$wrapper.find('.ht_clone_left thead tr').length).toBe(1);
-    expect(spec().$wrapper.find('.ht_clone_left tbody tr').length).toBe(0);
+    expect(spec().$wrapper.find('.ht_clone_inline_start colgroup col').length).toBe(0);
+    expect(spec().$wrapper.find('.ht_clone_inline_start thead tr').length).toBe(0);
+    expect(spec().$wrapper.find('.ht_clone_inline_start tbody tr').length).toBe(0);
     expect(spec().$wrapper.find('.ht_clone_top colgroup col').length).toBe(4);
     expect(spec().$wrapper.find('.ht_clone_top thead tr').length).toBe(1);
     expect(spec().$wrapper.find('.ht_clone_top tbody tr').length).toBe(0);
@@ -71,7 +71,7 @@ describe('columnHeaders option', () => {
     expect(spec().$wrapper.find('.ht_master tbody tr').length).toBe(9);
   });
 
-  it('should create column headers with correct height when th has css `white-space: normal`', () => {
+  it('should create column headers with correct height when th has css `white-space: normal`', async() => {
     const style = $('<style>.handsontable thead th {white-space: normal;}</style>').appendTo('head');
     const wt = walkontable({
       data: getData,
@@ -89,7 +89,7 @@ describe('columnHeaders option', () => {
     style.remove();
   });
 
-  it('should create column headers with correct height when th has css `white-space: pre-line` (default)', () => {
+  it('should create column headers with correct height when th has css `white-space: pre-line` (default)', async() => {
     const wt = walkontable({
       data: getData,
       totalRows: getTotalRows,
@@ -105,7 +105,7 @@ describe('columnHeaders option', () => {
     expect(spec().$wrapper.find('.ht_clone_top thead tr').height()).toBe(23);
   });
 
-  it('should generate column headers from function', () => {
+  it('should generate column headers from function', async() => {
     const headers = ['Description', 2012, 2013, 2014];
     const wt = walkontable({
       data: getData,

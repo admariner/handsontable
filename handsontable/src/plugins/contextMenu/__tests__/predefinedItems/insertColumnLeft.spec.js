@@ -13,7 +13,7 @@ describe('ContextMenu', () => {
   });
 
   describe('insert column left', () => {
-    it('should insert column on the left of the clicked column header', () => {
+    it('should insert column on the left of the clicked column header', async() => {
       handsontable({
         data: createSpreadsheetData(5, 5),
         colHeaders: true,
@@ -21,14 +21,9 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(-1, 1, true));
+      await contextMenu(getCell(-1, 1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(false);
       expect(getDataAtRow(0)).toEqual(['A1', null, 'B1', 'C1', 'D1', 'E1']);
@@ -43,7 +38,7 @@ describe('ContextMenu', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should not insert column when the menu is triggered by row header for object-based dataset', () => {
+    it('should not insert column when the menu is triggered by row header for object-based dataset', async() => {
       handsontable({
         data: createSpreadsheetObjectData(5, 5),
         colHeaders: true,
@@ -51,14 +46,9 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(-1, 1, true));
+      await contextMenu(getCell(-1, 1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(true);
       expect(getDataAtRow(0)).toEqual(['A1', 'B1', 'C1', 'D1', 'E1']);
@@ -73,7 +63,7 @@ describe('ContextMenu', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should not insert column when the menu is triggered by row header', () => {
+    it('should not insert column when the menu is triggered by row header', async() => {
       handsontable({
         data: createSpreadsheetData(5, 5),
         colHeaders: true,
@@ -81,20 +71,69 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(1, -1, true));
+      await contextMenu(getCell(1, -1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(true);
       expect(getDataAtRow(0)).toEqual(['A1', 'B1', 'C1', 'D1', 'E1']);
     });
 
-    it('should insert column on the left when the menu is triggered by corner', () => {
+    it('should not insert column when the menu is triggered by focused row header', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        colHeaders: true,
+        rowHeaders: true,
+        contextMenu: true,
+        navigableHeaders: true,
+      });
+
+      await selectCell(1, -1);
+      getPlugin('contextMenu').open({ top: 0, left: 0 });
+
+      const item = await selectContextMenuOption('Insert column left');
+
+      expect(item.hasClass('htDisabled')).toBe(true);
+      expect(getDataAtRow(0)).toEqual(['A1', 'B1', 'C1', 'D1', 'E1']);
+    });
+
+    it('should not insert column when the menu is triggered by focused corner', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        colHeaders: true,
+        rowHeaders: true,
+        contextMenu: true,
+        navigableHeaders: true,
+      });
+
+      await selectCell(-1, -1);
+      getPlugin('contextMenu').open({ top: 0, left: 0 });
+
+      const item = await selectContextMenuOption('Insert column left');
+
+      expect(item.hasClass('htDisabled')).toBe(true);
+      expect(getDataAtRow(0)).toEqual(['A1', 'B1', 'C1', 'D1', 'E1']);
+    });
+
+    it('should insert column when the menu is triggered by focused column header', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        colHeaders: true,
+        rowHeaders: true,
+        contextMenu: true,
+        navigableHeaders: true,
+      });
+
+      await selectCell(-1, 1);
+      getPlugin('contextMenu').open({ top: 0, left: 0 });
+
+      const item = await selectContextMenuOption('Insert column left');
+
+      expect(item.hasClass('htDisabled')).toBe(false);
+      expect(getDataAtRow(0)).toEqual(['A1', null, 'B1', 'C1', 'D1', 'E1']);
+    });
+
+    it('should insert column on the left when the menu is triggered by corner', async() => {
       handsontable({
         data: createSpreadsheetData(5, 5),
         colHeaders: true,
@@ -102,29 +141,24 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(-1, -1, true));
+      await contextMenu(getCell(-1, -1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(false);
       expect(getDataAtRow(0)).toEqual([null, 'A1', 'B1', 'C1', 'D1', 'E1']);
       expect(`
-        |   ║ * : * : * : * : * : * |
+        |   ║ - : - : - : - : - : - |
         |===:===:===:===:===:===:===|
-        | * ║ A : 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 : 0 |
+        | - ║ A : 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 : 0 |
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should not insert column when the menu is triggered by corner for object-based dataset', () => {
+    it('should not insert column when the menu is triggered by corner for object-based dataset', async() => {
       handsontable({
         data: createSpreadsheetObjectData(5, 5),
         colHeaders: true,
@@ -132,29 +166,24 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(-1, -1, true));
+      await contextMenu(getCell(-1, -1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(true);
       expect(getDataAtRow(0)).toEqual(['A1', 'B1', 'C1', 'D1', 'E1']);
       expect(`
-        |   ║ * : * : * : * : * |
+        |   ║ - : - : - : - : - |
         |===:===:===:===:===:===|
-        | * ║ A : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 |
-        | * ║ 0 : 0 : 0 : 0 : 0 |
+        | - ║ A : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 |
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should insert column on the left when the menu is triggered by corner and all rows are trimmed', () => {
+    it('should insert column on the left when the menu is triggered by corner and all rows are trimmed', async() => {
       handsontable({
         data: createSpreadsheetData(5, 5),
         colHeaders: [1, 2, 3, 4, 5],
@@ -163,14 +192,9 @@ describe('ContextMenu', () => {
         trimRows: [0, 1, 2, 3, 4],
       });
 
-      contextMenu(getCell(-1, -1, true));
+      await contextMenu(getCell(-1, -1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(false);
       expect(getColHeader()).toEqual(['A', 1, 2, 3, 4, 5]);
@@ -180,7 +204,7 @@ describe('ContextMenu', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should not insert column on the left when the menu is triggered by corner and all columns are trimmed', () => {
+    it('should not insert column on the left when the menu is triggered by corner and all columns are trimmed', async() => {
       handsontable({
         data: createSpreadsheetData(5, 0),
         dataSchema: [], // Unlocks adding new rows through the context menu.
@@ -189,14 +213,9 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(-1, -1, true));
+      await contextMenu(getCell(-1, -1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(true);
       expect(`
@@ -210,7 +229,7 @@ describe('ContextMenu', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should not insert column on the left when the menu is triggered by corner and dataset is empty', () => {
+    it('should not insert column on the left when the menu is triggered by corner and dataset is empty', async() => {
       handsontable({
         data: createSpreadsheetData(0, 0),
         dataSchema: [], // Unlocks adding new rows through the context menu.
@@ -219,14 +238,9 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(-1, -1, true));
+      await contextMenu(getCell(-1, -1, true));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(true);
       expect(`
@@ -235,7 +249,34 @@ describe('ContextMenu', () => {
         `).toBeMatchToSelectionPattern();
     });
 
-    it('should insert column on the left of the clicked cell', () => {
+    it('should not insert column on the left when the physical number of columns is the same as `maxCols` ' +
+       'and some indexes are trimmed', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 5),
+        colHeaders: true,
+        rowHeaders: true,
+        contextMenu: true,
+        maxCols: 5,
+      });
+
+      const columnMapper = columnIndexMapper().createAndRegisterIndexMap('my-hiding-map', 'trimming');
+
+      columnMapper.setValueAtIndex(1, true);
+      await render();
+
+      await contextMenu(getCell(0, 0, true));
+
+      const item = await selectContextMenuOption('Insert column left');
+
+      expect(item.hasClass('htDisabled')).toBe(true);
+      expect(`
+        |   ║ - :   :   :   |
+        |===:===:===:===:===|
+        | - ║ # :   :   :   |
+        `).toBeMatchToSelectionPattern();
+    });
+
+    it('should insert column on the left of the clicked cell', async() => {
       handsontable({
         data: createSpreadsheetData(5, 5),
         colHeaders: true,
@@ -243,14 +284,9 @@ describe('ContextMenu', () => {
         contextMenu: true,
       });
 
-      contextMenu(getCell(1, 1));
+      await contextMenu(getCell(1, 1));
 
-      const item = $('.htContextMenu .ht_master .htCore tbody')
-        .find('td')
-        .not('.htSeparator')
-        .eq(2); // "Insert column left"
-
-      simulateClick(item);
+      const item = await selectContextMenuOption('Insert column left');
 
       expect(item.hasClass('htDisabled')).toBe(false);
       expect(getDataAtRow(0)).toEqual(['A1', null, 'B1', 'C1', 'D1', 'E1']);
@@ -266,7 +302,7 @@ describe('ContextMenu', () => {
     });
 
     describe('UI', () => {
-      it('should display a disabled entry, when there\'s nothing selected', () => {
+      it('should display a disabled entry, when there\'s nothing selected', async() => {
         handsontable({
           data: createSpreadsheetData(4, 4),
           contextMenu: true,
@@ -276,12 +312,9 @@ describe('ContextMenu', () => {
           }
         });
 
-        contextMenu();
+        await contextMenu();
 
-        const item = $('.htContextMenu .ht_master .htCore tbody')
-          .find('td')
-          .not('.htSeparator')
-          .eq(2); // "Insert column left"
+        const item = await selectContextMenuOption('Insert column left');
 
         expect(item.hasClass('htDisabled')).toBe(true);
       });

@@ -14,7 +14,31 @@ describe('DropdownEditor', () => {
     }
   });
 
-  it('should render an editor in specified position at cell 0, 0', () => {
+  it('should have correct meta options set when defines as a type', async() => {
+    handsontable({
+      type: 'dropdown',
+      source: choices,
+    });
+
+    await selectCell(0, 0);
+
+    expect(getCellMeta(0, 0).filter).toBe(false);
+    expect(getCellMeta(0, 0).strict).toBe(true);
+  });
+
+  it('should have correct meta options set when defines as an editor', async() => {
+    handsontable({
+      editor: 'dropdown',
+      source: choices,
+    });
+
+    await selectCell(0, 0);
+
+    expect(getCellMeta(0, 0).filter).toBe(false);
+    expect(getCellMeta(0, 0).strict).toBe(true);
+  });
+
+  it('should render an editor in specified position at cell 0, 0', async() => {
     handsontable({
       columns: [
         {
@@ -24,16 +48,16 @@ describe('DropdownEditor', () => {
       ],
     });
 
-    selectCell(0, 0);
+    await selectCell(0, 0);
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    await keyDownUp('enter');
 
     expect(editor.offset()).toEqual($(getCell(0, 0)).offset());
   });
 
-  it('should render an editor in specified position at cell 0, 0 when all headers are selected', () => {
+  it('should render an editor in specified position at cell 0, 0 when all headers are selected', async() => {
     handsontable({
       rowHeaders: true,
       colHeaders: true,
@@ -45,20 +69,26 @@ describe('DropdownEditor', () => {
       ],
     });
 
-    selectAll();
-    listen();
+    await listen();
+
+    await selectAll();
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    await keyDownUp('F2');
 
     expect(editor.offset()).toEqual($(getCell(0, 0)).offset());
   });
 
-  it('should render an editor in specified position while opening an editor from top to bottom when ' +
-     'top and bottom overlays are enabled', () => {
+  it('should render the editor in the expected position when stepping top-to-bottom with top and bottom overlays', async() => {
+    // Keep the container sized to fit the same number of data rows across themes. The original
+    // main-theme 252px height corresponded to ~7.6 rows; containerHeightForRows(7, 1) produces
+    // the theme-appropriate pixel height so overlays and the scrollable middle region remain
+    // within the viewport on horizon, where the row height is larger than on main.
+    spec().$container[0].style.height = `${containerHeightForRows(7, 1)}px`;
+
     handsontable({
-      data: Handsontable.helper.createSpreadsheetData(8, 2),
+      data: createSpreadsheetData(8, 2),
       rowHeaders: true,
       colHeaders: true,
       fixedRowsTop: 3,
@@ -72,16 +102,16 @@ describe('DropdownEditor', () => {
       ],
     });
 
-    selectCell(0, 0);
+    await selectCell(0, 0);
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    await keyDownUp('enter');
 
     expect(editor.offset()).toEqual($(getCell(0, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional top border.
     const editorOffset = () => ({
@@ -91,59 +121,59 @@ describe('DropdownEditor', () => {
 
     expect(editorOffset()).toEqual($(getCell(1, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(2, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(3, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(4, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     // The first row of the bottom overlay has different position, influenced by `innerBorderTop` CSS class.
     expect(editor.offset()).toEqual($(getCell(5, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(6, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(7, 0, true)).offset());
   });
 
   it('should render an editor in specified position while opening an editor from left to right when ' +
-     'left overlay is enabled', () => {
+     'left overlay is enabled', async() => {
     handsontable({
-      data: Handsontable.helper.createSpreadsheetData(2, 5),
+      data: createSpreadsheetData(2, 5),
       rowHeaders: true,
       colHeaders: true,
-      fixedColumnsLeft: 3,
+      fixedColumnsStart: 3,
       editor: 'dropdown',
       source: choices,
     });
 
-    selectCell(0, 0);
+    await selectCell(0, 0);
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    await keyDownUp('enter');
 
     expect(editor.offset()).toEqual($(getCell(0, 0, true)).offset());
 
-    selectCell(0, 1);
-    keyDown('enter');
+    await selectCell(0, 1);
+    await keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional left border.
     const editorOffset = () => ({
@@ -153,28 +183,28 @@ describe('DropdownEditor', () => {
 
     expect(editorOffset()).toEqual($(getCell(0, 1, true)).offset());
 
-    selectCell(0, 2);
-    keyDown('enter');
+    await selectCell(0, 2);
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 2, true)).offset());
 
-    selectCell(0, 3);
-    keyDown('enter');
+    await selectCell(0, 3);
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 3, true)).offset());
 
-    selectCell(0, 4);
-    keyDown('enter');
+    await selectCell(0, 4);
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 4, true)).offset());
   });
 
   it('should render an editor in specified position while opening an editor from top to bottom when ' +
-       'top and bottom overlays are enabled and the first row of the both overlays are hidden', () => {
+       'top and bottom overlays are enabled and the first row of the both overlays are hidden', async() => {
     spec().$container.css('overflow', '').css('width', '').css('height', '');
 
     handsontable({
-      data: Handsontable.helper.createSpreadsheetData(8, 2),
+      data: createSpreadsheetData(8, 2),
       rowHeaders: true,
       colHeaders: true,
       fixedRowsTop: 3,
@@ -192,17 +222,17 @@ describe('DropdownEditor', () => {
       ],
     });
 
-    selectCell(1, 0);
+    await selectCell(1, 0);
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    await keyDownUp('enter');
 
     // First renderable row index.
     expect(editor.offset()).toEqual($(getCell(1, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional top border.
     const editorOffset = () => ({
@@ -212,35 +242,35 @@ describe('DropdownEditor', () => {
 
     expect(editorOffset()).toEqual($(getCell(2, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(3, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(4, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     // The first row of the bottom overlay has different position, influenced by `innerBorderTop` CSS class.
     expect(editor.offset()).toEqual($(getCell(6, 0, true)).offset());
 
-    keyDown('enter');
-    keyDown('enter');
+    await keyDownUp('enter');
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(7, 0, true)).offset());
   });
 
   it('should render an editor in specified position while opening an editor from left to right when ' +
-     'left overlay is enabled and the first column of the overlay is hidden', () => {
+     'left overlay is enabled and the first column of the overlay is hidden', async() => {
     handsontable({
-      data: Handsontable.helper.createSpreadsheetData(2, 5),
+      data: createSpreadsheetData(2, 5),
       rowHeaders: true,
       colHeaders: true,
-      fixedColumnsLeft: 3,
+      fixedColumnsStart: 3,
       hiddenColumns: {
         indicators: true,
         columns: [0],
@@ -249,17 +279,17 @@ describe('DropdownEditor', () => {
       source: choices,
     });
 
-    selectCell(0, 1);
+    await selectCell(0, 1);
 
     const editor = $(getActiveEditor().TEXTAREA_PARENT);
 
-    keyDown('enter');
+    await keyDownUp('enter');
 
     // First renderable column index.
     expect(editor.offset()).toEqual($(getCell(0, 1, true)).offset());
 
-    selectCell(0, 2);
-    keyDown('enter');
+    await selectCell(0, 2);
+    await keyDownUp('enter');
 
     // Cells that do not touch the edges of the table have an additional left border.
     const editorOffset = () => ({
@@ -269,25 +299,25 @@ describe('DropdownEditor', () => {
 
     expect(editorOffset()).toEqual($(getCell(0, 2, true)).offset());
 
-    selectCell(0, 3);
-    keyDown('enter');
+    await selectCell(0, 3);
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 3, true)).offset());
 
-    selectCell(0, 4);
-    keyDown('enter');
+    await selectCell(0, 4);
+    await keyDownUp('enter');
 
     expect(editorOffset()).toEqual($(getCell(0, 4, true)).offset());
   });
 
-  it('should not highlight the input element by browsers native selection', () => {
+  it('should not highlight the input element by browsers native selection', async() => {
     handsontable({
       editor: 'dropdown',
       source: choices,
     });
 
-    selectCell(0, 0);
-    keyDown('enter');
+    await selectCell(0, 0);
+    await keyDownUp('enter');
 
     const editor = getActiveEditor().TEXTAREA;
 
@@ -296,7 +326,7 @@ describe('DropdownEditor', () => {
 
   describe('open editor', () => {
     // see https://github.com/handsontable/handsontable/issues/3380
-    it('should not throw error while selecting the next cell by hitting enter key', () => {
+    it('should not throw error while selecting the next cell by hitting enter key', async() => {
       const spy = jasmine.createSpyObj('error', ['test']);
       const prevError = window.onerror;
 
@@ -310,24 +340,171 @@ describe('DropdownEditor', () => {
         }]
       });
 
-      selectCell(0, 0);
-      keyDownUp('enter');
-      keyDownUp('enter');
-      keyDownUp('enter');
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await keyDownUp('enter');
+      await keyDownUp('enter');
 
       expect(spy.test.calls.count()).toBe(0);
 
       window.onerror = prevError;
     });
+
+    // https://github.com/handsontable/dev-handsontable/issues/1724
+    it('should not throw any errors after opening the editor, when the saved value is represented by a option-cell ' +
+    'outside of the editor\'s initially loaded viewport', async() => {
+      const spy = jasmine.createSpyObj('error', ['test']);
+      const prevError = window.onerror;
+
+      window.onerror = function() {
+        spy.test();
+      };
+
+      handsontable({
+        data: [['49']],
+        columns: [
+          {
+            editor: 'dropdown',
+            source: (() => {
+              const arr = [];
+
+              for (let i = 0; i < 50; i++) {
+                arr.push(`${i}`);
+              }
+
+              return arr;
+            })(),
+          }
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+
+      expect(spy.test).not.toHaveBeenCalled();
+
+      window.onerror = prevError;
+    });
+
+    it('should open editor with the correct size when there is no scrollbar on the list', async() => {
+      handsontable({
+        colWidths: 120,
+        columns: [
+          {
+            editor: 'dropdown',
+            source: choices.slice(0, 5),
+            visibleRows: 5,
+          }
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await sleep(64);
+
+      const box = getInnerEditorListBox();
+
+      expect(box.clientWidth).toBe(box.settingsWidth);
+      expect(box.clientHeight).toBe(box.settingsHeight);
+    });
+
+    it('should open editor with the correct size when there is scrollbar on the list', async() => {
+      handsontable({
+        colWidths: 120,
+        columns: [
+          {
+            editor: 'dropdown',
+            source: choices,
+            visibleRows: 3,
+          }
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await sleep(64);
+
+      const box = getInnerEditorListBox();
+
+      expect(box.clientWidth).toBe(box.settingsWidth);
+      expect(box.clientHeight).toBe(box.settingsHeight);
+    });
+
+    it('should open editor with the correct size when there is scrollbar on the list and table', async() => {
+      handsontable({
+        colWidths: 120,
+        height: 100,
+        columns: [
+          {
+            editor: 'dropdown',
+            source: choices,
+            visibleRows: 3,
+          }
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await waitForNextAnimationFrames(2);
+
+      const box = getInnerEditorListBox();
+
+      expect(box.clientWidth).toBe(box.settingsWidth);
+      expect(box.clientHeight).toBe(box.settingsHeight);
+    });
+
+    it('should set textarea caret position at the end of the input, after moving scrollbar', async() => {
+      handsontable({
+        data: [
+          ['yellow'],
+          ['red'],
+          ['orange'],
+          ['green'],
+          ['blue'],
+          ['gray'],
+          ['black'],
+          ['white'],
+          ['purple'],
+          ['lime'],
+          ['olive'],
+          ['cyan'],
+        ],
+        colWidths: 120,
+        columns: [
+          {
+            editor: 'dropdown',
+            source: choices,
+            visibleRows: 3,
+          }
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+
+      const editor = getActiveEditor();
+      const htContainer = editor.htContainer;
+
+      await waitForNextAnimationFrames(2);
+      await simulateClick(htContainer.querySelector('.wtHolder'));
+
+      htContainer.querySelector('.wtHolder').scrollTo(0, 40);
+
+      await waitForNextAnimationFrames(2);
+
+      await keyDownUp('a');
+      await keyDownUp('a');
+
+      await waitForNextAnimationFrames(2);
+
+      expect(Handsontable.dom.getCaretPosition(getActiveEditor().TEXTAREA)).toBe(6);
+    });
   });
 
   describe('closing the editor', () => {
     it('should not close editor on scrolling', async() => {
-      const hot = handsontable({
-        data: [
-          ['', 'two', 'three'],
-          ['four', 'five', 'six']
-        ],
+      handsontable({
+        data: createEmptySpreadsheetData(100, 3),
         columns: [
           {
             type: 'dropdown',
@@ -338,31 +515,87 @@ describe('DropdownEditor', () => {
         ]
       });
 
-      selectCell(0, 0);
-      $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mousedown');
-      $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mouseup');
+      expect(choices.length).toBeGreaterThan(10);
 
-      hot.view.wt.wtOverlays.topOverlay.scrollTo(1);
-      const dropdown = hot.getActiveEditor();
+      await selectCell(0, 0);
+      await mouseDoubleClick(getCell(0, 0));
+      await waitForNextAnimationFrames(2);
 
-      await sleep(50);
+      const dropdown = getActiveEditor().htContainer;
 
-      expect($(dropdown.htContainer).is(':visible')).toBe(true);
+      await scrollViewportVertically(1);
 
-      selectCell(0, 0);
-      await sleep(50);
+      expect($(dropdown).is(':visible')).toBe(true);
 
-      $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mousedown');
-      $(getCell(0, 0)).find('.htAutocompleteArrow').simulate('mouseup');
-      hot.view.wt.wtOverlays.topOverlay.scrollTo(3);
+      await selectCell(0, 0);
+      await waitForNextAnimationFrames(2);
+      await mouseDoubleClick(getCell(0, 0));
 
-      await sleep(50);
+      await scrollViewportVertically(3);
 
-      expect($(dropdown.htContainer).is(':visible')).toBe(true);
+      expect($(dropdown).is(':visible')).toBe(true);
+    });
+
+    it('should not save the value, when closing the editor by clicking on the table', async() => {
+      handsontable({
+        columns: [
+          {
+            editor: 'dropdown',
+            source: choices
+          },
+          {},
+          {}
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await waitForNextAnimationFrames(2);
+
+      const editor = $('.handsontableInput');
+
+      editor.val('ora');
+      await keyDownUp('o');
+      await keyDownUp('r');
+      await keyDownUp('a');
+
+      await waitForNextAnimationFrames(2);
+
+      spec().$container.find('tbody tr:eq(1) td:eq(2)').simulate('mousedown');
+
+      expect(getDataAtCell(0, 0)).toEqual(null);
+    });
+
+    it('should not save the value, when closing the editor by clicking outside of the table', async() => {
+      const syncSources = jasmine.createSpy('syncSources');
+
+      syncSources.and.callFake((query, process) => {
+        process(choices);
+      });
+
+      handsontable({
+        columns: [
+          {
+            editor: 'dropdown',
+            source: syncSources
+          }
+        ]
+      });
+
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await waitForNextAnimationFrames(2);
+
+      const editor = $('.handsontableInput');
+
+      editor.val('foo');
+      $('body').simulate('mousedown');
+
+      expect(getDataAtCell(0, 0)).toEqual(null);
     });
   });
 
-  it('should mark all invalid values as invalid, after pasting them into dropdown-type cells', (done) => {
+  it('should mark all invalid values as invalid, after pasting them into dropdown-type cells', async() => {
     handsontable({
       data: [
         ['', 'two', 'three'],
@@ -378,18 +611,16 @@ describe('DropdownEditor', () => {
       ]
     });
 
-    populateFromArray(0, 0, [['invalid'], ['input']], null, null, 'paste');
+    await populateFromArray(0, 0, [['invalid'], ['input']], null, null, 'paste');
+    await waitForNextAnimationFrames(2);
 
-    setTimeout(() => {
-      expect(Handsontable.dom.hasClass(getCell(0, 0), 'htInvalid')).toBe(true);
-      expect(Handsontable.dom.hasClass(getCell(1, 0), 'htInvalid')).toBe(true);
-      done();
-    }, 40);
+    expect(Handsontable.dom.hasClass(getCell(0, 0), 'htInvalid')).toBe(true);
+    expect(Handsontable.dom.hasClass(getCell(1, 0), 'htInvalid')).toBe(true);
   });
 
   // Input element can not lose the focus while entering new characters. It breaks IME editor functionality for Asian users.
-  it('should not lose the focus on input element while inserting new characters (#839)', async() => {
-    const hot = handsontable({
+  it('should not lose the focus on input element while inserting new characters if `imeFastEdit` is enabled (#839)', async() => {
+    handsontable({
       data: [
         ['one', 'two'],
         ['three', 'four']
@@ -401,24 +632,68 @@ describe('DropdownEditor', () => {
         },
         {},
       ],
+      imeFastEdit: true,
     });
 
-    selectCell(0, 0);
+    await selectCell(0, 0);
 
-    const activeElement = hot.getActiveEditor().TEXTAREA;
+    // The `imeFastEdit` timeout is set to 50ms.
+    await waitForNextAnimationFrames(2);
+
+    const activeElement = getActiveEditor().TEXTAREA;
 
     expect(activeElement).toBeDefined();
     expect(activeElement).not.toBe(null);
     expect(document.activeElement).toBe(activeElement);
 
-    await sleep(50);
+    await keyDownUp('enter');
 
+    expect(document.activeElement).toBe(activeElement);
+
+    await waitForNextAnimationFrames(2);
+
+    expect(document.activeElement).toBe(activeElement);
+
+    getActiveEditor().TEXTAREA.value = 't';
+
+    await keyDownUp('t');
+
+    expect(document.activeElement).toBe(activeElement);
+
+    getActiveEditor().TEXTAREA.value = 'te';
+
+    await keyDownUp('e');
+
+    expect(document.activeElement).toBe(activeElement);
+
+    getActiveEditor().TEXTAREA.value = 'teo';
+
+    await keyDownUp('o');
+
+    expect(document.activeElement).toBe(activeElement);
+  });
+
+  it('should keep the focus on the input when editor value is empty', async() => {
+    handsontable({
+      columns: [
+        { type: 'dropdown', source: choices }
+      ],
+    });
+
+    await selectCell(0, 0);
+    await keyDownUp('enter');
+    await waitForNextAnimationFrames(1);
+
+    const editor = getActiveEditor();
+    const activeElement = getActiveEditor().TEXTAREA;
+
+    expect(editor.htEditor.getSelectedLast()).toBe(undefined);
     expect(document.activeElement).toBe(activeElement);
   });
 
   describe('allow html mode', () => {
     it('should allow render the html items without sanitizing the content', async() => {
-      const hot = handsontable({
+      handsontable({
         columns: [
           {
             type: 'dropdown',
@@ -432,12 +707,11 @@ describe('DropdownEditor', () => {
         ]
       });
 
-      selectCell(0, 0);
-      keyDownUp('enter');
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await sleep(100);
 
-      await sleep(200);
-
-      const ac = hot.getActiveEditor();
+      const ac = getActiveEditor();
       const innerHot = ac.htEditor;
 
       expect(window.__xssTestInjection).toBe(true);
@@ -453,7 +727,7 @@ describe('DropdownEditor', () => {
 
   describe('disallow html mode', () => {
     it('should strip HTML content', async() => {
-      const hot = handsontable({
+      handsontable({
         columns: [
           {
             type: 'dropdown',
@@ -467,12 +741,11 @@ describe('DropdownEditor', () => {
         ]
       });
 
-      selectCell(0, 0);
-      keyDownUp('enter');
+      await selectCell(0, 0);
+      await keyDownUp('enter');
+      await sleep(100);
 
-      await sleep(200);
-
-      const ac = hot.getActiveEditor();
+      const ac = getActiveEditor();
       const innerHot = ac.htEditor;
 
       expect(window.__xssTestInjection).toBeUndefined();
@@ -486,19 +759,58 @@ describe('DropdownEditor', () => {
     });
   });
 
+  it('should render an editable editor\'s element without messing with "dir" attribute', async() => {
+    handsontable({
+      data: createSpreadsheetData(2, 5),
+      editor: 'dropdown',
+    });
+
+    await selectCell(0, 0);
+
+    const editableElement = getActiveEditor().TEXTAREA;
+
+    expect(editableElement.getAttribute('dir')).toBeNull();
+  });
+
+  it('should close the dropdown editor after call `useTheme`', async() => {
+    const hot = handsontable({
+      columns: [
+        {
+          type: 'dropdown',
+          source: choices
+        }
+      ],
+    });
+
+    await selectCell(0, 0);
+
+    const editor = getActiveEditor();
+
+    await keyDownUp('enter');
+
+    expect(editor.isOpened()).toBe(true);
+
+    hot.useTheme(undefined);
+
+    expect(editor.isOpened()).toBe(false);
+  });
+
   describe('IME support', () => {
-    it('should focus editable element after selecting the cell', async() => {
+    it('should focus editable element after a timeout when selecting the cell if `imeFastEdit` is enabled', async() => {
       handsontable({
         columns: [
           {
             type: 'dropdown',
             source: choices,
           }
-        ]
+        ],
+        imeFastEdit: true,
       });
-      selectCell(0, 0, 0, 0, true, false);
 
-      await sleep(10);
+      await selectCell(0, 0, 0, 0, true, false);
+
+      // The `imeFastEdit` timeout is set to 50ms.
+      await sleep(100);
 
       expect(document.activeElement).toBe(getActiveEditor().TEXTAREA);
     });

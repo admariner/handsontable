@@ -13,9 +13,9 @@ describe('HiddenColumns', () => {
   });
 
   describe('cell selection UI', () => {
-    it('should select entire row by header if first column is hidden', () => {
+    it('should select entire row by header if first column is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -25,15 +25,9 @@ describe('HiddenColumns', () => {
 
       const header = getCell(0, -1);
 
-      simulateClick(header, 'LMB');
+      await simulateClick(header, 'LMB');
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(1);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - : - : - |
       |===:===:===:===:===|
@@ -45,9 +39,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire row by header if last column is hidden', () => {
+    it('should select entire row by header if last column is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -57,15 +51,9 @@ describe('HiddenColumns', () => {
 
       const header = getCell(0, -1);
 
-      simulateClick(header, 'LMB');
+      await simulateClick(header, 'LMB');
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - : - : - |
       |===:===:===:===:===|
@@ -77,9 +65,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire row by header if any column in the middle is hidden', () => {
+    it('should select entire row by header if any column in the middle is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -89,15 +77,9 @@ describe('HiddenColumns', () => {
 
       const header = getCell(0, -1);
 
-      simulateClick(header, 'LMB');
+      await simulateClick(header, 'LMB');
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - |
       |===:===:===|
@@ -109,9 +91,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire row by header if all columns are hidden', () => {
+    it('should select entire row by header if all columns are hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -119,20 +101,14 @@ describe('HiddenColumns', () => {
         },
       });
 
-      const header = $('.ht_clone_left .htCore')
+      const header = $('.ht_clone_inline_start .htCore')
         .find('tbody')
         .find('th')
         .eq(0);
 
-      simulateClick(header, 'LMB');
+      await simulateClick(header, 'LMB');
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
       expect(`
       |   |
       |===|
@@ -144,9 +120,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should keep hidden columns in cell range', () => {
+    it('should keep hidden columns in cell range', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -157,17 +133,11 @@ describe('HiddenColumns', () => {
       const startCell = getCell(0, 0);
       const endCell = getCell(0, 4);
 
-      mouseDown(startCell, 'LMB');
-      mouseOver(endCell);
-      mouseUp(endCell);
+      await mouseDown(startCell, 'LMB');
+      await mouseOver(endCell);
+      await mouseUp(endCell);
 
-      expect(getSelected()).toEqual([[0, 0, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,0 to: 0,4']);
       expect(`
       |   ║ - : - |
       |===:===:===|
@@ -179,9 +149,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select non-contiguous columns properly when there are some hidden columns', () => {
+    it('should select non-contiguous columns properly when there are some hidden columns', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 8),
+        data: createSpreadsheetData(5, 8),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -192,26 +162,20 @@ describe('HiddenColumns', () => {
       const startColumn = getCell(-1, 4);
       const endColumn = getCell(-1, 6);
 
-      mouseDown(startColumn, 'LMB');
-      mouseUp(startColumn);
+      await mouseDown(startColumn, 'LMB');
+      await mouseUp(startColumn);
 
-      keyDown('ctrl');
+      await keyDown('control/meta');
 
-      mouseDown(endColumn, 'LMB');
-      mouseUp(endColumn);
+      await mouseDown(endColumn, 'LMB');
+      await mouseUp(endColumn);
 
-      keyUp('ctrl');
+      await keyUp('control/meta');
 
-      expect(getSelected()).toEqual([
-        [-1, 4, 4, 4],
-        [-1, 6, 4, 6],
+      expect(getSelectedRange()).toEqualCellRange([
+        'highlight: 0,4 from: -1,4 to: 4,4',
+        'highlight: 0,6 from: -1,6 to: 4,6',
       ]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(6);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(6);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(6);
       expect(`
       |   ║   :   : * :   : * :   |
       |===:===:===:===:===:===:===|
@@ -223,7 +187,7 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select cells by using two layers when CTRL key is pressed and some columns are hidden', () => {
+    it('should select cells by using two layers when CTRL key is pressed and some columns are hidden', async() => {
       handsontable({
         rowHeaders: true,
         colHeaders: true,
@@ -234,17 +198,11 @@ describe('HiddenColumns', () => {
         },
       });
 
-      $(getCell(1, 3)).simulate('mousedown');
-      $(getCell(4, 6)).simulate('mouseover');
-      $(getCell(4, 6)).simulate('mouseup');
+      await mouseDown(getCell(1, 3));
+      await mouseOver(getCell(4, 6));
+      await mouseUp(getCell(4, 6));
 
-      expect(getSelected()).toEqual([[1, 3, 4, 6]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(1);
-      expect(getSelectedRangeLast().highlight.col).toBe(3);
-      expect(getSelectedRangeLast().from.row).toBe(1);
-      expect(getSelectedRangeLast().from.col).toBe(3);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(6);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,3 from: 1,3 to: 4,6']);
       expect(`
       |   ║   : - : - : - : - :   :   :   :   :   |
       |===:===:===:===:===:===:===:===:===:===:===|
@@ -258,19 +216,18 @@ describe('HiddenColumns', () => {
       |   ║   :   :   :   :   :   :   :   :   :   |
       `).toBeMatchToSelectionPattern();
 
-      keyDown('ctrl');
+      await keyDown('control/meta');
 
-      $(getCell(3, 5)).simulate('mousedown');
-      $(getCell(5, 8)).simulate('mouseover');
-      $(getCell(5, 8)).simulate('mouseup');
+      await mouseDown(getCell(3, 5));
+      await mouseOver(getCell(5, 8));
+      await mouseUp(getCell(5, 8));
 
-      expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(3);
-      expect(getSelectedRangeLast().highlight.col).toBe(5);
-      expect(getSelectedRangeLast().from.row).toBe(3);
-      expect(getSelectedRangeLast().from.col).toBe(5);
-      expect(getSelectedRangeLast().to.row).toBe(5);
-      expect(getSelectedRangeLast().to.col).toBe(8);
+      await keyUp('control/meta');
+
+      expect(getSelectedRange()).toEqualCellRange([
+        'highlight: 1,3 from: 1,3 to: 4,6',
+        'highlight: 3,5 from: 3,5 to: 5,8',
+      ]);
       expect(`
       |   ║   : - : - : - : - : - : - :   :   :   |
       |===:===:===:===:===:===:===:===:===:===:===|
@@ -286,9 +243,9 @@ describe('HiddenColumns', () => {
     });
 
     describe('should select entire table after the corner was clicked and', () => {
-      it('just some columns were hidden', () => {
+      it('just some columns were hidden', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: {
@@ -296,34 +253,28 @@ describe('HiddenColumns', () => {
           },
         });
 
-        const corner = $('.ht_clone_top_left_corner .htCore')
+        const corner = $('.ht_clone_top_inline_start_corner .htCore')
           .find('thead')
           .find('th')
           .eq(0);
 
-        simulateClick(corner, 'LMB');
+        await simulateClick(corner, 'LMB');
 
-        expect(getSelected()).toEqual([[-1, -1, 4, 4]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(3); // Corner (col) is shifted to renderable index.
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(-1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(4);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,3 from: -1,-1 to: 4,4']);
         expect(`
-        |   ║ * : * |
+        |   ║ - : - |
         |===:===:===|
-        | * ║ A : 0 |
-        | * ║ 0 : 0 |
-        | * ║ 0 : 0 |
-        | * ║ 0 : 0 |
-        | * ║ 0 : 0 |
+        | - ║ A : 0 |
+        | - ║ 0 : 0 |
+        | - ║ 0 : 0 |
+        | - ║ 0 : 0 |
+        | - ║ 0 : 0 |
         `).toBeMatchToSelectionPattern();
       });
 
-      it('all columns were hidden', () => {
+      it('all columns were hidden', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: {
@@ -331,36 +282,30 @@ describe('HiddenColumns', () => {
           },
         });
 
-        const corner = $('.ht_clone_top_left_corner .htCore')
+        const corner = $('.ht_clone_top_inline_start_corner .htCore')
           .find('thead')
           .find('th')
           .eq(0);
 
-        simulateClick(corner, 'LMB');
+        await simulateClick(corner, 'LMB');
 
-        expect(getSelected()).toEqual([[-1, -1, 4, 4]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(0);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(-1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(4);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,-1 to: 4,4']);
         expect(`
         |   |
         |===|
-        | * |
-        | * |
-        | * |
-        | * |
-        | * |
+        | - |
+        | - |
+        | - |
+        | - |
+        | - |
         `).toBeMatchToSelectionPattern();
       });
     });
 
     it('should move selection to the next visible cell on left' +
-       'if column between is hidden even if afterSelection call updateSettings', () => {
+       'if column between is hidden even if afterSelection call updateSettings', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(1, 3),
+        data: createSpreadsheetData(1, 3),
         hiddenColumns: {
           columns: [1],
         },
@@ -369,11 +314,11 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectCell(0, 2);
+      await selectCell(0, 2);
 
-      keyDownUp('arrow_left');
+      await keyDownUp('arrowleft');
 
-      expect(getSelected()).toEqual([[0, 0, 0, 0]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,0 to: 0,0']);
       expect(`
       | # :   |
         `).toBeMatchToSelectionPattern();
@@ -382,9 +327,9 @@ describe('HiddenColumns', () => {
 
   describe('cell selection (API)', () => {
     // Do we need this test case?
-    it('should not throw any errors, when selecting a whole row with the last column hidden', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+    it('should not throw any errors, when selecting a whole row with the last column hidden', async() => {
+      handsontable({
+        data: createSpreadsheetData(4, 4),
         hiddenColumns: {
           columns: [3]
         },
@@ -394,7 +339,7 @@ describe('HiddenColumns', () => {
       let errorThrown = false;
 
       try {
-        hot.selectCell(2, 0, 2, 3);
+        await selectCell(2, 0, 2, 3);
 
       } catch (err) {
         errorThrown = true;
@@ -403,9 +348,9 @@ describe('HiddenColumns', () => {
       expect(errorThrown).toBe(false);
     });
 
-    it('should highlight a proper headers when selection contains hidden columns', () => {
+    it('should highlight a proper headers when selection contains hidden columns', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -413,15 +358,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectCells([[1, 0, 2, 3]]);
+      await selectCells([[1, 0, 2, 3]]);
 
-      expect(getSelected()).toEqual([[1, 0, 2, 3]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(1);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(1);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(2);
-      expect(getSelectedRangeLast().to.col).toBe(3);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,0 from: 1,0 to: 2,3']);
       expect(`
         |   ║ - : - :   |
         |===:===:===:===|
@@ -433,9 +372,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should highlight a row header when all columns are hidden and selected cell is hidden', () => {
+    it('should highlight a row header when all columns are hidden and selected cell is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -443,15 +382,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectCell(0, 0);
+      await selectCell(0, 0);
 
-      expect(getSelected()).toEqual([[0, 0, 0, 0]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(0);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,0 to: 0,0']);
       expect(`
         |   |
         |===|
@@ -462,15 +395,9 @@ describe('HiddenColumns', () => {
         |   |
       `).toBeMatchToSelectionPattern();
 
-      selectCell(2, 1);
+      await selectCell(2, 1);
 
-      expect(getSelected()).toEqual([[2, 1, 2, 1]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(2);
-      expect(getSelectedRangeLast().highlight.col).toBe(1);
-      expect(getSelectedRangeLast().from.row).toBe(2);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(2);
-      expect(getSelectedRangeLast().to.col).toBe(1);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,1 from: 2,1 to: 2,1']);
       expect(`
         |   |
         |===|
@@ -482,9 +409,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should highlight a row header when all columns are hidden and selected cell is hidden', () => {
+    it('should highlight a row header when all columns are hidden and selected cell is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -492,15 +419,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectCell(0, 0);
+      await selectCell(0, 0);
 
-      expect(getSelected()).toEqual([[0, 0, 0, 0]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(0);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,0 to: 0,0']);
       expect(`
         |   |
         |===|
@@ -511,15 +432,9 @@ describe('HiddenColumns', () => {
         |   |
       `).toBeMatchToSelectionPattern();
 
-      selectCell(2, 1);
+      await selectCell(2, 1);
 
-      expect(getSelected()).toEqual([[2, 1, 2, 1]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(2);
-      expect(getSelectedRangeLast().highlight.col).toBe(1);
-      expect(getSelectedRangeLast().from.row).toBe(2);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(2);
-      expect(getSelectedRangeLast().to.col).toBe(1);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,1 from: 2,1 to: 2,1']);
       expect(`
         |   |
         |===|
@@ -531,9 +446,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should highlight a row header when all columns are hidden and selected cell is hidden (`single` selection mode)', () => {
+    it('should highlight a row header when all columns are hidden and selected cell is hidden (`single` selection mode)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         selectionMode: 'single',
@@ -542,15 +457,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectCell(0, 0);
+      await selectCell(0, 0);
 
-      expect(getSelected()).toEqual([[0, 0, 0, 0]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(0);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,0 to: 0,0']);
       expect(`
         |   |
         |===|
@@ -561,7 +470,7 @@ describe('HiddenColumns', () => {
         |   |
       `).toBeMatchToSelectionPattern();
 
-      selectCell(2, 1);
+      await selectCell(2, 1);
 
       expect(getSelected()).toEqual([[2, 1, 2, 1]]);
       expect(getSelectedRangeLast().highlight.row).toBe(2);
@@ -570,6 +479,7 @@ describe('HiddenColumns', () => {
       expect(getSelectedRangeLast().from.col).toBe(1);
       expect(getSelectedRangeLast().to.row).toBe(2);
       expect(getSelectedRangeLast().to.col).toBe(1);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,1 from: 2,1 to: 2,1']);
       expect(`
         |   |
         |===|
@@ -581,9 +491,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire table after call selectAll if some columns are hidden', () => {
+    it('should select entire table after call selectAll if some columns are hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -591,17 +501,11 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectAll();
+      await selectAll();
 
-      expect(getSelected()).toEqual([[-1, -1, 4, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(2);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,-1 to: 4,4']);
       expect(`
-      |   ║ * : * : * |
+      | * ║ * : * : * |
       |===:===:===:===|
       | * ║ A : 0 : 0 |
       | * ║ 0 : 0 : 0 |
@@ -611,9 +515,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire table after call selectAll if all of columns are hidden', () => {
+    it('should select entire table after call selectAll if all of columns are hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -621,17 +525,11 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectAll();
+      await selectAll();
 
-      expect(getSelected()).toEqual([[-1, -1, 4, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0); // a fallback to 0
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,-1 to: 4,4']);
       expect(`
-      |   |
+      | * |
       |===|
       | * |
       | * |
@@ -641,9 +539,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire row after call selectRows if the first column is hidden', () => {
+    it('should select entire row after call selectRows if the first column is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -651,15 +549,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectRows(0);
+      await selectRows(0);
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(1);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - : - : - |
       |===:===:===:===:===|
@@ -671,9 +563,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire row after call selectRows if the last column is hidden', () => {
+    it('should select entire row after call selectRows if the last column is hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -681,15 +573,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectRows(0);
+      await selectRows(0);
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - : - : - |
       |===:===:===:===:===|
@@ -701,9 +587,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select entire row after call selectRows if columns between the first and the last are hidden', () => {
+    it('should select entire row after call selectRows if columns between the first and the last are hidden', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -711,15 +597,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectRows(0);
+      await selectRows(0);
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - |
       |===:===:===|
@@ -731,9 +611,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select hidden column internally after the `selectColumns` call', () => {
+    it('should select hidden column internally after the `selectColumns` call', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -741,15 +621,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(1);
+      await selectColumns(1);
 
-      expect(getSelected()).toEqual([[-1, 1, 4, 1]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(1); // a fallback to 1
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(1);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 4,1']);
       expect(`
       |   ║   :   :   :   |
       |===:===:===:===:===|
@@ -761,9 +635,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select columns after the `selectColumns` call if range is partially hidden at the beginning of selection #1', () => {
+    it('should select columns after the `selectColumns` call if range is partially hidden at the beginning of selection #1', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -771,15 +645,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(1, 4);
+      await selectColumns(1, 4);
 
-      expect(getSelected()).toEqual([[-1, 1, 4, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(4);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,4 from: -1,1 to: 4,4']);
       expect(`
       |   ║   : * |
       |===:===:===|
@@ -791,9 +659,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select columns after the `selectColumns` call if range is partially hidden at the beginning of selection #2', () => {
+    it('should select columns after the `selectColumns` call if range is partially hidden at the beginning of selection #2', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -801,15 +669,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(2, 4);
+      await selectColumns(2, 4);
 
-      expect(getSelected()).toEqual([[-1, 2, 4, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(4);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(2);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,4 from: -1,2 to: 4,4']);
       expect(`
       |   ║   : * |
       |===:===:===|
@@ -821,9 +683,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select columns after the `selectColumns` call if range is partially hidden at the end of selection #1', () => {
+    it('should select columns after the `selectColumns` call if range is partially hidden at the end of selection #1', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -831,15 +693,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(0, 2);
+      await selectColumns(0, 2);
 
-      expect(getSelected()).toEqual([[-1, 0, 4, 2]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(2);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,0 to: 4,2']);
       expect(`
       |   ║ * :   |
       |===:===:===|
@@ -851,9 +707,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select columns after the `selectColumns` call if range is partially hidden at the end of selection #2', () => {
+    it('should select columns after the `selectColumns` call if range is partially hidden at the end of selection #2', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -861,15 +717,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(0, 3);
+      await selectColumns(0, 3);
 
-      expect(getSelected()).toEqual([[-1, 0, 4, 3]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(3);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,0 to: 4,3']);
       expect(`
       |   ║ * :   |
       |===:===:===|
@@ -881,9 +731,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select columns after call selectColumns if range is partially hidden in the middle of selection', () => {
+    it('should select columns after call selectColumns if range is partially hidden in the middle of selection', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -891,15 +741,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(0, 4);
+      await selectColumns(0, 4);
 
-      expect(getSelected()).toEqual([[-1, 0, 4, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(0);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,0 to: 4,4']);
       expect(`
       |   ║ * : * |
       |===:===:===|
@@ -911,9 +755,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
     });
 
-    it('should select columns after call selectColumns if range is partially hidden at the start and at the end of the range', () => {
+    it('should select columns after call selectColumns if range is partially hidden at the start and at the end of the range', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -921,15 +765,9 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(1, 3);
+      await selectColumns(1, 3);
 
-      expect(getSelected()).toEqual([[-1, 1, 4, 3]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(2);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(3);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,1 to: 4,3']);
       expect(`
       |   ║   : * :   |
       |===:===:===:===|
@@ -940,11 +778,48 @@ describe('HiddenColumns', () => {
       | - ║   : 0 :   |
       `).toBeMatchToSelectionPattern();
     });
+
+    it('should regenerate the selection after hiding and showing columns it was in using `updateSettings`, ' +
+      'without throwing any errors (#dev-2293)', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 5),
+        hiddenColumns: {
+          columns: []
+        },
+        rowHeaders: true,
+        colHeaders: true,
+      });
+
+      await selectCell(0, 0);
+
+      let errorThrown = false;
+
+      try {
+        await updateSettings({
+          hiddenColumns: {
+            columns: [0]
+          },
+        });
+
+        await updateSettings({
+          hiddenColumns: {
+            columns: []
+          },
+        });
+
+      } catch (err) {
+        errorThrown = true;
+      }
+
+      expect(getSelected()).toEqual([[0, 0, 0, 0]]);
+      expect(getCell(0, 0, true)).toHaveClass('current');
+      expect(errorThrown).toBe(false);
+    });
   });
 
   describe('redrawing rendered selection when the selected range has been changed', () => {
     describe('by showing columns placed before the current selection', () => {
-      it('single cell was selected', () => {
+      it('single cell was selected', async() => {
         handsontable({
           rowHeaders: true,
           colHeaders: true,
@@ -955,18 +830,12 @@ describe('HiddenColumns', () => {
           },
         });
 
-        selectCell(3, 3);
+        await selectCell(3, 3);
 
         getPlugin('hiddenColumns').showColumns([0]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 3, 3, 3]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(3);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(3);
-        expect(getSelectedRangeLast().to.row).toBe(3);
-        expect(getSelectedRangeLast().to.col).toBe(3);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 3,3 from: 3,3 to: 3,3']);
         expect(`
         |   ║   : - :   |
         |===:===:===:===|
@@ -978,15 +847,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').showColumns([1, 2]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 3, 3, 3]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(3);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(3);
-        expect(getSelectedRangeLast().to.row).toBe(3);
-        expect(getSelectedRangeLast().to.col).toBe(3);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 3,3 from: 3,3 to: 3,3']);
         expect(`
         |   ║   :   :   : - :   |
         |===:===:===:===:===:===|
@@ -999,9 +862,9 @@ describe('HiddenColumns', () => {
       });
 
       describe('entire row was selected and', () => {
-        it('columns at the start had been hidden and were showed', () => {
+        it('columns at the start had been hidden and were showed', async() => {
           handsontable({
-            data: Handsontable.helper.createSpreadsheetData(5, 5),
+            data: createSpreadsheetData(5, 5),
             rowHeaders: true,
             colHeaders: true,
             hiddenColumns: {
@@ -1009,18 +872,12 @@ describe('HiddenColumns', () => {
             },
           });
 
-          selectRows(0);
+          await selectRows(0);
 
           getPlugin('hiddenColumns').showColumns([1]);
-          render();
+          await render();
 
-          expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(1);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(0);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: 0,-1 to: 0,4']);
           expect(`
           |   ║ - : - : - : - |
           |===:===:===:===:===|
@@ -1032,15 +889,9 @@ describe('HiddenColumns', () => {
           `).toBeMatchToSelectionPattern();
 
           getPlugin('hiddenColumns').showColumns([0]);
-          render();
+          await render();
 
-          expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-          expect(getSelectedRangeLast().highlight.row).toBe(0);
-          expect(getSelectedRangeLast().highlight.col).toBe(0);
-          expect(getSelectedRangeLast().from.row).toBe(0);
-          expect(getSelectedRangeLast().from.col).toBe(-1);
-          expect(getSelectedRangeLast().to.row).toBe(0);
-          expect(getSelectedRangeLast().to.col).toBe(4);
+          expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
           expect(`
           |   ║ - : - : - : - : - |
           |===:===:===:===:===:===|
@@ -1053,7 +904,7 @@ describe('HiddenColumns', () => {
         });
       });
 
-      it('non-contiguous selection', () => {
+      it('non-contiguous selection', async() => {
         handsontable({
           rowHeaders: true,
           colHeaders: true,
@@ -1064,29 +915,27 @@ describe('HiddenColumns', () => {
           },
         });
 
-        $(getCell(1, 3)).simulate('mousedown');
-        $(getCell(4, 6)).simulate('mouseover');
-        $(getCell(4, 6)).simulate('mouseup');
+        await mouseDown(getCell(1, 3));
+        await mouseOver(getCell(4, 6));
+        await mouseUp(getCell(4, 6));
 
-        keyDown('ctrl');
+        await keyDown('control/meta');
 
-        $(getCell(3, 5)).simulate('mousedown');
-        $(getCell(5, 8)).simulate('mouseover');
-        $(getCell(5, 8)).simulate('mouseup');
+        await mouseDown(getCell(3, 5));
+        await mouseOver(getCell(5, 8));
+        await mouseUp(getCell(5, 8));
 
-        keyDown('ctrl');
+        await mouseDown(getCell(3, 6));
+        await mouseOver(getCell(6, 9));
+        await mouseUp(getCell(6, 9));
 
-        $(getCell(3, 6)).simulate('mousedown');
-        $(getCell(6, 9)).simulate('mouseover');
-        $(getCell(6, 9)).simulate('mouseup');
+        await keyUp('control/meta');
 
-        expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8], [3, 6, 6, 9]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(6);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(6);
-        expect(getSelectedRangeLast().to.row).toBe(6);
-        expect(getSelectedRangeLast().to.col).toBe(9);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 1,3 from: 1,3 to: 4,6',
+          'highlight: 3,5 from: 3,5 to: 5,8',
+          'highlight: 3,6 from: 3,6 to: 6,9',
+        ]);
         expect(`
         |   ║ - : - : - : - : - : - : - :   :   |
         |===:===:===:===:===:===:===:===:===:===|
@@ -1101,15 +950,13 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').showColumns([0]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8], [3, 6, 6, 9]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(6);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(6);
-        expect(getSelectedRangeLast().to.row).toBe(6);
-        expect(getSelectedRangeLast().to.col).toBe(9);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 1,3 from: 1,3 to: 4,6',
+          'highlight: 3,5 from: 3,5 to: 5,8',
+          'highlight: 3,6 from: 3,6 to: 6,9',
+        ]);
         expect(`
         |   ║   : - : - : - : - : - : - : - :   :   |
         |===:===:===:===:===:===:===:===:===:===:===|
@@ -1124,15 +971,13 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').showColumns([1, 2]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8], [3, 6, 6, 9]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(6);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(6);
-        expect(getSelectedRangeLast().to.row).toBe(6);
-        expect(getSelectedRangeLast().to.col).toBe(9);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 1,3 from: 1,3 to: 4,6',
+          'highlight: 3,5 from: 3,5 to: 5,8',
+          'highlight: 3,6 from: 3,6 to: 6,9',
+        ]);
         expect(`
         |   ║   :   :   : - : - : - : - : - : - : - :   :   |
         |===:===:===:===:===:===:===:===:===:===:===:===:===|
@@ -1149,7 +994,7 @@ describe('HiddenColumns', () => {
     });
 
     describe('by hiding columns placed before the current selection', () => {
-      it('single cell was selected', () => {
+      it('single cell was selected', async() => {
         handsontable({
           rowHeaders: true,
           colHeaders: true,
@@ -1158,18 +1003,12 @@ describe('HiddenColumns', () => {
           hiddenColumns: true,
         });
 
-        selectCell(3, 3);
+        await selectCell(3, 3);
 
         getPlugin('hiddenColumns').hideColumns([1, 2]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 3, 3, 3]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(3);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(3);
-        expect(getSelectedRangeLast().to.row).toBe(3);
-        expect(getSelectedRangeLast().to.col).toBe(3);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 3,3 from: 3,3 to: 3,3']);
         expect(`
         |   ║   : - :   |
         |===:===:===:===|
@@ -1181,15 +1020,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').hideColumns([0]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 3, 3, 3]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(3);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(3);
-        expect(getSelectedRangeLast().to.row).toBe(3);
-        expect(getSelectedRangeLast().to.col).toBe(3);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 3,3 from: 3,3 to: 3,3']);
         expect(`
         |   ║ - :   |
         |===:===:===|
@@ -1201,7 +1034,7 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('non-contiguous selection', () => {
+      it('non-contiguous selection', async() => {
         handsontable({
           rowHeaders: true,
           colHeaders: true,
@@ -1210,29 +1043,27 @@ describe('HiddenColumns', () => {
           hiddenColumns: true,
         });
 
-        $(getCell(1, 3)).simulate('mousedown');
-        $(getCell(4, 6)).simulate('mouseover');
-        $(getCell(4, 6)).simulate('mouseup');
+        await mouseDown(getCell(1, 3));
+        await mouseOver(getCell(4, 6));
+        await mouseUp(getCell(4, 6));
 
-        keyDown('ctrl');
+        await keyDown('control/meta');
 
-        $(getCell(3, 5)).simulate('mousedown');
-        $(getCell(5, 8)).simulate('mouseover');
-        $(getCell(5, 8)).simulate('mouseup');
+        await mouseDown(getCell(3, 5));
+        await mouseOver(getCell(5, 8));
+        await mouseUp(getCell(5, 8));
 
-        keyDown('ctrl');
+        await mouseDown(getCell(3, 6));
+        await mouseOver(getCell(6, 9));
+        await mouseUp(getCell(6, 9));
 
-        $(getCell(3, 6)).simulate('mousedown');
-        $(getCell(6, 9)).simulate('mouseover');
-        $(getCell(6, 9)).simulate('mouseup');
+        await keyUp('control/meta');
 
-        expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8], [3, 6, 6, 9]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(6);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(6);
-        expect(getSelectedRangeLast().to.row).toBe(6);
-        expect(getSelectedRangeLast().to.col).toBe(9);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 1,3 from: 1,3 to: 4,6',
+          'highlight: 3,5 from: 3,5 to: 5,8',
+          'highlight: 3,6 from: 3,6 to: 6,9',
+        ]);
         expect(`
         |   ║   :   :   : - : - : - : - : - : - : - :   :   |
         |===:===:===:===:===:===:===:===:===:===:===:===:===|
@@ -1247,15 +1078,13 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').hideColumns([1, 2]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8], [3, 6, 6, 9]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(6);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(6);
-        expect(getSelectedRangeLast().to.row).toBe(6);
-        expect(getSelectedRangeLast().to.col).toBe(9);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 1,3 from: 1,3 to: 4,6',
+          'highlight: 3,5 from: 3,5 to: 5,8',
+          'highlight: 3,6 from: 3,6 to: 6,9',
+        ]);
         expect(`
         |   ║   : - : - : - : - : - : - : - :   :   |
         |===:===:===:===:===:===:===:===:===:===:===|
@@ -1270,15 +1099,13 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').hideColumns([0]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[1, 3, 4, 6], [3, 5, 5, 8], [3, 6, 6, 9]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(6);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(6);
-        expect(getSelectedRangeLast().to.row).toBe(6);
-        expect(getSelectedRangeLast().to.col).toBe(9);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 1,3 from: 1,3 to: 4,6',
+          'highlight: 3,5 from: 3,5 to: 5,8',
+          'highlight: 3,6 from: 3,6 to: 6,9',
+        ]);
         expect(`
         |   ║ - : - : - : - : - : - : - :   :   |
         |===:===:===:===:===:===:===:===:===:===|
@@ -1295,9 +1122,9 @@ describe('HiddenColumns', () => {
     });
 
     describe('by showing hidden,', () => {
-      it('selected columns', () => {
+      it('selected columns', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: {
@@ -1305,18 +1132,12 @@ describe('HiddenColumns', () => {
           },
         });
 
-        selectColumns(1, 2);
+        await selectColumns(1, 2);
 
         getPlugin('hiddenColumns').showColumns([2]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[-1, 1, 4, 2]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(2);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(2);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,1 to: 4,2']);
         expect(`
         |   ║   : * :   :   |
         |===:===:===:===:===|
@@ -1328,15 +1149,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').showColumns([1]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[-1, 1, 4, 2]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(1);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(2);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 4,2']);
         expect(`
         |   ║   : * : * :   :   |
         |===:===:===:===:===:===|
@@ -1348,9 +1163,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('selected cell', () => {
+      it('selected cell', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: {
@@ -1358,18 +1173,12 @@ describe('HiddenColumns', () => {
           },
         });
 
-        selectCell(3, 1);
+        await selectCell(3, 1);
 
         getPlugin('hiddenColumns').showColumns([1]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 1, 3, 1]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(1);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(3);
-        expect(getSelectedRangeLast().to.col).toBe(1);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 3,1 from: 3,1 to: 3,1']);
         expect(`
         |   ║   : - :   :   :   |
         |===:===:===:===:===:===|
@@ -1381,9 +1190,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('selected cells (just a few)', () => {
+      it('selected cells (just a few)', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: {
@@ -1391,18 +1200,16 @@ describe('HiddenColumns', () => {
           },
         });
 
-        selectCells([[3, 1], [0, 1], [0, 1]]);
+        await selectCells([[3, 1], [0, 1], [0, 1]]);
 
         getPlugin('hiddenColumns').showColumns([1]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 1, 3, 1], [0, 1, 0, 1], [0, 1, 0, 1]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(1);
-        expect(getSelectedRangeLast().from.row).toBe(0);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(0);
-        expect(getSelectedRangeLast().to.col).toBe(1);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 3,1 from: 3,1 to: 3,1',
+          'highlight: 0,1 from: 0,1 to: 0,1',
+          'highlight: 0,1 from: 0,1 to: 0,1',
+        ]);
         expect(`
         |   ║   : - :   :   :   |
         |===:===:===:===:===:===|
@@ -1414,9 +1221,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('selected cells (all of them)', () => {
+      it('selected cells (all of them)', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: {
@@ -1424,20 +1231,14 @@ describe('HiddenColumns', () => {
           },
         });
 
-        selectAll();
+        await selectAll();
 
         getPlugin('hiddenColumns').showColumns([0, 1, 2, 3, 4]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[-1, -1, 4, 4]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(0);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(-1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(4);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,-1 to: 4,4']);
         expect(`
-        |   ║ * : * : * : * : * |
+        | * ║ * : * : * : * : * |
         |===:===:===:===:===:===|
         | * ║ A : 0 : 0 : 0 : 0 |
         | * ║ 0 : 0 : 0 : 0 : 0 |
@@ -1448,9 +1249,9 @@ describe('HiddenColumns', () => {
       });
     });
 
-    it('by showing columns from a selection containing hidden columns at the start and at the end of the range', () => {
+    it('by showing columns from a selection containing hidden columns at the start and at the end of the range', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -1458,18 +1259,12 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectColumns(1, 3);
+      await selectColumns(1, 3);
 
       getPlugin('hiddenColumns').showColumns([3]);
-      render();
+      await render();
 
-      expect(getSelected()).toEqual([[-1, 1, 4, 3]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(2);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(3);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,1 to: 4,3']);
       expect(`
       |   ║   : * : * :   |
       |===:===:===:===:===|
@@ -1481,15 +1276,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
 
       getPlugin('hiddenColumns').showColumns([1]);
-      render();
+      await render();
 
-      expect(getSelected()).toEqual([[-1, 1, 4, 3]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(1);
-      expect(getSelectedRangeLast().from.row).toBe(-1);
-      expect(getSelectedRangeLast().from.col).toBe(1);
-      expect(getSelectedRangeLast().to.row).toBe(4);
-      expect(getSelectedRangeLast().to.col).toBe(3);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 4,3']);
       expect(`
       |   ║   : * : * : * :   |
       |===:===:===:===:===:===|
@@ -1502,26 +1291,20 @@ describe('HiddenColumns', () => {
     });
 
     describe('by hiding', () => {
-      it('selected columns', () => {
+      it('selected columns', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: true,
         });
 
-        selectColumns(1, 2);
+        await selectColumns(1, 2);
 
         getPlugin('hiddenColumns').hideColumns([1]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[-1, 1, 4, 2]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(2);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(2);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,1 to: 4,2']);
         expect(`
         |   ║   : * :   :   |
         |===:===:===:===:===|
@@ -1533,15 +1316,9 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
 
         getPlugin('hiddenColumns').hideColumns([2]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[-1, 1, 4, 2]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(1);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(2);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,1 to: 4,2']);
         expect(`
         |   ║   :   :   |
         |===:===:===:===|
@@ -1553,26 +1330,20 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('selected cell', () => {
+      it('selected cell', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: true,
         });
 
-        selectCell(3, 1);
+        await selectCell(3, 1);
 
         getPlugin('hiddenColumns').hideColumns([1]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 1, 3, 1]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(3);
-        expect(getSelectedRangeLast().highlight.col).toBe(1);
-        expect(getSelectedRangeLast().from.row).toBe(3);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(3);
-        expect(getSelectedRangeLast().to.col).toBe(1);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 3,1 from: 3,1 to: 3,1']);
         expect(`
         |   ║   :   :   :   |
         |===:===:===:===:===|
@@ -1584,26 +1355,24 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('selected cells', () => {
+      it('selected cells', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: true,
         });
 
-        selectCells([[3, 1], [0, 1], [0, 1]]);
+        await selectCells([[3, 1], [0, 1], [0, 1]]);
 
         getPlugin('hiddenColumns').hideColumns([1]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[3, 1, 3, 1], [0, 1, 0, 1], [0, 1, 0, 1]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(1);
-        expect(getSelectedRangeLast().from.row).toBe(0);
-        expect(getSelectedRangeLast().from.col).toBe(1);
-        expect(getSelectedRangeLast().to.row).toBe(0);
-        expect(getSelectedRangeLast().to.col).toBe(1);
+        expect(getSelectedRange()).toEqualCellRange([
+          'highlight: 3,1 from: 3,1 to: 3,1',
+          'highlight: 0,1 from: 0,1 to: 0,1',
+          'highlight: 0,1 from: 0,1 to: 0,1',
+        ]);
         expect(`
         |   ║   :   :   :   |
         |===:===:===:===:===|
@@ -1615,28 +1384,22 @@ describe('HiddenColumns', () => {
         `).toBeMatchToSelectionPattern();
       });
 
-      it('all selected cells', () => {
+      it('all selected cells', async() => {
         handsontable({
-          data: Handsontable.helper.createSpreadsheetData(5, 5),
+          data: createSpreadsheetData(5, 5),
           rowHeaders: true,
           colHeaders: true,
           hiddenColumns: true,
         });
 
-        selectAll();
+        await selectAll();
 
         getPlugin('hiddenColumns').hideColumns([0, 1, 2, 3, 4]);
-        render();
+        await render();
 
-        expect(getSelected()).toEqual([[-1, -1, 4, 4]]);
-        expect(getSelectedRangeLast().highlight.row).toBe(0);
-        expect(getSelectedRangeLast().highlight.col).toBe(0);
-        expect(getSelectedRangeLast().from.row).toBe(-1);
-        expect(getSelectedRangeLast().from.col).toBe(-1);
-        expect(getSelectedRangeLast().to.row).toBe(4);
-        expect(getSelectedRangeLast().to.col).toBe(4);
+        expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: -1,-1 to: 4,4']);
         expect(`
-        |   |
+        | * |
         |===|
         | * |
         | * |
@@ -1647,9 +1410,9 @@ describe('HiddenColumns', () => {
       });
     });
 
-    it('showed columns on a table with all columns hidden and with selected entire row', () => {
+    it('showed columns on a table with all columns hidden and with selected entire row', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(5, 5),
+        data: createSpreadsheetData(5, 5),
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: {
@@ -1657,18 +1420,12 @@ describe('HiddenColumns', () => {
         },
       });
 
-      selectRows(0);
+      await selectRows(0);
 
       getPlugin('hiddenColumns').showColumns([4]);
-      render();
+      await render();
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(4);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,4 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - |
       |===:===|
@@ -1680,15 +1437,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
 
       getPlugin('hiddenColumns').showColumns([1, 2, 3]);
-      render();
+      await render();
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(1);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - : - : - |
       |===:===:===:===:===|
@@ -1700,15 +1451,9 @@ describe('HiddenColumns', () => {
       `).toBeMatchToSelectionPattern();
 
       getPlugin('hiddenColumns').showColumns([0]);
-      render();
+      await render();
 
-      expect(getSelected()).toEqual([[0, -1, 0, 4]]);
-      expect(getSelectedRangeLast().highlight.row).toBe(0);
-      expect(getSelectedRangeLast().highlight.col).toBe(0);
-      expect(getSelectedRangeLast().from.row).toBe(0);
-      expect(getSelectedRangeLast().from.col).toBe(-1);
-      expect(getSelectedRangeLast().to.row).toBe(0);
-      expect(getSelectedRangeLast().to.col).toBe(4);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,0 from: 0,-1 to: 0,4']);
       expect(`
       |   ║ - : - : - : - : - |
       |===:===:===:===:===:===|

@@ -18,9 +18,10 @@ describe('`registerAllPlugins`', () => {
       'text',
     ]);
     expect(getPluginsNames()).toEqual([
-      'PersistentState',
       'AutoColumnSize',
       'Autofill',
+      'SelectionHandles',
+      'MoveCells',
       'ManualRowResize',
       'AutoRowSize',
       'ColumnSorting',
@@ -34,6 +35,7 @@ describe('`registerAllPlugins`', () => {
       'ManualColumnResize',
       'ManualRowMove',
       'MergeCells',
+      'StretchColumns',
       'MultipleSelectionHandles',
       'MultiColumnSorting',
       'Search',
@@ -50,10 +52,17 @@ describe('`registerAllPlugins`', () => {
       'HiddenColumns',
       'HiddenRows',
       'TrimRows',
+      'Loading',
+      'Dialog',
+      'EmptyDataState',
+      'Notification',
+      'Pagination',
+      'DataProvider',
       'UndoRedo',
     ]);
     expect(getRegisteredRendererNames()).toEqual([
       'text',
+      'base',
     ]);
     expect(getRegisteredValidatorNames()).toEqual([]);
   });

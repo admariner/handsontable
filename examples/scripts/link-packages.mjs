@@ -12,18 +12,22 @@ import {
   displayErrorMessage,
   displayWarningMessage
 } from '../../scripts/utils/index.mjs';
-import examplesPackageJson from '../package.json';
-import mainPackageJson from '../../package.json';
+import examplesPackageJson from '../package.json' with { type: 'json' };
+import mainPackageJson from '../../package.json' with { type: 'json' };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const workspaces = examplesPackageJson.workspaces;
+const exampleFrameworkSubdirs = examplesPackageJson.internal.framework_dirs;
 const hotWorkspaces = mainPackageJson.workspaces;
 const isPackageRequired = (packageName, packageLocation) => {
   const frameworkName = packageName.split('/').pop() || null;
+  const isLegacyAngularExample = packageLocation.includes('/angular-9/') || packageLocation.includes('/angular-10/');
 
   return (
     // If the required package is handsontable
     packageName === 'handsontable' ||
+    packageLocation.includes(frameworkName) ||
+    // If the required package is @handsontable/angular-wrapper
+    (frameworkName === 'angular' && packageName === '@handsontable/angular-wrapper' && !isLegacyAngularExample) ||
     // If it's in the framework directory
     packageLocation.split('/').pop().includes(frameworkName) ||
     // If it's deeper in the framework directory
@@ -32,17 +36,32 @@ const isPackageRequired = (packageName, packageLocation) => {
 };
 const packagesToLink = [];
 const linkPackage = (sourceLocation, linkLocation, packageName, exampleDir = false) => {
-  if (isPackageRequired(packageName, linkLocation)) {
+  const mainDependencyLocationPath = `${sourceLocation}/${packageName}`;
+  const destinationDependencyLocationPath = `${linkLocation}/${packageName}`;
+
+  if (isPackageRequired(packageName, linkLocation) && fse.pathExistsSync(path.resolve(mainDependencyLocationPath))) {
     try {
-      fse.removeSync(
-        path.resolve(`${linkLocation}/${packageName}`),
-      );
+      const destinationPath = path.resolve(destinationDependencyLocationPath);
+
+      // Check if destination exists and remove it appropriately
+      if (fse.pathExistsSync(destinationPath)) {
+        const stats = fse.lstatSync(destinationPath);
+
+        if (stats.isSymbolicLink() || stats.isFile()) {
+          // Remove symlinks and files with unlinkSync
+          fse.unlinkSync(destinationPath);
+        } else if (stats.isDirectory()) {
+          // Remove directories with removeSync
+          fse.removeSync(destinationPath);
+        }
+      }
 
       fse.ensureSymlinkSync(
-        path.resolve(`${sourceLocation}/${packageName}`),
-        path.resolve(`${linkLocation}/${packageName}`),
+        path.resolve(mainDependencyLocationPath),
+        destinationPath,
         'junction',
       );
+
 
     } catch (e) {
       displayErrorMessage(e);
@@ -70,29 +89,29 @@ for (const hotPackageGlob of hotWorkspaces) {
   const mainPackages = glob.sync(`../${hotPackageGlob}`);
 
   for (const mainPackageUrl of mainPackages) {
-    const { default: packagePackageJson } = await import(`../${mainPackageUrl}/package.json`);
+    const { default: packagePackageJson } = await import(`../${mainPackageUrl}/package.json`, { with: { type: 'json' } });
     const packageName = packagePackageJson.name;
     packagesToLink.push(packageName);
   }
 }
 
-workspaces.forEach((packagesLocation) => {
+exampleFrameworkSubdirs.forEach((packagesLocation) => {
   const subdirs = glob.sync(`./${packagesLocation}`);
 
   subdirs.forEach((packageLocation) => {
-    const frameworkName = packageLocation.split('/').pop();
+    const frameworkLocationName = packageLocation.split('/').pop();
 
     if (
       packageLocation.startsWith(`./${argv.examplesVersion}`) &&
-      ((argv.framework && argv.framework.includes(frameworkName)) ||
+      ((argv.framework && argv.framework.includes(frameworkLocationName)) ||
       !argv.framework)
     ) {
 
       // Currently linking the live dependencies only for the 'next' directory.
-      if (argv.examplesVersion === 'next') {
+      if (argv.examplesVersion.startsWith('next')) {
         packagesToLink.forEach((packageName) => {
           linkPackage(
-            path.resolve('../node_modules'),
+            path.resolve('./node_modules'),
             path.resolve(packageLocation, './node_modules'),
             packageName
           );
@@ -100,10 +119,11 @@ workspaces.forEach((packagesLocation) => {
       }
 
       // Additional linking to all the examples for Angular (required to load css files from `angular.json`)
-      if (frameworkName === `angular`) {
+      if (/^angular(-(\d+|next|wrapper))?$/.test(frameworkLocationName)) {
         const angularPackageJson = fse.readJSONSync(`${packageLocation}/package.json`);
+        const workspacesList = angularPackageJson?.workspaces.packages || angularPackageJson?.workspaces;
 
-        angularPackageJson?.workspaces.forEach((angularPackagesLocation) => {
+        workspacesList.forEach((angularPackagesLocation) => {
           const angularPackageDirs = glob.sync(`${packageLocation}/${angularPackagesLocation}`);
 
           angularPackageDirs.forEach((angularPackageLocation) => {

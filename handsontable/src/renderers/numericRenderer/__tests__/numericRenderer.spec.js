@@ -12,144 +12,172 @@ describe('NumericRenderer', () => {
     }
   });
 
-  it('should render formatted number', (done) => {
-    const onAfterValidate = jasmine.createSpy('onAfterValidate');
-
+  it('should not try to render string as numeral', async() => {
     handsontable({
       cells() {
         return {
-          type: 'numeric',
-          numericFormat: { pattern: '$0,0.00' }
-        };
-      },
-      afterValidate: onAfterValidate
-    });
-    setDataAtCell(2, 2, '1000.234');
-
-    setTimeout(() => {
-      expect(getCell(2, 2).innerHTML).toEqual('$1,000.23');
-      done();
-    }, 200);
-  });
-
-  it('should render signed number', (done) => {
-    const onAfterValidate = jasmine.createSpy('onAfterValidate');
-
-    handsontable({
-      cells() {
-        return {
-          type: 'numeric',
-          numericFormat: { pattern: '$0,0.00' }
-        };
-      },
-      afterValidate: onAfterValidate
-    });
-
-    setDataAtCell(2, 2, '-1000.234');
-
-    setTimeout(() => {
-      expect(getCell(2, 2).innerHTML).toEqual('-$1,000.23');
-      done();
-    }, 200);
-  });
-
-  it('should not try to render string as numeral', (done) => {
-    handsontable({
-      cells() {
-        return {
-          type: 'numeric',
-          numericFormat: { pattern: '$0,0.00' }
+          renderer: 'numeric',
+          numericFormat: { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }
         };
       },
     });
 
-    setDataAtCell(2, 2, '123 simple test');
+    await setDataAtCell(2, 2, '123 simple test');
 
-    setTimeout(() => {
-      expect(getCell(2, 2).innerHTML).toEqual('123 simple test');
-      done();
-    }, 100);
+    await waitForNextAnimationFrames(2);
+
+    expect(getCell(2, 2).innerHTML).toEqual('123 simple test');
   });
 
-  it('should add class names `htNumeric` and `htRight` to the cell if it renders a number', () => {
-    const DIV = document.createElement('DIV');
-    const instance = new Handsontable(DIV, {});
-    const TD = document.createElement('TD');
+  it('should render the cell with "dir" attribute set as "ltr" as long as the value is of a numeric-like type', async() => {
+    handsontable({
+      data: [[1, '1', '1.1']],
+      renderer: 'numeric'
+    });
 
-    TD.className = 'someClass';
-    Handsontable.renderers.NumericRenderer(instance, TD, 0, 0, 0, 123, {});
-    expect(TD.className).toEqual('someClass htRight htNumeric');
-    instance.destroy();
+    expect(getCell(0, 0).getAttribute('dir')).toBe('ltr');
+    expect(getCell(0, 1).getAttribute('dir')).toBe('ltr');
+    expect(getCell(0, 2).getAttribute('dir')).toBe('ltr');
   });
 
-  it('should add class names `htNumeric` and `htRight` to the cell if it renders a numeric string', () => {
-    const DIV = document.createElement('DIV');
-    const instance = new Handsontable(DIV, {});
-    const TD = document.createElement('TD');
+  it('should render the cell without messing "dir" attribute as long as the value is not of a numeric-like type', async() => {
+    handsontable({
+      data: [['1z', 'z', true]],
+      renderer: 'numeric'
+    });
 
-    TD.className = 'someClass';
-    Handsontable.renderers.NumericRenderer(instance, TD, 0, 0, 0, '123', {});
-    expect(TD.className).toEqual('someClass htRight htNumeric');
-    instance.destroy();
+    expect(getCell(0, 0).getAttribute('dir')).toBeNull();
+    expect(getCell(0, 1).getAttribute('dir')).toBeNull();
+    expect(getCell(0, 2).getAttribute('dir')).toBeNull();
   });
 
-  it('should not add class name `htNumeric` to the cell if it renders a text', () => {
-    const DIV = document.createElement('DIV');
-    const instance = new Handsontable(DIV, {});
-    const TD = document.createElement('TD');
+  it('should add class names `htNumeric` and `htRight` to the cell if it is a number', async() => {
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
+    });
 
-    TD.className = 'someClass';
-    Handsontable.renderers.NumericRenderer(instance, TD, 0, 0, 0, 'abc', {});
-    expect(TD.className).toEqual('someClass');
-    instance.destroy();
+    expect(getCell(0, 0).className).toEqual('htRight htNumeric');
   });
 
-  it('should add class name `htDimmed` to a read only cell', () => {
-    const DIV = document.createElement('DIV');
-    const instance = new Handsontable(DIV, {});
-    const TD = document.createElement('TD');
+  it('should add class names `htNumeric` and `htRight` to the cell if it is a number passed as string', async() => {
+    handsontable({
+      data: [['123']],
+      renderer: 'numeric',
+    });
 
-    Handsontable.renderers.NumericRenderer(instance, TD, 0, 0, 0, 123, {
+    expect(getCell(0, 0).className).toEqual('htRight htNumeric');
+  });
+
+  it('should not add class name `htNumeric` to the cell if it is string (text)', async() => {
+    handsontable({
+      data: [['abc']],
+      renderer: 'numeric',
+    });
+
+    expect(getCell(0, 0).className).toEqual('');
+  });
+
+  it('should add class name `htDimmed` to the cell', async() => {
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
       readOnly: true,
       readOnlyCellClassName: 'htDimmed',
     });
-    expect(TD.className).toContain('htDimmed');
-    instance.destroy();
+
+    expect(getCell(0, 0).className).toEqual('htRight htNumeric htDimmed');
   });
 
-  describe('NumericRenderer with ContextMenu', () => {
-    it('should change class name from default `htRight` to `htLeft` after set align in contextMenu', (done) => {
-      handsontable({
-        startRows: 1,
-        startCols: 1,
-        contextMenu: ['alignment'],
-        cells() {
-          return {
-            type: 'numeric',
-            numericFormat: { pattern: '$0,0.00' }
-          };
-        },
-        height: 100
-      });
-
-      setDataAtCell(0, 0, '1000');
-      selectCell(0, 0);
-
-      contextMenu();
-
-      const menu = $('.htContextMenu .ht_master .htCore').find('tbody td').not('.htSeparator');
-
-      menu.simulate('mouseover');
-
-      setTimeout(() => {
-        const contextSubMenu = $(`.htContextMenuSub_${menu.text()}`).find('tbody td').eq(0);
-
-        contextSubMenu.simulate('mousedown');
-        contextSubMenu.simulate('mouseup');
-
-        expect($('.handsontable.ht_master .htLeft:not(.htRight)').length).toBe(1);
-        done();
-      }, 500);
+  it('should add custom class as string to the cell if it is a number', async() => {
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
+      className: 'someClass',
     });
+
+    expect(getCell(0, 0).className).toEqual('someClass htRight htNumeric');
+  });
+
+  it('should add custom class as an array to the cell if it is a number', async() => {
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
+      className: ['someClass', 'someClass2'],
+    });
+
+    expect(getCell(0, 0).className).toEqual('someClass someClass2 htRight htNumeric');
+  });
+
+  it('should print warn message if unsupported numericFormat.pattern is used', async() => {
+    const warnSpy = spyOnConsoleWarn();
+
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
+      numericFormat: { pattern: '$0,0.00' }
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'The numericFormat.pattern and numericFormat.culture options are not supported. ' +
+      'Use Intl.NumberFormat options instead (numericFormat: { style, currency, ... }).'
+    );
+  });
+
+  it('should print warn message if unsupported numericFormat.culture is used', async() => {
+    const warnSpy = spyOnConsoleWarn();
+
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
+      numericFormat: { culture: '$0,0.00' }
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'The numericFormat.pattern and numericFormat.culture options are not supported. ' +
+      'Use Intl.NumberFormat options instead (numericFormat: { style, currency, ... }).'
+    );
+  });
+
+  it('should not print warn message if supported Intl.NumberFormat object format is used', async() => {
+    const warnSpy = spyOnConsoleWarn();
+
+    handsontable({
+      data: [[123]],
+      renderer: 'numeric',
+      numericFormat: {
+        useGrouping: false,
+        maximumFractionDigits: 20,
+      }
+    });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('should internally call base renderer once', async() => {
+    const originalBaseRenderer = Handsontable.renderers.BaseRenderer;
+
+    const renderedCellCalls = [];
+
+    spyOn(Handsontable.renderers, 'BaseRenderer').and.callFake((...args) => {
+      const TD = args[1];
+
+      // The GhostTable that AutoColumnSize measures in renders its own cells, flagged with the
+      // `ghost-table` attribute, and those go through the same renderer contract. They are a
+      // separate render pass, not a second call on the rendered cell this spec is about.
+      if (!TD.hasAttribute('ghost-table')) {
+        renderedCellCalls.push(TD);
+      }
+    });
+
+    Handsontable.renderers.registerRenderer('base', Handsontable.renderers.BaseRenderer);
+    handsontable({
+      data: [['test']],
+      renderer: 'numeric',
+    });
+
+    expect(renderedCellCalls.length).toBe(1);
+
+    Handsontable.renderers.registerRenderer('base', originalBaseRenderer);
   });
 });

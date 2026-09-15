@@ -1,6 +1,21 @@
-import Handsontable from 'handsontable';
+import Handsontable from 'handsontable/base';
 
-const hot = new Handsontable(document.createElement('div'), {
+interface ColumnConditions {
+  column: number;
+  operation: string;
+  conditions: { name: string; args: unknown[] }[];
+}
+
+type Maybe<T> = T | undefined;
+type OperationType = 'conjunction' | 'disjunction' | 'disjunctionWithExtraCondition';
+
+interface Condition {
+  name: string;
+  args: unknown[];
+  func?: (dataRow: unknown, values: unknown[]) => boolean;
+}
+
+const hot = Handsontable(document.createElement('div'), {
   filters: true,
 });
 
@@ -18,7 +33,7 @@ const cellLikeData = {
 };
 const condition = {
   args: [3],
-  name: 'eq' as Handsontable.plugins.Filters.ConditionName,
+  name: 'eq',
 };
 
 if (conditionCollection) {
@@ -28,7 +43,7 @@ if (conditionCollection) {
     [{
       name: 'not_between',
       args: [[3]],
-      func: (dataRow, values) => true,
+      func: (dataRow: unknown, values: unknown[]) => true,
     }],
     cellLikeData,
     'conjunction'
@@ -36,14 +51,22 @@ if (conditionCollection) {
   conditionCollection.addCondition(2, condition);
   conditionCollection.addCondition(2, condition, 'conjunction');
   conditionCollection.addCondition(2, condition, 'conjunction', 3);
-  conditionCollection.getConditions(3);
-  conditionCollection.getFilteredColumns();
-  conditionCollection.getColumnStackPosition(3);
-  conditionCollection.getOperation(3);
-  conditionCollection.exportAllConditions();
-  conditionCollection.importAllConditions([condition]);
+  conditionCollection.importAllConditions([{
+    column: 1,
+    conditions: [{
+      name: 'gt',
+      args: [],
+    }],
+    operation: 'conjunction',
+  }]);
   conditionCollection.removeConditions(3);
   conditionCollection.hasConditions(3, 'eq');
   conditionCollection.clean();
   conditionCollection.destroy();
+
+  const conditions: Condition[] = conditionCollection.getConditions(3);
+  const filteredColumns = conditionCollection.getFilteredColumns();
+  const columnStackPosition: Maybe<number> = conditionCollection.getColumnStackPosition(3);
+  const operation: Maybe<OperationType> = conditionCollection.getOperation(3);
+  const exportAllConditions: ColumnConditions[] = conditionCollection.exportAllConditions();
 }

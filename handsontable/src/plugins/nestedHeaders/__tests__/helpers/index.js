@@ -27,7 +27,7 @@ export function extractDOMStructure(overlaysTHead, overlaysTBody) {
  * @returns {HTMLTableCellElement}
  */
 export function nonHiddenTHs(hot, row) {
-  const headerRows = hot.view.wt.wtTable.THEAD.querySelectorAll('tr');
+  const headerRows = hot.view._wt.wtTable.THEAD.querySelectorAll('tr');
 
   return headerRows[row].querySelectorAll('th:not(.hiddenHeader)');
 }
@@ -90,6 +90,8 @@ const colspanSettingsAbbreviations = new Map([
   ['l', 'label'],
   ['cs', 'colspan'],
   ['ocs', 'origColspan'],
+  ['rs', 'rowspan'],
+  ['ors', 'origRowspan'],
 ]);
 
 /**
@@ -101,7 +103,7 @@ const colspanSettingsAbbreviations = new Map([
  */
 export function createColspanSettings(overwriteProps = {}) {
   colspanSettingsAbbreviations.forEach((fullKey, abbrKey) => {
-    if (overwriteProps[abbrKey] !== void 0) {
+    if (overwriteProps[abbrKey] !== undefined) {
       overwriteProps[fullKey] = overwriteProps[abbrKey];
       delete overwriteProps[abbrKey];
     }
@@ -111,11 +113,15 @@ export function createColspanSettings(overwriteProps = {}) {
     label: '',
     colspan: 1,
     origColspan: 1,
+    rowspan: 1,
+    origRowspan: 1,
     isHidden: false,
     isCollapsed: false,
     collapsible: false,
     isRoot: true,
     isPlaceholder: false,
+    isRowspanPlaceholder: false,
+    headerClassNames: [],
     ...overwriteProps,
   };
 }

@@ -19,17 +19,17 @@ describe('ContextMenu', () => {
 
   describe('hide column', () => {
     it('should hide the entry for "Hide column" in the context menu, when the selection doesn\'t contain an' +
-      ' entire column (including the header)', () => {
+      ' entire column (including the header)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: true,
       });
 
-      selectCell(0, 0);
-      contextMenu();
+      await selectCell(0, 0);
+      await contextMenu();
 
       const compatibleEntries = getHideColumnCMElement();
 
@@ -37,28 +37,51 @@ describe('ContextMenu', () => {
     });
 
     it('should NOT hide the entry for "Hide column" in the context menu, when the selection contains an' +
-      ' entire column (including the header) or all cells (including all headers)', () => {
+      ' entire column (including the header) or all cells (including all headers)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 4),
+        data: createSpreadsheetData(4, 4),
         contextMenu: true,
         rowHeaders: true,
         colHeaders: true,
         hiddenColumns: true
       });
 
-      selectColumns(0);
-      contextMenu();
+      await selectColumns(0);
+      await contextMenu();
 
       let compatibleEntries = getHideColumnCMElement();
 
       expect(compatibleEntries.size()).toEqual(1);
 
-      selectAll(true);
-      contextMenu(getCell(-1, 0));
+      await selectAll(true);
+      await contextMenu(getCell(-1, 0));
 
       compatibleEntries = getHideColumnCMElement();
 
       expect(compatibleEntries.size()).toEqual(1);
+    });
+
+    it('should resolve `hidden_columns_hide` to the plugin-provided full entry when items are passed as an' +
+      ' object', async() => {
+      handsontable({
+        data: createSpreadsheetData(4, 4),
+        rowHeaders: true,
+        colHeaders: true,
+        hiddenColumns: true,
+        contextMenu: {
+          items: {
+            hidden_columns_hide: {},
+          }
+        }
+      });
+
+      await selectColumns(0);
+      await contextMenu();
+
+      const compatibleEntries = getHideColumnCMElement();
+
+      expect(compatibleEntries.size()).toEqual(1);
+      expect(compatibleEntries.hasClass('htDisabled')).toBe(false);
     });
   });
 });

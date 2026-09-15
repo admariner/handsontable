@@ -17,7 +17,11 @@ const NEXT_EXAMPLES_DIR = path.join(REPO_ROOT_DIR, 'examples', 'next');
 const TMP_DIR_NAME = 'tmp';
 const TMP_DIR = path.join('examples', TMP_DIR_NAME);
 
-const HOT_WRAPPERS = ['@handsontable/react', '@handsontable/angular', '@handsontable/vue'];
+const HOT_WRAPPERS = [
+  '@handsontable/react-wrapper',
+  '@handsontable/angular-wrapper',
+  '@handsontable/vue3'
+];
 
 const [shellCommand, hotVersion] = process.argv.slice(2);
 
@@ -29,7 +33,11 @@ const getExamplesFolders = (dirPath, exampleFolders, onlyWorkspaceConfigs = fals
   exampleFolders = exampleFolders || [];
 
   files.forEach((file) => {
-    if (file !== '.cache' && file !== 'node_modules' && fs.statSync(path.join(dirPath, file)).isDirectory()) {
+    if (
+      file !== '.cache' &&
+      file !== 'node_modules' &&
+      fs.statSync(path.join(dirPath, file)).isDirectory()
+    ) {
       exampleFolders = getExamplesFolders(path.join(dirPath, file), exampleFolders, onlyWorkspaceConfigs);
       return;
     }
@@ -73,12 +81,17 @@ const updatePackageJsonWithVersion = (projectDir, version) => {
   fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
 };
 
-const updateFrameworkWorkspacesNames = (projectDir, version) => {
+const updateFrameworkWorkspacesInformation = (projectDir, version) => {
   const packageJsonPath = path.join(projectDir, 'package.json');
   const packageJson = fs.readJsonSync(packageJsonPath);
 
   packageJson.name += `-${version}`;
   packageJson.version = version;
+
+  if (packageJson.scripts?.postinstall) {
+    packageJson.scripts.postinstall = packageJson.scripts.postinstall.replace(
+      'examples-version next', `examples-version ${version}`);
+  }
 
   fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
 };
@@ -139,7 +152,7 @@ switch (shellCommand) {
         displayConfirmationMessage('package.json updated for code examples');
 
         workspaceConfigFolders.forEach((frameworkFolder) => {
-          updateFrameworkWorkspacesNames(frameworkFolder, hotVersion);
+          updateFrameworkWorkspacesInformation(frameworkFolder, hotVersion);
         });
         displayConfirmationMessage('package.json updated for examples workspaces');
       });
@@ -194,16 +207,14 @@ switch (shellCommand) {
 
     const examplesFolders = getExamplesFolders(versionedDir);
 
-    spawnProcess('http-server . - 8080');
+    spawnProcess('http-server . -p 8080');
 
     examplesFolders.forEach((exampleDir, i) => {
       if (i < examplesFolders.length) {
-        const split = exampleDir.split('handsontable');
-        const splitLength = split.length;
         // this env is used in each `Smoke.spec.js` file inside code example directory
-        process.env.TEST_URL = `http://127.0.0.1:8080${split[splitLength - 1]}/dist`;
+        process.env.TEST_URL = `http://127.0.0.1:8080/${path.relative(REPO_ROOT_DIR, exampleDir)}/dist`;
 
-        runNpmCommandInExample(exampleDir, 'npm run test');
+        runNpmCommandInExample(exampleDir, 'npm run test --if-present');
       }
 
       if (i === examplesFolders.length - 1) {

@@ -1,0 +1,151 @@
+/* file: app.component.ts */
+import { Component } from '@angular/core';
+import { GridSettings, HotTableModule} from '@handsontable/angular-wrapper';
+
+@Component({
+  selector: 'app-example8',
+  template: `
+    <hot-table
+      [settings]="hotSettings!" [data]="hotData">
+    </hot-table>
+  `,
+  styles: `
+    :host ::ng-deep {
+      /* hide the column menu button by default */
+      .customFilterButtonExample2 .changeType {
+        visibility: hidden;
+      }
+
+      /* show the column menu button on hover */
+      .customFilterButtonExample2 th .relative:hover .changeType {
+        visibility: visible;
+      }
+    }
+  `,
+  standalone: true,
+  imports: [HotTableModule],
+})
+export class AppComponent {
+
+  readonly hotData = [
+    {
+      brand: 'Jetpulse',
+      model: 'Racing Socks',
+      price: 30,
+      sellDate: '2023-10-11',
+      sellTime: '01:23',
+      inStock: false,
+    },
+    {
+      brand: 'Gigabox',
+      model: 'HL Mountain Frame',
+      price: 1890.9,
+      sellDate: '2023-05-03',
+      sellTime: '11:27',
+      inStock: false,
+    },
+    {
+      brand: 'Camido',
+      model: 'Cycling Cap',
+      price: 130.1,
+      sellDate: '2023-03-27',
+      sellTime: '03:17',
+      inStock: true,
+    },
+    {
+      brand: 'Chatterpoint',
+      model: 'Road Tire Tube',
+      price: 59,
+      sellDate: '2023-08-28',
+      sellTime: '08:01',
+      inStock: true,
+    },
+    {
+      brand: 'Eidel',
+      model: 'HL Road Tire',
+      price: 279.99,
+      sellDate: '2023-10-02',
+      sellTime: '01:23',
+      inStock: true,
+    },
+  ];
+
+  readonly hotSettings: GridSettings = {
+    columns: [
+      {
+        title: 'Brand',
+        type: 'text',
+        data: 'brand',
+      },
+      {
+        title: 'Model',
+        type: 'text',
+        data: 'model',
+      },
+      {
+        title: 'Price',
+        type: 'numeric',
+        data: 'price',
+        locale: 'en-US',
+        numericFormat: {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+        },
+      },
+      {
+        title: 'Date',
+        type: 'intl-date',
+        data: 'sellDate',
+        locale: 'en-US',
+        dateFormat: { month: 'short', day: 'numeric', year: 'numeric' },
+        className: 'htRight',
+      },
+      {
+        title: 'Time',
+        type: 'intl-time',
+        data: 'sellTime',
+        locale: 'en-US',
+        timeFormat: { hour: '2-digit', minute: '2-digit', hour12: true },
+        className: 'htRight',
+      },
+      {
+        title: 'In stock',
+        type: 'checkbox',
+        data: 'inStock',
+        className: 'htCenter',
+      },
+    ],
+    // enable filtering
+    filters: true,
+    // enable the column menu
+    dropdownMenu: true,
+    // to differentiate this example's CSS from other examples on this page
+    className: 'customFilterButtonExample2',
+    height: 'auto',
+    autoWrapRow: true,
+    autoWrapCol: true,
+  };
+}
+/* end-file */
+
+
+
+/* file: app.config.ts */
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { registerAllModules } from 'handsontable/registry';
+import { HOT_GLOBAL_CONFIG, HotGlobalConfig, NON_COMMERCIAL_LICENSE } from '@handsontable/angular-wrapper';
+
+// register Handsontable's modules
+registerAllModules();
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    {
+      provide: HOT_GLOBAL_CONFIG,
+      useValue: { license: NON_COMMERCIAL_LICENSE } as HotGlobalConfig,
+    },
+  ],
+};
+/* end-file */

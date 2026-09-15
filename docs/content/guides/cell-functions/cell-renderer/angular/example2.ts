@@ -1,0 +1,85 @@
+/* file: app.component.ts */
+import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import {GridSettings, HotTableModule} from '@handsontable/angular-wrapper';
+
+@Component({
+  standalone: true,
+  imports: [HotTableModule],
+  selector: 'app-example2',
+  template: `
+    <hot-table
+      [settings]="hotSettings!" [data]="hotData">
+    </hot-table>
+
+    <ng-template #myCellTpl let-value let-row="row" let-col="col">
+      <img [src]="value" (mousedown)="$event.preventDefault()"/>
+    </ng-template>
+  `,
+})
+export class AppComponent implements OnInit {
+  @ViewChild('myCellTpl', { static: true }) myCellTpl!: TemplateRef<HTMLInputElement>;
+
+  readonly hotData = [
+    {
+      title:
+        '<a href="https://www.amazon.com/Professional-JavaScript-Developers-Nicholas-Zakas/dp/1118026691">Professional JavaScript for Web Developers</a>',
+      description:
+        'This <a href="https://www.amazon.com/Professional-JavaScript-Developers-Nicholas-Zakas/dp/1118026691">book</a> provides a developer-level introduction along with more advanced and useful features of <b>JavaScript</b>.',
+      cover:
+        '/docs/img/examples/professional-javascript-developers-nicholas-zakas.jpg',
+    },
+    {
+      title:
+        '<a href="https://shop.oreilly.com/product/9780596517748.do">JavaScript: The Good Parts</a>',
+      description:
+        'This book provides a developer-level introduction along with <b>more advanced</b> and useful features of JavaScript.',
+      cover: '/docs/img/examples/javascript-the-good-parts.jpg',
+    },
+    {
+      title:
+        '<a href="https://shop.oreilly.com/product/9780596805531.do">JavaScript: The Definitive Guide</a>',
+      description:
+        '<em>JavaScript: The Definitive Guide</em> provides a thorough description of the core <b>JavaScript</b> language and both the legacy and standard DOMs implemented in web browsers.',
+      cover: '/docs/img/examples/javascript-the-definitive-guide.jpg',
+    },
+  ];
+
+  hotSettings!: GridSettings;
+
+  ngOnInit() {
+    this.hotSettings = {
+      colWidths: [200, 400, 80],
+      colHeaders: ['Title', 'Description', 'Cover'],
+      height: 'auto',
+      columns: [
+        { data: 'title', renderer: 'html' },
+        { data: 'description', renderer: 'html' },
+        { data: 'cover', renderer: this.myCellTpl },
+      ],
+      autoWrapRow: true,
+      autoWrapCol: true,
+    };
+  }
+}
+/* end-file */
+
+
+
+/* file: app.config.ts */
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { registerAllModules } from 'handsontable/registry';
+import { HOT_GLOBAL_CONFIG, HotGlobalConfig, NON_COMMERCIAL_LICENSE } from '@handsontable/angular-wrapper';
+
+// register Handsontable's modules
+registerAllModules();
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    {
+      provide: HOT_GLOBAL_CONFIG,
+      useValue: { license: NON_COMMERCIAL_LICENSE } as HotGlobalConfig,
+    },
+  ],
+};
+/* end-file */

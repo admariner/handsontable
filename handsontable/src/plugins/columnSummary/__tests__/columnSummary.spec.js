@@ -1,3 +1,5 @@
+import HyperFormula from 'hyperformula';
+
 describe('ColumnSummarySpec', () => {
   const id = 'testContainer';
   const warnMessage = 'One of the Column Summary plugins\' destination points you ' +
@@ -55,10 +57,11 @@ describe('ColumnSummarySpec', () => {
   });
 
   describe('parseSettings', () => {
-    it('should parse the settings from the Handsontable instance', () => {
+    it('should parse the settings from the Handsontable instance', async() => {
       const customFunction = function() {};
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(15, 15),
+
+      handsontable({
+        data: createSpreadsheetData(15, 15),
         height: 200,
         width: 200,
         columnSummary: [
@@ -88,7 +91,7 @@ describe('ColumnSummarySpec', () => {
         ]
       });
 
-      const plugin = hot.getPlugin('ColumnSummary');
+      const plugin = getPlugin('ColumnSummary');
       const endpoints = [
         plugin.endpoints.getEndpoint(0),
         plugin.endpoints.getEndpoint(1)
@@ -118,7 +121,7 @@ describe('ColumnSummarySpec', () => {
   });
 
   describe('calculateSum', () => {
-    it('should calculate sum  of values from the provided range', () => {
+    it('should calculate sum of values from the provided range', async() => {
       handsontable({
         data: createNumericData(15, 15),
         height: 200,
@@ -141,9 +144,14 @@ describe('ColumnSummarySpec', () => {
   });
 
   describe('calculateMinMax', () => {
-    it('should calculate the minimum from the provided range', () => {
+    it('should calculate the minimum from the provided range', async() => {
+      const dataset = createNumericData(15, 15);
+
+      dataset[0][1] = 0;
+      dataset[0][2] = 0;
+
       handsontable({
-        data: createNumericData(15, 15),
+        data: dataset,
         height: 200,
         width: 200,
         columnSummary: [
@@ -155,16 +163,55 @@ describe('ColumnSummarySpec', () => {
               [5, 6], [8], [10, 13]
             ],
             type: 'min'
+          },
+          {
+            destinationColumn: 1,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 13]
+            ],
+            type: 'min'
           }
         ]
       });
 
       expect(getDataAtCell(14, 0)).toEqual(6);
+      expect(getDataAtCell(14, 1)).toEqual(0);
     });
 
-    it('should calculate the minimum from the provided range', () => {
+    it('should calculate the minimum from the column when the destination row is empty and `forceNumeric` is enabled', async() => {
       handsontable({
-        data: createNumericData(15, 15),
+        data: [
+          [0],
+          [1],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'min'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(0);
+    });
+
+    it('should calculate the maximum from the provided range', async() => {
+      const dataset = createNumericData(15, 15);
+
+      dataset.forEach((rowArr) => {
+        rowArr[1] = 0;
+      });
+
+      handsontable({
+        data: dataset,
         height: 200,
         width: 200,
         columnSummary: [
@@ -176,19 +223,57 @@ describe('ColumnSummarySpec', () => {
               [5, 6], [8], [10, 13]
             ],
             type: 'max'
+          },
+          {
+            destinationColumn: 1,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 13]
+            ],
+            type: 'max'
           }
         ]
       });
 
       expect(getDataAtCell(14, 0)).toEqual(14);
+      expect(getDataAtCell(14, 1)).toEqual(0);
     });
 
+    it('should calculate the maximum from the column when the destination row is empty and `forceNumeric` is enabled', async() => {
+      handsontable({
+        data: [
+          [0],
+          [1],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'max'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(5);
+    });
   });
 
   describe('countEntries', () => {
-    it('should count non-empty entries from the provided range', () => {
+    it('should count non-empty entries from the provided range', async() => {
+      const dataset = createNumericData(15, 15);
+
+      dataset.forEach((rowArr) => {
+        rowArr[1] = 0;
+      });
+
       handsontable({
-        data: createNumericData(15, 15),
+        data: dataset,
         height: 200,
         width: 200,
         columnSummary: [
@@ -200,16 +285,49 @@ describe('ColumnSummarySpec', () => {
               [0, 3], [5, 6], [8], [10, 13]
             ],
             type: 'count'
+          },
+          {
+            destinationColumn: 1,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 13]
+            ],
+            type: 'count'
           }
         ]
       });
 
       expect(getDataAtCell(14, 0)).toEqual(11);
+      expect(getDataAtCell(14, 1)).toEqual(14);
+    });
+
+    it('should count non-empty entries from the column when the destination row is empty and `forceNumeric` is enabled', async() => {
+      handsontable({
+        data: [
+          [4],
+          [1],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'count'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(3);
     });
   });
 
   describe('calculateAverage', () => {
-    it('should get average value from entries in the provided range', () => {
+    it('should get average value from entries in the provided range', async() => {
       handsontable({
         data: createNumericData(15, 15),
         height: 200,
@@ -229,10 +347,33 @@ describe('ColumnSummarySpec', () => {
 
       expect(getDataAtCell(14, 0).toFixed(4)).toEqual((7.45454545454545).toFixed(4));
     });
+
+    it('should count average value from the column when the destination row is empty and `forceNumeric` is enabled', async() => {
+      handsontable({
+        data: [
+          [4],
+          [2],
+          [5],
+          [],
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            forceNumeric: true,
+            type: 'average'
+          },
+        ]
+      });
+
+      expect(getDataAtCell(3, 0)).toBe(3.6666666666666665);
+    });
   });
 
   describe('customFunction', () => {
-    it('should apply a custom function to the entries in the provided range', () => {
+    it('should apply a custom function to the entries in the provided range', async() => {
       handsontable({
         data: createNumericData(15, 15),
         height: 200,
@@ -295,12 +436,11 @@ describe('ColumnSummarySpec', () => {
       });
 
       expect(getDataAtCell(14, 0)).toEqual(3);
-
     });
   });
 
   describe('complex setups', () => {
-    it('should properly calculate values when many endpoints are declared', () => {
+    it('should properly calculate values when many endpoints are declared', async() => {
       handsontable({
         data: createNumericData(40, 40),
         height: 200,
@@ -345,8 +485,8 @@ describe('ColumnSummarySpec', () => {
       expect(getDataAtCell(0, 1)).toEqual(820);
     });
 
-    it('should accept endpoints configuration provided as a function', () => {
-      const hot = handsontable({
+    it('should accept endpoints configuration provided as a function', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 200,
         width: 200,
@@ -363,21 +503,21 @@ describe('ColumnSummarySpec', () => {
         }
       });
 
-      const plugin = hot.getPlugin('columnSummary');
+      const plugin = getPlugin('columnSummary');
 
-      expect(plugin.endpoints.getEndpoint(0).destinationRow).toEqual(parseInt(hot.countRows() / 2, 10));
-      expect(hot.getDataAtCell(parseInt(hot.countRows() / 2, 10), 1)).toEqual(820);
+      expect(plugin.endpoints.getEndpoint(0).destinationRow).toEqual(parseInt(countRows() / 2, 10));
+      expect(getDataAtCell(parseInt(countRows() / 2, 10), 1)).toEqual(820);
 
-      hot.alter('remove_row', 10, 3);
+      await alter('remove_row', 10, 3);
 
-      expect(plugin.endpoints.getEndpoint(0).destinationRow).toEqual(parseInt(hot.countRows() / 2, 10));
-      expect(hot.getDataAtCell(parseInt(hot.countRows() / 2, 10), 1)).toEqual(763);
+      expect(plugin.endpoints.getEndpoint(0).destinationRow).toEqual(parseInt(countRows() / 2, 10));
+      expect(getDataAtCell(parseInt(countRows() / 2, 10), 1)).toEqual(763);
     });
   });
 
   describe('structure alteration', () => {
-    it('should shift the endpoint coordinates when a new row was added above an endpoint', () => {
-      const hot = handsontable({
+    it('should shift the endpoint coordinates when a new row was added above an endpoint', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 200,
         width: 200,
@@ -392,17 +532,18 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      hot.alter('insert_row', 0, 1);
+      await alter('insert_row_above', 0, 1);
+
       expect(getDataAtCell(0, 0)).toEqual(null);
-      expect(getCellMeta(0, 0).className).toEqual(void 0);
+      expect(getCellMeta(0, 0).className).toEqual(undefined);
       expect(getCellMeta(0, 0).readOnly).toEqual(false);
       expect(getDataAtCell(1, 0)).toEqual(14);
       expect(getCellMeta(1, 0).className).toEqual('columnSummaryResult');
       expect(getCellMeta(1, 0).readOnly).toEqual(true);
     });
 
-    it('should shift the endpoint coordinates when a new column was added on the left of an endpoint', () => {
-      const hot = handsontable({
+    it('should shift the endpoint coordinates when a new column was added on the left of an endpoint', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 200,
         width: 200,
@@ -417,17 +558,18 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      hot.alter('insert_col', 0, 1);
+      await alter('insert_col_start', 0, 1);
+
       expect(getDataAtCell(0, 0)).toEqual(null);
-      expect(getCellMeta(0, 0).className).toEqual(void 0);
+      expect(getCellMeta(0, 0).className).toEqual(undefined);
       expect(getCellMeta(0, 0).readOnly).toEqual(false);
       expect(getDataAtCell(0, 1)).toEqual(14);
       expect(getCellMeta(0, 1).className).toEqual('columnSummaryResult');
       expect(getCellMeta(0, 1).readOnly).toEqual(true);
     });
 
-    it('should shift the endpoint coordinates when a row was removed above an endpoint', () => {
-      const hot = handsontable({
+    it('should shift the endpoint coordinates when a row was removed above an endpoint', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 520,
         rowHeaders: true,
@@ -443,17 +585,18 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      hot.alter('remove_row', 0, 1);
+      await alter('remove_row', 0, 1);
+
       expect(getDataAtCell(14, 0)).toEqual(16);
-      expect(getCellMeta(14, 0).className).toEqual(void 0);
+      expect(getCellMeta(14, 0).className).toEqual(undefined);
       expect(getCellMeta(14, 0).readOnly).toEqual(false);
       expect(getDataAtCell(13, 0)).toEqual(14);
       expect(getCellMeta(13, 0).className).toEqual('columnSummaryResult');
       expect(getCellMeta(13, 0).readOnly).toEqual(true);
     });
 
-    it('should shift the endpoint coordinates when a column was removed on the left of an endpoint', () => {
-      const hot = handsontable({
+    it('should shift the endpoint coordinates when a column was removed on the left of an endpoint', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 200,
         width: 200,
@@ -468,9 +611,10 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      hot.alter('remove_col', 0, 1);
+      await alter('remove_col', 0, 1);
+
       expect(getDataAtCell(0, 3)).toEqual(1);
-      expect(getCellMeta(0, 3).className).toEqual(void 0);
+      expect(getCellMeta(0, 3).className).toEqual(undefined);
       expect(getCellMeta(0, 3).readOnly).toEqual(false);
       expect(getDataAtCell(0, 2)).toEqual(14);
       expect(getCellMeta(0, 2).className).toEqual('columnSummaryResult');
@@ -478,8 +622,8 @@ describe('ColumnSummarySpec', () => {
     });
 
     describe('if range is undefined', () => {
-      it('should not throw an error if removing column', () => {
-        const hot = handsontable({
+      it('should not throw an error if removing column', async() => {
+        handsontable({
           data: createNumericData(3, 3),
           height: 200,
           width: 200,
@@ -490,13 +634,13 @@ describe('ColumnSummarySpec', () => {
           }],
         });
 
-        expect(() => {
-          hot.alter('remove_col', 0, 1);
+        expect(async() => {
+          await alter('remove_col', 0, 1);
         }).not.toThrow();
       });
 
-      it('should not throw an error if removing row', () => {
-        const hot = handsontable({
+      it('should not throw an error if removing row', async() => {
+        handsontable({
           data: createNumericData(3, 3),
           height: 200,
           width: 200,
@@ -507,14 +651,14 @@ describe('ColumnSummarySpec', () => {
           }],
         });
 
-        expect(() => {
-          hot.alter('remove_row', 0, 1);
+        expect(async() => {
+          await alter('remove_row', 0, 1);
         }).not.toThrow();
       });
     });
 
-    it('should modify the calculation row range when a row was moved outside the range', () => {
-      const hot = handsontable({
+    it('should modify the calculation row range when a row was moved outside the range', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 200,
         width: 200,
@@ -530,13 +674,13 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      expect(JSON.stringify(hot.getPlugin('columnSummary').endpoints.getEndpoint(0).ranges)).toEqual('[[0,6]]');
-      hot.getPlugin('manualRowMove').moveRow(3, 10);
-      expect(JSON.stringify(hot.getPlugin('columnSummary').endpoints.getEndpoint(0).ranges)).toEqual('[[0,2],[4,6]]');
+      expect(JSON.stringify(getPlugin('columnSummary').endpoints.getEndpoint(0).ranges)).toEqual('[[0,6]]');
+      getPlugin('manualRowMove').moveRow(3, 10);
+      expect(JSON.stringify(getPlugin('columnSummary').endpoints.getEndpoint(0).ranges)).toEqual('[[0,2],[4,6]]');
     });
 
-    it('should modify the calculation row range when a row was moved into the range', () => {
-      const hot = handsontable({
+    it('should modify the calculation row range when a row was moved into the range', async() => {
+      handsontable({
         data: createNumericData(40, 40),
         height: 200,
         width: 200,
@@ -552,19 +696,22 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      expect(JSON.stringify(hot.getPlugin('columnSummary').endpoints.getEndpoint(0).ranges))
+      expect(JSON.stringify(getPlugin('columnSummary').endpoints.getEndpoint(0).ranges))
         .toEqual('[[0,6]]');
 
-      hot.getPlugin('manualRowMove').moveRow(10, 3);
+      getPlugin('manualRowMove').moveRow(10, 3);
 
-      expect(JSON.stringify(hot.getPlugin('columnSummary').endpoints.getEndpoint(0).ranges))
+      expect(JSON.stringify(getPlugin('columnSummary').endpoints.getEndpoint(0).ranges))
         .toEqual('[[0,2],[10,10],[3,6]]');
     });
 
-    it('should shift the visual calculation result position when a row was moved outside the endpoint range', function() {
-      const hot = handsontable({
+    it('should shift the visual calculation result position when a row ' +
+      'was moved outside the endpoint range', async() => {
+      const height = 252;
+
+      handsontable({
         data: createNumericData(40, 40),
-        height: 200,
+        height,
         width: 200,
         manualRowMove: true,
         columnSummary: [
@@ -578,23 +725,28 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      expect(this.$container.find('.columnSummaryResult').size()).toEqual(1);
-      expect(this.$container.find('.htDimmed').size()).toEqual(1);
-      expect($(hot.getCell(7, 3)).hasClass('columnSummaryResult')).toBe(true);
-      expect($(hot.getCell(7, 3)).hasClass('htDimmed')).toBe(true);
+      expect(spec().$container.find('.columnSummaryResult').size()).toEqual(1);
+      expect(spec().$container.find('.htDimmed').size()).toEqual(1);
+      expect($(getCell(7, 3)).hasClass('columnSummaryResult')).toBe(true);
+      expect($(getCell(7, 3)).hasClass('htDimmed')).toBe(true);
 
-      hot.getPlugin('manualRowMove').moveRow(3, 10);
+      getPlugin('manualRowMove').moveRow(3, 10);
 
-      expect(this.$container.find('.columnSummaryResult').size()).toEqual(1);
-      expect(this.$container.find('.htDimmed').size()).toEqual(1);
-      expect($(hot.getCell(6, 3)).hasClass('columnSummaryResult')).toBe(true);
-      expect($(hot.getCell(6, 3)).hasClass('htDimmed')).toBe(true);
+      expect(spec().$container.find('.columnSummaryResult').size()).toEqual(1);
+      expect(spec().$container.find('.htDimmed').size()).toEqual(1);
+      expect($(getCell(6, 3)).hasClass('columnSummaryResult')).toBe(true);
+      expect($(getCell(6, 3)).hasClass('htDimmed')).toBe(true);
     });
 
-    it('should shift the visual calculation result position when a row was moved inside the endpoint range', function() {
-      const hot = handsontable({
+    it('should shift the visual calculation result position when a row ' +
+      'was moved inside the endpoint range', async() => {
+      // Size the container so at least 9 data rows fit regardless of theme row height,
+      // otherwise the summary result row (row 8 after the move) renders outside the viewport.
+      const height = containerHeightForRows(9);
+
+      handsontable({
         data: createNumericData(40, 40),
-        height: 200,
+        height,
         width: 200,
         manualRowMove: true,
         columnSummary: [
@@ -608,24 +760,149 @@ describe('ColumnSummarySpec', () => {
           }]
       });
 
-      expect(this.$container.find('.columnSummaryResult').size()).toEqual(1);
-      expect(this.$container.find('.htDimmed').size()).toEqual(1);
-      expect($(hot.getCell(7, 3)).hasClass('columnSummaryResult')).toBe(true);
-      expect($(hot.getCell(7, 3)).hasClass('htDimmed')).toBe(true);
+      expect(spec().$container.find('.columnSummaryResult').size()).toEqual(1);
+      expect(spec().$container.find('.htDimmed').size()).toEqual(1);
+      expect($(getCell(7, 3)).hasClass('columnSummaryResult')).toBe(true);
+      expect($(getCell(7, 3)).hasClass('htDimmed')).toBe(true);
 
-      hot.getPlugin('manualRowMove').moveRow(10, 3);
+      getPlugin('manualRowMove').moveRow(10, 3);
 
-      expect(this.$container.find('.columnSummaryResult').size()).toEqual(1);
-      expect(this.$container.find('.htDimmed').size()).toEqual(1);
-      expect($(hot.getCell(8, 3)).hasClass('columnSummaryResult')).toBe(true);
-      expect($(hot.getCell(8, 3)).hasClass('htDimmed')).toBe(true);
+      expect(spec().$container.find('.columnSummaryResult').size()).toEqual(1);
+      expect(spec().$container.find('.htDimmed').size()).toEqual(1);
+      expect($(getCell(8, 3)).hasClass('columnSummaryResult')).toBe(true);
+      expect($(getCell(8, 3)).hasClass('htDimmed')).toBe(true);
+    });
+
+    it('should recalculate results after calling the `updateSettings` method with new data', async() => {
+      handsontable({
+        data: createNumericData(10, 10),
+        height: 200,
+        width: 200,
+        columnSummary: [{
+          sourceColumn: 0,
+          destinationColumn: 0,
+          destinationRow: 0,
+          ranges: [[1, 3]],
+          type: 'sum'
+        }]
+      });
+
+      expect(getDataAtCell(0, 0)).toEqual(9);
+
+      await updateSettings({
+        data: createNumericData(5, 5).map(row => row.map(cell => cell * 2)),
+      });
+
+      expect(getDataAtCell(0, 0)).toEqual(18);
+    });
+
+    it('should recalculate results after calling the `loadData` method', async() => {
+      handsontable({
+        data: createNumericData(10, 10),
+        height: 200,
+        width: 200,
+        columnSummary: [{
+          sourceColumn: 0,
+          destinationColumn: 0,
+          destinationRow: 0,
+          ranges: [[1, 3]],
+          type: 'sum'
+        }]
+      });
+
+      expect(getDataAtCell(0, 0)).toEqual(9);
+
+      await loadData(createNumericData(5, 5).map(row => row.map(cell => cell * 2)));
+
+      expect(getDataAtCell(0, 0)).toEqual(18);
+    });
+
+    it('should recalculate results after calling the `updateData` method', async() => {
+      handsontable({
+        data: createNumericData(10, 10),
+        height: 200,
+        width: 200,
+        columnSummary: [{
+          sourceColumn: 0,
+          destinationColumn: 0,
+          destinationRow: 0,
+          ranges: [[1, 3]],
+          type: 'sum'
+        }]
+      });
+
+      expect(getDataAtCell(0, 0)).toEqual(9);
+
+      await updateData(createNumericData(5, 5).map(row => row.map(cell => cell * 2)));
+
+      expect(getDataAtCell(0, 0)).toEqual(18);
+    });
+
+    it('should not reset the endpoint setup for the automatically added rows (minSpareRows)', async() => {
+      let resetAllEndpointsSpy;
+
+      handsontable({
+        beforeLoadData() {
+          const plugin = this.getPlugin('columnSummary');
+
+          resetAllEndpointsSpy = spyOn(plugin.endpoints, 'resetAllEndpoints').and.callThrough();
+        },
+        data: createNumericData(5, 5),
+        height: 200,
+        width: 200,
+        minSpareRows: 10,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            destinationRow: 0,
+            ranges: [
+              [1, 3]
+            ],
+            type: 'sum'
+          }
+        ]
+      });
+
+      await waitForNextAnimationFrames(2);
+
+      expect(resetAllEndpointsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not reset the endpoint setup for the automatically added columns (minSpareCols)', async() => {
+      let resetAllEndpointsSpy;
+
+      handsontable({
+        beforeLoadData() {
+          const plugin = this.getPlugin('columnSummary');
+
+          resetAllEndpointsSpy = spyOn(plugin.endpoints, 'resetAllEndpoints').and.callThrough();
+        },
+        data: createNumericData(5, 5),
+        height: 200,
+        width: 200,
+        minSpareCols: 10,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            destinationRow: 0,
+            ranges: [
+              [1, 3]
+            ],
+            type: 'sum'
+          }
+        ]
+      });
+
+      await waitForNextAnimationFrames(2);
+
+      expect(resetAllEndpointsSpy).not.toHaveBeenCalled();
     });
   });
 
   describe('compatibility with other plugins', () => {
     describe('nestedRows', () => {
-      it('should work properly with the nestedRows plugin', (done) => {
-        const hot = handsontable({
+      it('should work properly with the nestedRows plugin', async() => {
+        handsontable({
           data: getDataForColumnSummary(),
           height: 200,
           width: 200,
@@ -634,7 +911,7 @@ describe('ColumnSummarySpec', () => {
           columnSummary: columnSummaryFunction
         });
 
-        const nestedRowsPlugin = hot.getPlugin('nestedRows');
+        const nestedRowsPlugin = getPlugin('nestedRows');
 
         /**
          * @param row
@@ -655,47 +932,273 @@ describe('ColumnSummarySpec', () => {
           }
         }
 
-        setTimeout(() => {
-          toggle(0);
+        await waitForNextAnimationFrames(2);
 
-          expect(getDataAtCell(0, 1)).toEqual(106);
-          expect(getDataAtCell(1, 1)).toEqual(3996);
-          setDataAtCell(2, 1, 0);
-          expect(getDataAtCell(0, 1)).toEqual(106);
-          expect(getDataAtCell(1, 1)).toEqual(3633);
-          expect(getCellMeta(0, 1).readOnly).toEqual(true);
-          expect(getCellMeta(1, 1).readOnly).toEqual(true);
+        toggle(0);
 
-          done();
-        }, 300);
+        expect(getDataAtCell(0, 1)).toEqual(106);
+        expect(getDataAtCell(1, 1)).toEqual(3996);
+
+        await setDataAtCell(2, 1, 0);
+
+        expect(getDataAtCell(0, 1)).toEqual(106);
+        expect(getDataAtCell(1, 1)).toEqual(3633);
+        expect(getCellMeta(0, 1).readOnly).toEqual(true);
+        expect(getCellMeta(1, 1).readOnly).toEqual(true);
       });
     });
 
-    it('should calculate the endpoints properly after moving rows between groups', function() {
-      const hot = handsontable({
+    it('should calculate the endpoints properly after moving rows between groups', async() => {
+      handsontable({
         data: getDataForColumnSummary(),
         height: 200,
         width: 200,
         rowHeaders: true,
         nestedRows: true,
+        viewportColumnRenderingOffset: 10,
+        viewportRowRenderingOffset: 10,
         columnSummary: columnSummaryFunction
       });
 
-      expect(hot.getDataAtCell(0, 1)).toEqual(106);
-      expect(hot.getDataAtCell(4, 1)).toEqual(3996);
-      expect(this.$container.find('.columnSummaryResult').size()).toEqual(3);
-      expect(this.$container.find('.htDimmed').size()).toEqual(3);
+      expect(getDataAtCell(0, 1)).toEqual(106);
+      expect(getDataAtCell(4, 1)).toEqual(3996);
+      expect(spec().$container.find('.columnSummaryResult').size()).toEqual(3);
+      expect(spec().$container.find('.htDimmed').size()).toEqual(3);
 
-      hot.getPlugin('manualRowMove').dragRow(2, 6);
+      getPlugin('manualRowMove').dragRow(2, 6);
 
-      expect(hot.getDataAtCell(0, 1)).toEqual(70);
-      expect(hot.getDataAtCell(3, 1)).toEqual(4032);
-      expect(this.$container.find('.columnSummaryResult').size()).toEqual(3);
-      expect(this.$container.find('.htDimmed').size()).toEqual(3);
+      expect(getDataAtCell(0, 1)).toEqual(70);
+      expect(getDataAtCell(3, 1)).toEqual(4032);
+      expect(spec().$container.find('.columnSummaryResult').size()).toEqual(3);
+      expect(spec().$container.find('.htDimmed').size()).toEqual(3);
     });
+
+    it('should keep the grand-total endpoint working when a nested group is collapsed (#11674)', async() => {
+      const data = getDataForColumnSummary();
+
+      data.push({ a: 'TOTAL', b: null });
+
+      // installed before the grid so init-time warnings land inside the spied window
+      const warnSpy = spyOnConsoleWarn();
+
+      handsontable({
+        data,
+        height: 400,
+        width: 400,
+        rowHeaders: true,
+        nestedRows: true,
+        columnSummary() {
+          return [
+            {
+              destinationRow: 0,
+              destinationColumn: 1,
+              type: 'sum',
+              forceNumeric: true,
+              ranges: [[1, 3]],
+            },
+            {
+              destinationRow: 4,
+              destinationColumn: 1,
+              type: 'sum',
+              forceNumeric: true,
+              ranges: [[5, 6]],
+            },
+            {
+              destinationRow: 7,
+              destinationColumn: 1,
+              type: 'sum',
+              forceNumeric: true,
+              ranges: [[8, 9]],
+            },
+            {
+              // physical row 10 - the grand-total row at the bottom
+              destinationRow: 10,
+              destinationColumn: 1,
+              type: 'sum',
+              forceNumeric: true,
+              ranges: [[1, 3], [5, 6], [8, 9]],
+            },
+          ];
+        },
+      });
+
+      await waitForNextAnimationFrames(2);
+
+      expect(getDataAtCell(10, 1)).toEqual(4251);
+
+      getPlugin('nestedRows').collapsingUI.collapseChildren(0);
+
+      await waitForNextAnimationFrames(2);
+
+      expect(getDataAtCell(7, 1)).toEqual(4251);
+
+      await setDataAtCell(2, 1, 0);
+
+      expect(warnSpy).not.toHaveBeenCalledWith(warnMessage);
+      // the edited row belongs to the second group, so its subtotal and the grand total drop by 363
+      expect(getDataAtCell(1, 1)).toEqual(3633);
+      expect(getDataAtCell(7, 1)).toEqual(3888);
+    });
+
+    it('should resolve `reversedRowCoords` against the physical row count when a group is collapsed (#11674)',
+      async() => {
+        const data = getDataForColumnSummary();
+
+        data.push({ a: 'TOTAL', b: null });
+
+        handsontable({
+          data,
+          height: 400,
+          width: 400,
+          rowHeaders: true,
+          nestedRows: true,
+          columnSummary() {
+            return [
+              {
+                destinationRow: 0,
+                reversedRowCoords: true,
+                destinationColumn: 1,
+                type: 'sum',
+                forceNumeric: true,
+                ranges: [[1, 3], [5, 6], [8, 9]],
+              },
+            ];
+          },
+        });
+
+        await waitForNextAnimationFrames(2);
+
+        expect(getDataAtCell(10, 1)).toEqual(4251);
+
+        getPlugin('nestedRows').collapsingUI.collapseChildren(0);
+
+        await waitForNextAnimationFrames(2);
+
+        // force a recalculation while the group stays collapsed
+        await setDataAtCell(2, 1, 0);
+
+        // the result stays in the last physical row instead of jumping to the row that is now `countRows() - 1`
+        expect(getDataAtCell(7, 1)).toEqual(3888);
+        expect(getDataAtCell(4, 1)).toEqual('7');
+      });
+
+    it('should not throw when the destination row itself is trimmed, and recover once it is visible (#11674)',
+      async() => {
+        handsontable({
+          data: getDataForColumnSummary(),
+          height: 400,
+          width: 400,
+          rowHeaders: true,
+          nestedRows: true,
+          columnSummary() {
+            return [
+              {
+                // physical row 3 - the last child of the first group, so collapsing that group hides it
+                destinationRow: 3,
+                destinationColumn: 1,
+                type: 'sum',
+                forceNumeric: true,
+                ranges: [[8, 9]],
+              },
+            ];
+          },
+        });
+
+        await waitForNextAnimationFrames(2);
+
+        expect(getDataAtCell(3, 1)).toEqual(149);
+
+        getPlugin('nestedRows').collapsingUI.collapseChildren(0);
+
+        await waitForNextAnimationFrames(2);
+
+        // visual row 5 is physical row 8 while the first group is collapsed. Recalculating towards a
+        // hidden destination used to throw in `DataMap.set`.
+        await setDataAtCell(5, 1, 0);
+
+        getPlugin('nestedRows').collapsingUI.expandChildren(0);
+
+        await waitForNextAnimationFrames(2);
+
+        // the next recalculation with the row visible writes the up-to-date result
+        await setDataAtCell(9, 1, 4);
+
+        expect(getDataAtCell(3, 1)).toEqual(4);
+      });
   });
+
+  it('should not count a trimmed summary row as data in another summary (#11674)', async() => {
+    handsontable({
+      data: [[1], [2], [3], [null], [null]],
+      columnSummary: [
+        {
+          destinationRow: 3,
+          destinationColumn: 0,
+          type: 'sum',
+          forceNumeric: true,
+          ranges: [[0, 2]],
+        },
+        {
+          // no `ranges`, so the default range spans every physical row - including row 3, which
+          // holds the subtotal above
+          destinationRow: 4,
+          destinationColumn: 0,
+          type: 'sum',
+          forceNumeric: true,
+        },
+      ],
+      trimRows: true,
+    });
+
+    await waitForNextAnimationFrames(2);
+
+    expect(getDataAtCell(3, 0)).toEqual(6);
+    expect(getDataAtCell(4, 0)).toEqual(6);
+
+    getPlugin('trimRows').trimRow(3);
+
+    await waitForNextAnimationFrames(2);
+
+    // the subtotal row is hidden now, so its `columnSummaryResult` class is unreadable
+    await setDataAtCell(0, 0, 10);
+
+    // 10 + 2 + 3, without the hidden subtotal of 6 added on top
+    expect(getDataAtCell(hot().toVisualRow(4), 0)).toEqual(15);
+  });
+
+  it('should build the default `ranges` from the physical row count when rows are already trimmed (#11674)',
+    async() => {
+      handsontable({
+        data: [[1], [2], [3], [4], [null]],
+        trimRows: [1, 2],
+        columnSummary() {
+          return [
+            {
+              // no `ranges`, so the default range is built while rows 1 and 2 are already trimmed
+              destinationRow: 4,
+              destinationColumn: 0,
+              type: 'sum',
+              forceNumeric: true,
+            },
+          ];
+        },
+      });
+
+      await waitForNextAnimationFrames(2);
+
+      const plugin = getPlugin('ColumnSummary');
+
+      // 5 physical rows, so the default range spans them all - not the 3 visible ones
+      expect(plugin.endpoints.getAllEndpoints()[0].ranges).toEqual([[0, 4]]);
+
+      // force a recalculation and check the sum covers the trimmed rows too
+      await setDataAtCell(0, 0, 10);
+
+      expect(getDataAtCell(hot().toVisualRow(4), 0)).toEqual(19);
+    });
+
   describe('maxRows options set', () => {
-    it('should apply summary operation only on rows which are < maxRows', () => {
+    it('should apply summary operation only on rows which are < maxRows', async() => {
       const rows = 9;
       const columns = 5;
 
@@ -731,8 +1234,147 @@ describe('ColumnSummarySpec', () => {
     });
   });
 
-  it('should warn user that provided destination points are beyond the table boundaries', () => {
-    const warnSpy = spyOn(console, 'warn');
+  describe('`roundFloat` option', () => {
+    it('should not round the resultif `roundFloat` is set to `false`', async() => {
+      handsontable({
+        data: createNumericData(15, 15),
+        height: 200,
+        width: 200,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: false,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual(7.454545454545454);
+    });
+
+    it('should round the result to the provided number of decimal places', async() => {
+      handsontable({
+        data: createNumericData(15, 15),
+        height: 200,
+        width: 200,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: 2,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7.45');
+
+      await updateSettings({
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: 0,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7');
+    });
+
+    it('should round the `roundFloat` value to range <0, 100> if its value is an integer outside of that range', async() => {
+      handsontable({
+        data: createNumericData(15, 15),
+        height: 200,
+        width: 200,
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: -50,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7');
+
+      await updateSettings({
+        columnSummary: [
+          {
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            ranges: [
+              [0, 3], [5, 6], [8], [10, 13]
+            ],
+            roundFloat: 150,
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(14, 0)).toEqual('7.45454545454545414173708195448853075504302978515625' +
+      '00000000000000000000000000000000000000000000000000');
+    });
+
+    it('should automatically adjust decimal places so the entire number fits into 8 digits when roundFloat is set to "auto"', async() => {
+      handsontable({
+        data: [
+          [1],
+          [2],
+          [3.123456789],
+          [4.987654321],
+          []
+        ],
+        columnSummary: [
+          {
+            sourceColumn: 0,
+            destinationColumn: 0,
+            reversedRowCoords: true,
+            destinationRow: 0,
+            roundFloat: 'auto',
+            type: 'average'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(4, 0)).toEqual('2.7777778');
+
+      await updateSettings({
+        data: [
+          [10000],
+          [20000],
+          [30000.123],
+          [40000.456],
+          []
+        ]
+      });
+
+      expect(getDataAtCell(4, 0)).toEqual('25000.145');
+    });
+  });
+
+  it('should warn user that provided destination points are beyond the table boundaries', async() => {
+    const warnSpy = spyOnConsoleWarn();
 
     handsontable({
       startRows: 3,
@@ -747,8 +1389,8 @@ describe('ColumnSummarySpec', () => {
     expect(warnSpy).toHaveBeenCalledWith(warnMessage);
   });
 
-  it('should not show endpoint when it\'s destination point is proper just after new row insertion', () => {
-    const warnSpy = spyOn(console, 'warn');
+  it('should not show endpoint when it\'s destination point is proper just after new row insertion', async() => {
+    const warnSpy = spyOnConsoleWarn();
     let warnFirstArgs;
 
     handsontable({
@@ -765,7 +1407,7 @@ describe('ColumnSummarySpec', () => {
 
     expect(warnFirstArgs.filter(arg => arg === warnMessage).length).toBe(1);
 
-    alter('insert_row', 0);
+    await alter('insert_row_above', 0);
 
     warnFirstArgs = warnSpy.calls.allArgs().map(args => args[0]);
 
@@ -776,5 +1418,281 @@ describe('ColumnSummarySpec', () => {
       [null, null, null],
       [null, null, null],
     ]);
+  });
+
+  it('should not reset the cell meta information after `updateSettings` call', async() => {
+    handsontable({
+      data: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+        [null, null, null],
+      ],
+      columnSummary: [{
+        destinationRow: 3,
+        destinationColumn: 1,
+        type: 'sum'
+      }]
+    });
+
+    expect(getCellMeta(3, 1).readOnly).toBe(true);
+    expect(getCellMeta(3, 1).className).toBe('columnSummaryResult');
+
+    await updateSettings({});
+
+    expect(getCellMeta(3, 1).readOnly).toBe(true);
+    expect(getCellMeta(3, 1).className).toBe('columnSummaryResult');
+
+    await updateSettings({ columns: [{}, {}, {}, {}] });
+
+    expect(getCellMeta(3, 1).readOnly).toBe(true);
+    expect(getCellMeta(3, 1).className).toBe('columnSummaryResult');
+  });
+
+  describe('integration with the `Formulas` plugin', () => {
+    it('should include calculated formula values in the `sum` summary (#10980)', async() => {
+      handsontable({
+        data: [
+          [1, 2, '=A1+B1'],
+          [3, 4, '=A2+B2'],
+          [5, 6, '=A3+B3'],
+          [null, null, null],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        columnSummary: [{
+          destinationRow: 0,
+          destinationColumn: 2,
+          reversedRowCoords: true,
+          ranges: [[0, 2]],
+          type: 'sum'
+        }]
+      });
+
+      expect(getDataAtCell(3, 2)).toBe(21);
+    });
+
+    it('should include calculated formula values in the `min` and `max` summaries', async() => {
+      handsontable({
+        data: [
+          [1, 2, '=A1+B1'], // 3
+          [3, 4, '=A2+B2'], // 7
+          [5, 6, '=A3+B3'], // 11
+          [null, null, null],
+          [null, null, null],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        columnSummary: [
+          {
+            destinationRow: 0,
+            destinationColumn: 2,
+            reversedRowCoords: true,
+            ranges: [[0, 2]],
+            type: 'min'
+          },
+          {
+            destinationRow: 1,
+            destinationColumn: 2,
+            reversedRowCoords: true,
+            ranges: [[0, 2]],
+            type: 'max'
+          }
+        ]
+      });
+
+      expect(getDataAtCell(4, 2)).toBe(3);
+      expect(getDataAtCell(3, 2)).toBe(11);
+    });
+
+    it('should include calculated formula values in the `average` summary', async() => {
+      handsontable({
+        data: [
+          [2, 2, '=A1+B1'], // 4
+          [4, 4, '=A2+B2'], // 8
+          [null, null, null],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        columnSummary: [{
+          destinationRow: 0,
+          destinationColumn: 2,
+          reversedRowCoords: true,
+          ranges: [[0, 1]],
+          type: 'average'
+        }]
+      });
+
+      expect(getDataAtCell(2, 2)).toBe(6);
+    });
+
+    it('should sum the visual `sourceColumn` after a manual column move', async() => {
+      handsontable({
+        data: [
+          [1, 100, 1000],
+          [2, 200, 2000],
+          [3, 300, 3000],
+          [null, null, null],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        manualColumnMove: true,
+        columnSummary: [{
+          destinationRow: 0,
+          destinationColumn: 1,
+          reversedRowCoords: true,
+          ranges: [[0, 2]],
+          type: 'sum'
+        }]
+      });
+
+      // Initial: visual column 1 = [100, 200, 300] -> sum 600.
+      expect(getDataAtCell(3, 1)).toBe(600);
+
+      // Move physical column 1 to visual position 0; visual column 1 now
+      // holds the original physical column 0 -> [1, 2, 3].
+      await getPlugin('manualColumnMove').moveColumn(1, 0);
+      await render();
+
+      // Trigger a refresh on the (visual) sourceColumn so the summary recalculates.
+      await setDataAtCell(0, 1, 10);
+
+      // Sum of visual column 1 = [10, 2, 3] = 15.
+      expect(getDataAtCell(3, 1)).toBe(15);
+    });
+
+    it('should not recalculate endpoints when formulas updates only touch unrelated columns', async() => {
+      const customFunction = jasmine.createSpy('customFunction').and.returnValue(0);
+
+      handsontable({
+        data: [
+          [1, 2, '=A1+B1'],
+          [3, 4, '=A2+B2'],
+          [5, 6, '=A3+B3'],
+          [null, null, null, null],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        columnSummary: [{
+          destinationRow: 0,
+          destinationColumn: 3,
+          sourceColumn: 3,
+          reversedRowCoords: true,
+          ranges: [[0, 2]],
+          type: 'custom',
+          customFunction
+        }]
+      });
+
+      const initialCalls = customFunction.calls.count();
+
+      // Editing column A only triggers recalculation of the formula in column C.
+      // Neither column matches the endpoint's sourceColumn (3), so the custom
+      // function must not be invoked again from `afterFormulasValuesUpdate`.
+      await setDataAtCell(0, 0, 99);
+
+      expect(customFunction.calls.count()).toBe(initialCalls);
+    });
+
+    it('should recalculate the summary when a referenced cell is changed', async() => {
+      handsontable({
+        data: [
+          [1, 2, '=A1+B1'],
+          [3, 4, '=A2+B2'],
+          [null, null, null],
+        ],
+        formulas: {
+          engine: HyperFormula
+        },
+        columnSummary: [{
+          destinationRow: 0,
+          destinationColumn: 2,
+          reversedRowCoords: true,
+          ranges: [[0, 1]],
+          type: 'sum'
+        }]
+      });
+
+      expect(getDataAtCell(2, 2)).toBe(10);
+
+      await setDataAtCell(0, 0, 10);
+
+      expect(getDataAtCell(2, 2)).toBe(19);
+    });
+  });
+
+  describe('result cell meta (declarative styling)', () => {
+    it('should apply the result styling without firing the `beforeSetCellMeta`/`afterSetCellMeta` hooks', async() => {
+      const beforeSetCellMeta = jasmine.createSpy('beforeSetCellMeta');
+      const afterSetCellMeta = jasmine.createSpy('afterSetCellMeta');
+
+      handsontable({
+        data: [[1], [2], [3], [null]],
+        columns: [{ type: 'numeric' }],
+        columnSummary: [{
+          destinationRow: 3,
+          destinationColumn: 0,
+          type: 'sum',
+          forceNumeric: true,
+        }],
+        beforeSetCellMeta,
+        afterSetCellMeta,
+      });
+
+      // The result styling is plugin-internal render state - it is written declaratively and must not
+      // surface through the public cell-meta hooks.
+      expect(getCellMeta(3, 0).className).toBe('columnSummaryResult');
+      expect(getCellMeta(3, 0).readOnly).toBe(true);
+      expect(beforeSetCellMeta).not.toHaveBeenCalled();
+      expect(afterSetCellMeta).not.toHaveBeenCalled();
+    });
+
+    it('should apply the result styling even when `beforeSetCellMeta` vetoes every cell-meta write', async() => {
+      handsontable({
+        data: [[1], [2], [3], [null]],
+        columns: [{ type: 'numeric' }],
+        columnSummary: [{
+          destinationRow: 3,
+          destinationColumn: 0,
+          type: 'sum',
+          forceNumeric: true,
+        }],
+        beforeSetCellMeta: () => false,
+      });
+
+      // A `beforeSetCellMeta` veto blocks user-facing `setCellMeta` calls, but it must not block the
+      // plugin's own declarative result styling.
+      expect(getCellMeta(3, 0).className).toBe('columnSummaryResult');
+      expect(getCellMeta(3, 0).readOnly).toBe(true);
+    });
+
+    it('should re-apply the result styling after `updateSettings` without firing the cell-meta hooks', async() => {
+      const afterSetCellMeta = jasmine.createSpy('afterSetCellMeta');
+
+      handsontable({
+        data: [[1], [2], [3], [null]],
+        columns: [{ type: 'numeric' }],
+        columnSummary: [{
+          destinationRow: 3,
+          destinationColumn: 0,
+          type: 'sum',
+          forceNumeric: true,
+        }],
+        afterSetCellMeta,
+      });
+
+      await updateSettings({ columns: [{ type: 'numeric' }] });
+
+      // The result styling is reapplied after the `updateSettings` cache reset (the numeric cell type
+      // merges its own classes alongside it), and still without firing the public cell-meta hooks.
+      expect(getCellMeta(3, 0).className).toContain('columnSummaryResult');
+      expect(getCellMeta(3, 0).readOnly).toBe(true);
+      expect(afterSetCellMeta).not.toHaveBeenCalled();
+    });
   });
 });

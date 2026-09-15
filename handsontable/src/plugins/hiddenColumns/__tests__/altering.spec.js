@@ -13,9 +13,49 @@ describe('HiddenColumns', () => {
   });
 
   describe('alter actions', () => {
-    it('should update hidden column indexes after columns removal (removing not hidden columns)', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(1, 10),
+    it('should move the selection off a hidden column to the nearest visible one after removing a column', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 6),
+        colHeaders: true,
+        hiddenColumns: {
+          columns: [2], // hide column C
+        },
+      });
+
+      await selectCell(0, 3); // D - the visible column right after the hidden C
+      await alter('remove_col', 3, 1); // remove D; the shift would land the selection on hidden C (visual col 2)
+
+      // The selection must not rest on the hidden column - it snaps to the nearest visible one.
+      const { col } = getSelectedRange()[0].highlight;
+
+      expect(columnIndexMapper().isHidden(col)).toBe(false);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,3 from: 0,3 to: 0,3']);
+    });
+
+    it('should keep a hidden column within the bounds of a multi-column selection after removing a column', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 8),
+        colHeaders: true,
+        hiddenColumns: {
+          columns: [3], // hide column D
+        },
+      });
+
+      await selectCell(0, 4, 0, 6); // range over columns E..G (the hidden D sits just before it)
+      await alter('remove_col', 4, 1); // shifts the range left so a corner moves next to the hidden D
+
+      // A wide range legitimately keeps hidden columns inside its bounds (copy/fill include them);
+      // the shift must not snap the corners out, so the hidden column D stays within [from, to].
+      const range = getSelectedRange()[0];
+
+      expect(columnIndexMapper().isHidden(3)).toBe(true);
+      expect(range.from.col).toBeLessThanOrEqual(3);
+      expect(range.to.col).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should update hidden column indexes after columns removal (removing not hidden columns)', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 10),
         hiddenColumns: true,
         manualColumnMove: [4, 0, 8, 5, 2, 6, 1, 7, 3, 9]
       });
@@ -23,21 +63,21 @@ describe('HiddenColumns', () => {
       const plugin = getPlugin('hiddenColumns');
 
       plugin.hideColumns([6, 7, 8]); // visual column indexes after move (physical indexes: 1, 7, 3)
-      alter('remove_col', 2, 3); // visual column index
+      await alter('remove_col', 2, 3); // visual column index
 
       expect(plugin.isHidden(3)).toBe(true); // 6 -> 3
-      expect(hot.getColWidth(3)).toEqual(0);
+      expect(getColWidth(3)).toEqual(0);
       expect(plugin.isHidden(4)).toBe(true); // 7 -> 4
-      expect(hot.getColWidth(4)).toEqual(0);
+      expect(getColWidth(4)).toEqual(0);
       expect(plugin.isHidden(5)).toBe(true); // 8 -> 5
-      expect(hot.getColWidth(5)).toEqual(0);
+      expect(getColWidth(5)).toEqual(0);
 
       expect(plugin.isHidden(6)).toBe(false);
-      expect(hot.getColWidth(6)).toEqual(50);
+      expect(getColWidth(6)).toEqual(50);
       expect(plugin.isHidden(7)).toBe(false);
-      expect(hot.getColWidth(7)).toEqual(50);
+      expect(getColWidth(7)).toEqual(50);
       expect(plugin.isHidden(8)).toBe(false);
-      expect(hot.getColWidth(8)).toEqual(50);
+      expect(getColWidth(8)).toEqual(50);
 
       expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('E1');
       expect(spec().$container.find('tbody tr:eq(0) td:eq(1)').text()).toEqual('A1');
@@ -46,9 +86,9 @@ describe('HiddenColumns', () => {
       expect(getDataAtRow(0)).toEqual(['E1', 'A1', 'G1', 'B1', 'H1', 'D1', 'J1']);
     });
 
-    it('should update hidden column indexes after columns removal (removing part of hidden columns)', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(1, 10),
+    it('should update hidden column indexes after columns removal (removing part of hidden columns)', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 10),
         colHeaders: true,
         hiddenColumns: {
           indicators: true,
@@ -59,21 +99,21 @@ describe('HiddenColumns', () => {
       const plugin = getPlugin('hiddenColumns');
 
       plugin.hideColumns([6, 7, 8]); // visual column indexes after move (physical indexes: 1, 7, 3)
-      alter('remove_col', 6, 2); // visual column index
+      await alter('remove_col', 6, 2); // visual column index
 
       expect(plugin.isHidden(6)).toBe(true); // 8 -> 6
-      expect(hot.getColWidth(6)).toEqual(0);
+      expect(getColWidth(6)).toEqual(0);
 
       expect(getCell(-1, 5)).toHaveClass(CSS_CLASS_BEFORE_HIDDEN_COLUMN);
       expect(getCell(-1, 6)).toBe(null);
       expect(getCell(-1, 7)).toHaveClass(CSS_CLASS_AFTER_HIDDEN_COLUMN);
 
       expect(plugin.isHidden(5)).toBe(false);
-      expect(hot.getColWidth(5)).toEqual(65);
+      expect(getColWidth(5)).toEqual(65);
       expect(plugin.isHidden(7)).toBe(false);
-      expect(hot.getColWidth(7)).toEqual(65);
+      expect(getColWidth(7)).toEqual(65);
       expect(plugin.isHidden(8)).toBe(false);
-      expect(hot.getColWidth(8)).toEqual(50);
+      expect(getColWidth(8)).toEqual(50);
 
       expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('E1');
       expect(spec().$container.find('tbody tr:eq(0) td:eq(1)').text()).toEqual('A1');
@@ -85,9 +125,9 @@ describe('HiddenColumns', () => {
       expect(getDataAtRow(0)).toEqual(['E1', 'A1', 'I1', 'F1', 'C1', 'G1', 'D1', 'J1']);
     });
 
-    it('should update hidden column indexes after columns insertion (inserting columns before already hidden columns)', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(1, 10),
+    it('should update hidden column indexes after columns insertion (inserting columns before already hidden columns)', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 10),
         hiddenColumns: true,
         manualColumnMove: [4, 0, 8, 5, 2, 6, 1, 7, 3, 9]
       });
@@ -95,21 +135,21 @@ describe('HiddenColumns', () => {
       const plugin = getPlugin('hiddenColumns');
 
       plugin.hideColumns([6, 7, 8]); // visual column indexes after move (physical indexes: 1, 7, 3)
-      alter('insert_col', 0, 3); // visual column index
+      await alter('insert_col_start', 0, 3); // visual column index
 
       expect(plugin.isHidden(9)).toBe(true); // 6 -> 9
-      expect(hot.getColWidth(9)).toEqual(0);
+      expect(getColWidth(9)).toEqual(0);
       expect(plugin.isHidden(10)).toBe(true); // 7 -> 10
-      expect(hot.getColWidth(10)).toEqual(0);
+      expect(getColWidth(10)).toEqual(0);
       expect(plugin.isHidden(11)).toBe(true); // 8 -> 11
-      expect(hot.getColWidth(11)).toEqual(0);
+      expect(getColWidth(11)).toEqual(0);
 
       expect(plugin.isHidden(6)).toBe(false);
-      expect(hot.getColWidth(6)).toEqual(50);
+      expect(getColWidth(6)).toEqual(50);
       expect(plugin.isHidden(7)).toBe(false);
-      expect(hot.getColWidth(7)).toEqual(50);
+      expect(getColWidth(7)).toEqual(50);
       expect(plugin.isHidden(8)).toBe(false);
-      expect(hot.getColWidth(8)).toEqual(50);
+      expect(getColWidth(8)).toEqual(50);
 
       expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('');
       expect(spec().$container.find('tbody tr:eq(0) td:eq(1)').text()).toEqual('');
@@ -124,9 +164,9 @@ describe('HiddenColumns', () => {
       expect(getDataAtRow(0)).toEqual([null, null, null, 'E1', 'A1', 'I1', 'F1', 'C1', 'G1', 'B1', 'H1', 'D1', 'J1']);
     });
 
-    it('should update hidden column indexes after columns insertion (inserting columns between already hidden columns)', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(1, 10),
+    it('should update hidden column indexes after columns insertion (inserting columns between already hidden columns)', async() => {
+      handsontable({
+        data: createSpreadsheetData(1, 10),
         colHeaders: true,
         hiddenColumns: {
           indicators: true,
@@ -137,14 +177,14 @@ describe('HiddenColumns', () => {
       const plugin = getPlugin('hiddenColumns');
 
       plugin.hideColumns([6, 7, 8]); // visual column indexes after move (physical indexes: 1, 7, 3)
-      alter('insert_col', 7, 2); // visual column index
+      await alter('insert_col_start', 7, 2); // visual column index
 
       expect(plugin.isHidden(6)).toBe(true);
-      expect(hot.getColWidth(6)).toEqual(0);
+      expect(getColWidth(6)).toEqual(0);
       expect(plugin.isHidden(9)).toBe(true); // 7 -> 9
-      expect(hot.getColWidth(9)).toEqual(0);
+      expect(getColWidth(9)).toEqual(0);
       expect(plugin.isHidden(10)).toBe(true); // 8 -> 10
-      expect(hot.getColWidth(10)).toEqual(0);
+      expect(getColWidth(10)).toEqual(0);
 
       expect(getCell(-1, 5)).toHaveClass(CSS_CLASS_BEFORE_HIDDEN_COLUMN);
       expect(getCell(-1, 6)).toBe(null);
@@ -155,13 +195,13 @@ describe('HiddenColumns', () => {
       expect(getCell(-1, 11)).toHaveClass(CSS_CLASS_AFTER_HIDDEN_COLUMN);
 
       expect(plugin.isHidden(5)).toBe(false);
-      expect(hot.getColWidth(5)).toEqual(65);
+      expect(getColWidth(5)).toEqual(65);
       expect(plugin.isHidden(7)).toBe(false);
-      expect(hot.getColWidth(7)).toEqual(65);
+      expect(getColWidth(7)).toEqual(65);
       expect(plugin.isHidden(8)).toBe(false);
-      expect(hot.getColWidth(8)).toEqual(65);
+      expect(getColWidth(8)).toEqual(65);
       expect(plugin.isHidden(11)).toBe(false);
-      expect(hot.getColWidth(11)).toEqual(65);
+      expect(getColWidth(11)).toEqual(65);
 
       expect(spec().$container.find('tbody tr:eq(0) td:eq(0)').text()).toEqual('E1');
       expect(spec().$container.find('tbody tr:eq(0) td:eq(1)').text()).toEqual('A1');

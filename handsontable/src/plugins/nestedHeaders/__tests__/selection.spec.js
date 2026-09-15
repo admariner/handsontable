@@ -3,6 +3,13 @@ describe('NestedHeaders', () => {
 
   beforeEach(function() {
     this.$container = $(`<div id="${id}"></div>`).appendTo('body');
+
+    // Matchers configuration.
+    this.matchersConfig = {
+      toMatchHTML: {
+        keepAttributes: ['class', 'colspan']
+      }
+    };
   });
 
   afterEach(function() {
@@ -13,9 +20,9 @@ describe('NestedHeaders', () => {
   });
 
   describe('selection', () => {
-    it('should generate class names based on "currentHeaderClassName" and "activeHeaderClassName" settings', () => {
+    it('should generate class names based on "currentHeaderClassName" and "activeHeaderClassName" settings', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(10, 10),
         colHeaders: true,
         currentHeaderClassName: 'my-current-header',
         activeHeaderClassName: 'my-active-header',
@@ -44,7 +51,7 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
-            <th class="">C</th>
+            <th class="htLastVisibleHeader">C</th>
           </tr>
           <tr>
             <th class="">D</th>
@@ -56,10 +63,10 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
             <th class="hiddenHeader"></th>
-            <th class="">G</th>
+            <th class="htLastVisibleHeader">G</th>
           </tr>
           <tr>
-            <th class="">H</th>
+            <th class="my-active-header-prev">H</th>
             <th class="my-active-header" colspan="2">I</th>
             <th class="hiddenHeader"></th>
             <th class="" colspan="2">J</th>
@@ -68,11 +75,11 @@ describe('NestedHeaders', () => {
             <th class="hiddenHeader"></th>
             <th class="" colspan="2">L</th>
             <th class="hiddenHeader"></th>
-            <th class="">M</th>
+            <th class="htLastVisibleHeader">M</th>
           </tr>
           <tr>
-            <th class="">N</th>
-            <th class="my-current-header my-active-header">O</th>
+            <th class="my-active-header-prev">N</th>
+            <th class="my-current-header my-active-header my-active-header-prev">O</th>
             <th class="my-current-header my-active-header">P</th>
             <th class="">Q</th>
             <th class="">R</th>
@@ -80,15 +87,15 @@ describe('NestedHeaders', () => {
             <th class="">T</th>
             <th class="">U</th>
             <th class="">V</th>
-            <th class="">W</th>
+            <th class="htLastVisibleHeader">W</th>
           </tr>
         </thead>
         `);
     });
 
-    it('should highlight column header for selected cells', () => {
+    it('should highlight column header for selected cells', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 4 }, 'F1', 'G1', 'H1', 'I1', 'J1'],
@@ -97,182 +104,58 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      selectCells([[0, 1, 0, 1]]); // B1
+      await selectCells([[0, 1, 0, 1]]); // B1
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__highlight">B3</th>
-            <th class="" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   : - :       :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : # :   :   :   :   :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      selectCells([[1, 2, 1, 2]]); // C2
+      await selectCells([[1, 2, 1, 2]]); // C2
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   :   : -   - :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   :   : # :   :   :   :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      selectCells([[1, 3, 1, 3]]); // D2
+      await selectCells([[1, 3, 1, 3]]); // D2
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   :   : -   - :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   :   :   : # :   :   :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      selectCells([[1, 4, 1, 6]]); // E2 to G2
+      await selectCells([[1, 4, 1, 6]]); // E2 to G2
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="">B3</th>
-            <th class="" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight">E3</th>
-            <th class="ht__highlight">F3</th>
-            <th class="ht__highlight">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   :   :       : - : - : - :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   :   :   :   : A : 0 : 0 :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
     });
 
-    it('should highlight column header for selected cells in-between nested headers', () => {
+    it('should highlight column header for selected cells in-between nested headers', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 4 }, 'F1', 'G1', 'H1', 'I1', 'J1'],
@@ -281,139 +164,46 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      selectCells([[1, 2, 1, 5]]); // C2 to F2
+      await selectCells([[1, 2, 1, 5]]); // C2 to F2
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight">E3</th>
-            <th class="ht__highlight">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   :   : -   - : - : - :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   :   : A : 0 : 0 : 0 :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      selectCells([[1, 3, 1, 6]]); // D2 to G2
+      await selectCells([[1, 3, 1, 6]]); // D2 to G2
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight">E3</th>
-            <th class="ht__highlight">F3</th>
-            <th class="ht__highlight">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   :   : -   - : - : - : - :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   :   :   : A : 0 : 0 : 0 :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      selectCells([[1, 0, 1, 2]]); // A2 to C2
+      await selectCells([[1, 0, 1, 2]]); // A2 to C2
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="ht__highlight">A3</th>
-            <th class="ht__highlight">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        | - : - : -   - :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        | A : 0 : 0 :   :   :   :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
     });
 
-    it('should highlight column header for non-contiguous selected cells', () => {
+    it('should highlight column header for non-contiguous selected cells', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 4 }, 'F1', 'G1', 'H1', 'I1', 'J1'],
@@ -422,96 +212,34 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      selectCells([[1, 1, 1, 1], [1, 3, 1, 3], [1, 5, 1, 5]]); // B2, B4, B6
+      await selectCells([[1, 1, 1, 1], [1, 3, 1, 3], [1, 5, 1, 5]]); // B2, B4, B6
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__highlight">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="ht__highlight">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   : - : -   - :   : - :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   : 0 :   : 0 :   : A :   :   :   :   |
+        |   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      selectCells([[1, 1, 1, 2], [2, 3, 2, 4]]); // B3 to C2, D3 to E3
+      await selectCells([[1, 1, 1, 2], [2, 3, 2, 4]]); // B3 to C2, D3 to E3
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__highlight">B3</th>
-            <th class="ht__highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight">E3</th>
-            <th class="">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   : - : -   - : - :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   |
+        |   :   :   : A : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
     });
 
-    it('should active highlight column header for selected column headers', () => {
+    it('should active highlight column header for selected column headers', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A', { label: 'B', colspan: 8 }, 'C'],
@@ -526,183 +254,57 @@ describe('NestedHeaders', () => {
         .simulate('mousedown')
         .simulate('mouseup');
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A</th>
-            <th class="" colspan="8">B</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">C</th>
-          </tr>
-          <tr>
-            <th class="">D</th>
-            <th class="" colspan="4">E</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">G</th>
-          </tr>
-          <tr>
-            <th class="">H</th>
-            <th class="ht__active_highlight" colspan="2">I</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">J</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">K</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">L</th>
-            <th class="hiddenHeader"></th>
-            <th class="">M</th>
-          </tr>
-          <tr>
-            <th class="">N</th>
-            <th class="ht__highlight ht__active_highlight">O</th>
-            <th class="ht__highlight ht__active_highlight">P</th>
-            <th class="">Q</th>
-            <th class="">R</th>
-            <th class="">S</th>
-            <th class="">T</th>
-            <th class="">U</th>
-            <th class="">V</th>
-            <th class="">W</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   : *   * :       :       :       :   |
+        |   : * : * :   :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      expect(getSelected()).toEqual([[-2, 1, 9, 2]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -2,1 to: 2,2']);
 
       $(getCell(-3, 1)) // Header "E"
         .simulate('mousedown')
         .simulate('mouseup');
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A</th>
-            <th class="" colspan="8">B</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">C</th>
-          </tr>
-          <tr>
-            <th class="">D</th>
-            <th class="ht__active_highlight" colspan="4">E</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">G</th>
-          </tr>
-          <tr>
-            <th class="">H</th>
-            <th class="ht__active_highlight" colspan="2">I</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="2">J</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">K</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">L</th>
-            <th class="hiddenHeader"></th>
-            <th class="">M</th>
-          </tr>
-          <tr>
-            <th class="">N</th>
-            <th class="ht__highlight ht__active_highlight">O</th>
-            <th class="ht__highlight ht__active_highlight">P</th>
-            <th class="ht__highlight ht__active_highlight">Q</th>
-            <th class="ht__highlight ht__active_highlight">R</th>
-            <th class="">S</th>
-            <th class="">T</th>
-            <th class="">U</th>
-            <th class="">V</th>
-            <th class="">W</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :                               :   |
+        |   : *   *   *   * :               :   |
+        |   : *   * : *   * :       :       :   |
+        |   : * : * : * : * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      expect(getSelected()).toEqual([[-3, 1, 9, 4]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -3,1 to: 2,4']);
 
       $(getCell(-4, 1)) // Header "B"
         .simulate('mousedown')
         .simulate('mouseup');
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A</th>
-            <th class="ht__active_highlight" colspan="8">B</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">C</th>
-          </tr>
-          <tr>
-            <th class="">D</th>
-            <th class="ht__active_highlight" colspan="4">E</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="4">F</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">G</th>
-          </tr>
-          <tr>
-            <th class="">H</th>
-            <th class="ht__active_highlight" colspan="2">I</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="2">J</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="2">K</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="2">L</th>
-            <th class="hiddenHeader"></th>
-            <th class="">M</th>
-          </tr>
-          <tr>
-            <th class="">N</th>
-            <th class="ht__highlight ht__active_highlight">O</th>
-            <th class="ht__highlight ht__active_highlight">P</th>
-            <th class="ht__highlight ht__active_highlight">Q</th>
-            <th class="ht__highlight ht__active_highlight">R</th>
-            <th class="ht__highlight ht__active_highlight">S</th>
-            <th class="ht__highlight ht__active_highlight">T</th>
-            <th class="ht__highlight ht__active_highlight">U</th>
-            <th class="ht__highlight ht__active_highlight">V</th>
-            <th class="">W</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   : *   *   *   *   *   *   *   * :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : *   * : *   * : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
 
-      expect(getSelected()).toEqual([[-4, 1, 9, 8]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -4,1 to: 2,8']);
     });
 
-    it('should active highlight column header for non-contiguous header selection', () => {
+    it('should active highlight column header for non-contiguous header selection', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 4 }, 'F1', 'G1', 'H1', 'I1', 'J1'],
@@ -712,196 +314,70 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      $(getCell(-2, 1)) // Header "B3"
-        .simulate('mousedown')
-        .simulate('mouseup');
+      await simulateClick(getCell(-2, 1)); // Header "B3"
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight">B3</th>
-            <th class="" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight">B4</th>
-            <th class="" colspan="2">C4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E4</th>
-            <th class="">F4</th>
-            <th class="">G4</th>
-            <th class="">H4</th>
-            <th class="">I4</th>
-            <th class="">J4</th>
-          </tr>
-        </thead>
-        `);
+      expect(`
+        |   :               :   :   :   :   :   |
+        |   :           :   :   :   :   :   :   |
+        |   : * :       :   :   :   :   :   :   |
+        |   : * :       :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : A :   :   :   :   :   :   :   :   |
+        |   : 0 :   :   :   :   :   :   :   :   |
+        |   : 0 :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      expect(getSelected()).toEqual([[-2, 1, 9, 1]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -2,1 to: 2,1']);
 
-      keyDown('ctrl');
+      await keyDown('control/meta');
 
-      $(getCell(-3, 5)) // Header "F2"
-        .simulate('mousedown')
-        .simulate('mouseup');
+      await simulateClick(getCell(-3, 5)); // Header "F2"
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="ht__active_highlight">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight">B3</th>
-            <th class="" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="ht__active_highlight">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight">B4</th>
-            <th class="" colspan="2">C4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E4</th>
-            <th class="ht__highlight ht__active_highlight">F4</th>
-            <th class="">G4</th>
-            <th class="">H4</th>
-            <th class="">I4</th>
-            <th class="">J4</th>
-          </tr>
-        </thead>
-        `);
+      await keyUp('control/meta');
 
-      expect(getSelected()).toEqual([
-        [-2, 1, 9, 1],
-        [-3, 5, 9, 5],
+      expect(`
+        |   :               : * :   :   :   :   |
+        |   :           :   : * :   :   :   :   |
+        |   : * :       :   : * :   :   :   :   |
+        |   : * :       :   : * :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 :   :   :   : A :   :   :   :   |
+        |   : 0 :   :   :   : 0 :   :   :   :   |
+        |   : 0 :   :   :   : 0 :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      expect(getSelectedRange()).toEqualCellRange([
+        'highlight: 0,1 from: -2,1 to: 2,1',
+        'highlight: 0,5 from: -3,5 to: 2,5',
       ]);
 
-      $(getCell(-3, 1)) // Header "B2"
-        .simulate('mousedown')
-        .simulate('mouseup');
+      await keyDown('control/meta');
 
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="4">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">F1</th>
-            <th class="">G1</th>
-            <th class="">H1</th>
-            <th class="">I1</th>
-            <th class="">J1</th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="ht__active_highlight" colspan="3">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">E2</th>
-            <th class="ht__active_highlight">F2</th>
-            <th class="">G2</th>
-            <th class="">H2</th>
-            <th class="">I2</th>
-            <th class="">J2</th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight">B3</th>
-            <th class="ht__active_highlight" colspan="2">C3</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E3</th>
-            <th class="ht__active_highlight">F3</th>
-            <th class="">G3</th>
-            <th class="">H3</th>
-            <th class="">I3</th>
-            <th class="">J3</th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight">B4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">C4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">E4</th>
-            <th class="ht__highlight ht__active_highlight">F4</th>
-            <th class="">G4</th>
-            <th class="">H4</th>
-            <th class="">I4</th>
-            <th class="">J4</th>
-          </tr>
-        </thead>
-        `);
+      await simulateClick(getCell(-3, 1)); // Header "B2"
 
-      expect(getSelected()).toEqual([
-        [-2, 1, 9, 1],
-        [-3, 5, 9, 5],
-        [-3, 1, 9, 3],
+      await keyUp('control/meta');
+
+      expect(`
+        |   :               : * :   :   :   :   |
+        |   : *   *   * :   : * :   :   :   :   |
+        |   : * : *   * :   : * :   :   :   :   |
+        |   : * : *   * :   : * :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : B : 0 : 0 :   : 0 :   :   :   :   |
+        |   : 1 : 0 : 0 :   : 0 :   :   :   :   |
+        |   : 1 : 0 : 0 :   : 0 :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      expect(getSelectedRange()).toEqualCellRange([
+        'highlight: 0,1 from: -2,1 to: 2,1',
+        'highlight: 0,5 from: -3,5 to: 2,5',
+        'highlight: 0,1 from: -3,1 to: 2,3',
       ]);
     });
 
-    it('should select every column header under the nested headers, when changing the selection by dragging the cursor', () => {
-      const hot = handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+    it('should select every column header under the nested headers, when changing the selection by dragging the cursor', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A', { label: 'B', colspan: 8 }, 'C'],
@@ -918,7 +394,17 @@ describe('NestedHeaders', () => {
         .simulate('mouseover')
         .simulate('mouseup');
 
-      expect(hot.getSelected()).toEqual([[-1, 3, hot.countRows() - 1, 6]]);
+      expect(getSelected()).toEqual([[-2, 3, countRows() - 1, 6]]);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   :       : *   * : *   * :       :   |
+        |   :   :   : * : * : * : * :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   : A : 0 : 0 : 0 :   :   :   |
+        |   :   :   : 0 : 0 : 0 : 0 :   :   :   |
+        |   :   :   : 0 : 0 : 0 : 0 :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
       getTopClone().find('thead tr:eq(2) th:eq(3)')
         .simulate('mousedown');
@@ -926,7 +412,17 @@ describe('NestedHeaders', () => {
         .simulate('mouseover')
         .simulate('mouseup');
 
-      expect(hot.getSelected()).toEqual([[-1, 4, hot.countRows() - 1, 1]]);
+      expect(getSelected()).toEqual([[-2, 4, countRows() - 1, 1]]);
+      expect(`
+        |   :                               :   |
+        |   : *   *   *   * :               :   |
+        |   : *   * : *   * :       :       :   |
+        |   : * : * : * : * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : A :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
       getTopClone().find('thead tr:eq(2) th:eq(3)').simulate('mousedown');
       getTopClone().find('thead tr:eq(2) th:eq(1)').simulate('mouseover');
@@ -934,12 +430,495 @@ describe('NestedHeaders', () => {
       getTopClone().find('thead tr:eq(2) th:eq(5)').simulate('mouseover');
       getTopClone().find('thead tr:eq(2) th:eq(5)').simulate('mouseup');
 
-      expect(hot.getSelected()).toEqual([[-1, 3, hot.countRows() - 1, 6]]);
+      expect(getSelected()).toEqual([[-2, 3, countRows() - 1, 6]]);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   :       : *   * : *   * :       :   |
+        |   :   :   : * : * : * : * :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   : A : 0 : 0 : 0 :   :   :   |
+        |   :   :   : 0 : 0 : 0 : 0 :   :   :   |
+        |   :   :   : 0 : 0 : 0 : 0 :   :   :   |
+      `).toBeMatchToSelectionPattern();
     });
 
-    it('should select all column headers (on all levels) after clicking the corner header', function() {
+    it('should not move the focus initial position while expanding the selection up in the tree (all nodes with the same colspan width)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(3, 10),
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ]
+      });
+
+      getTopClone().find('thead tr:eq(2) th:eq(0)') // "H"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(1) th:eq(0)') // "D"
+        .simulate('mouseover')
+        .simulate('mouseup');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,0 from: -3,0 to: 2,0']);
+      expect(`
+        | * :                               :   |
+        | * :               :               :   |
+        | # :       :       :       :       :   |
+        | * :   :   :   :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        | 0 :   :   :   :   :   :   :   :   :   |
+        | 0 :   :   :   :   :   :   :   :   :   |
+        | 0 :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(2) th:eq(0)') // "H"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(3) th:eq(0)') // "N"
+        .simulate('mouseover')
+        .simulate('mouseup');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,0 from: -1,0 to: 2,0']);
+      expect(`
+        | * :                               :   |
+        | * :               :               :   |
+        | # :       :       :       :       :   |
+        | * :   :   :   :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        | 0 :   :   :   :   :   :   :   :   :   |
+        | 0 :   :   :   :   :   :   :   :   :   |
+        | 0 :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+    });
+
+    it('should not move the focus initial position while expanding the selection up in the tree', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ]
+      });
+
+      getTopClone().find('thead tr:eq(2) th:eq(2)') // "I"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(1) th:eq(3)') // "E"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,2 from: -3,1 to: 2,4']);
+      expect(`
+        |   :                               :   |
+        |   : *   *   *   * :               :   |
+        |   : #   # : *   * :       :       :   |
+        |   : * : * : * : * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(0) th:eq(7)') // "B"
+        .simulate('mouseover')
+        .simulate('mouseup');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,2 from: -4,1 to: 2,8']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : #   # : *   * : *   * : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(2) th:eq(3)') // "J"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(1) th:eq(3)') // "E"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,3 from: -3,1 to: 2,4']);
+      expect(`
+        |   :                               :   |
+        |   : *   *   *   * :               :   |
+        |   : *   * : #   # :       :       :   |
+        |   : * : * : * : * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(0) th:eq(7)') // "B"
+        .simulate('mouseover')
+        .simulate('mouseup');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,3 from: -4,1 to: 2,8']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : #   # : *   * : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(2) th:eq(5)') // "K"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(1) th:eq(5)') // "F"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,5 from: -3,5 to: 2,8']);
+      expect(`
+        |   :                               :   |
+        |   :               : *   *   *   * :   |
+        |   :       :       : #   # : *   * :   |
+        |   :   :   :   :   : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(0) th:eq(7)') // "B"
+        .simulate('mouseover')
+        .simulate('mouseup');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,5 from: -4,1 to: 2,8']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : *   * : #   # : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(2) th:eq(7)') // "L"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(1) th:eq(5)') // "F"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,7 from: -3,8 to: 2,5']);
+      expect(`
+        |   :                               :   |
+        |   :               : *   *   *   * :   |
+        |   :       :       : *   * : #   # :   |
+        |   :   :   :   :   : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(0) th:eq(7)') // "B"
+        .simulate('mouseover')
+        .simulate('mouseup');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,7 from: -4,8 to: 2,1']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : *   * : *   * : #   # :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+    });
+
+    it('should update the focus initial position while changing the selection from right to the left', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ]
+      });
+
+      getTopClone().find('thead tr:eq(0) th:eq(1)') // "B"
+        .simulate('mousedown');
+      getTopClone().find('thead tr:eq(1) th:eq(1)') // "E"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -3,1 from: -3,1 to: 2,4']);
+      expect(`
+        |   :                               :   |
+        |   : #   #   #   # :               :   |
+        |   : *   * : *   * :       :       :   |
+        |   : * : * : * : * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(2) th:eq(3)') // "J"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -3,1 from: -2,1 to: 2,4']);
+      expect(`
+        |   :                               :   |
+        |   : #   #   #   # :               :   |
+        |   : *   * : *   * :       :       :   |
+        |   : * : * : * : * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(3)') // "Q"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,1 from: -1,1 to: 2,3']);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   : #   # :       :       :       :   |
+        |   : * : * : * :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 :   :   :   :   :   :   |
+        |   : 0 : 0 : 0 :   :   :   :   :   :   |
+        |   : 0 : 0 : 0 :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(2)') // "P"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,1 from: -1,1 to: 2,2']);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   : #   # :       :       :       :   |
+        |   : * : * :   :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(1)') // "O"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -1,1 from: -1,1 to: 2,1']);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   :       :       :       :       :   |
+        |   : # :   :   :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 :   :   :   :   :   :   :   :   |
+        |   : 0 :   :   :   :   :   :   :   :   |
+        |   : 0 :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(0)') // "N"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -1,1 from: -1,1 to: 2,0']);
+      expect(`
+        | * :                               :   |
+        | * :               :               :   |
+        | * :       :       :       :       :   |
+        | * : # :   :   :   :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        | 0 : 0 :   :   :   :   :   :   :   :   |
+        | 0 : 0 :   :   :   :   :   :   :   :   |
+        | 0 : 0 :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(1)') // "O"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(2) th:eq(1)') // "I"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(1) th:eq(1)') // "E"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(0) th:eq(1)') // "B"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -4,1 from: -4,1 to: 2,8']);
+      expect(`
+        |   : #   #   #   #   #   #   #   # :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : *   * : *   * : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+    });
+
+    it('should update the focus initial position while changing the selection from left to the right', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ]
+      });
+
+      getTopClone().find('thead tr:eq(0) th:eq(1)') // "B"
+        .simulate('mousedown');
+      // select header "A" and back to "B" to trigger the internals that changes the selection to go from left to right
+      getTopClone().find('thead tr:eq(0) th:eq(0)') // "A"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(0) th:eq(1)') // "B"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -4,1 from: -4,8 to: 2,1']);
+      expect(`
+        |   : #   #   #   #   #   #   #   # :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : *   * : *   * : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(1) th:eq(5)') // "F"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -3,8 from: -3,8 to: 2,5']);
+      expect(`
+        |   :                               :   |
+        |   :               : #   #   #   # :   |
+        |   :       :       : *   * : *   * :   |
+        |   :   :   :   :   : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(2) th:eq(5)') // "K"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -3,8 from: -2,8 to: 2,5']);
+      expect(`
+        |   :                               :   |
+        |   :               : #   #   #   # :   |
+        |   :       :       : *   * : *   * :   |
+        |   :   :   :   :   : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(6)') // "T"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,8 from: -1,8 to: 2,6']);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   :       :       :       : #   # :   |
+        |   :   :   :   :   :   : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   : 0 : 0 : 0 :   |
+        |   :   :   :   :   :   : 0 : 0 : 0 :   |
+        |   :   :   :   :   :   : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(7)') // "U"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -2,8 from: -1,8 to: 2,7']);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   :       :       :       : #   # :   |
+        |   :   :   :   :   :   :   : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   : 0 : 0 :   |
+        |   :   :   :   :   :   :   : 0 : 0 :   |
+        |   :   :   :   :   :   :   : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(8)') // "V"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -1,8 from: -1,8 to: 2,8']);
+      expect(`
+        |   :                               :   |
+        |   :               :               :   |
+        |   :       :       :       :       :   |
+        |   :   :   :   :   :   :   :   : # :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   : 0 :   |
+        |   :   :   :   :   :   :   :   : 0 :   |
+        |   :   :   :   :   :   :   :   : 0 :   |
+      `).toBeMatchToSelectionPattern();
+
+      getTopClone().find('thead tr:eq(3) th:eq(9)') // "W"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -1,8 from: -1,8 to: 2,9']);
+      expect(`
+        |   :                               : * |
+        |   :               :               : * |
+        |   :       :       :       :       : * |
+        |   :   :   :   :   :   :   :   : # : * |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   : 0 : 0 |
+        |   :   :   :   :   :   :   :   : 0 : 0 |
+        |   :   :   :   :   :   :   :   : 0 : 0 |
+      `).toBeMatchToSelectionPattern();
+
+      // back to the initial selection
+      getTopClone().find('thead tr:eq(3) th:eq(8)') // "V"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(2) th:eq(8)') // "L"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(1) th:eq(8)') // "F"
+        .simulate('mouseover');
+      getTopClone().find('thead tr:eq(0) th:eq(8)') // "B"
+        .simulate('mouseover');
+
+      expect(getSelectedRange()).toEqualCellRange(['highlight: -4,1 from: -4,1 to: 2,8']);
+      expect(`
+        |   : #   #   #   #   #   #   #   # :   |
+        |   : *   *   *   * : *   *   *   * :   |
+        |   : *   * : *   * : *   * : *   * :   |
+        |   : * : * : * : * : * : * : * : * :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   |
+      `).toBeMatchToSelectionPattern();
+    });
+
+    it('should select all column headers (on all levels) after clicking the corner header', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
         colHeaders: true,
         rowHeaders: true,
         nestedHeaders: [
@@ -951,21 +930,27 @@ describe('NestedHeaders', () => {
         ]
       });
 
-      const $cornerHeader = this.$container.find('.ht_clone_top_left_corner thead tr:eq(0) th:eq(0)');
+      const $cornerHeader = spec().$container
+        .find('.ht_clone_top_inline_start_corner thead tr:eq(0) th:eq(0)');
 
       $cornerHeader.simulate('mousedown');
       $cornerHeader.simulate('mouseup');
 
-      expect(
-        $('.ht_clone_top thead tr th:not(:first-child)').filter(function() {
-          return !$(this).hasClass('hiddenHeader') && !$(this).hasClass('ht__active_highlight');
-        }).size()
-      ).toEqual(0);
+      expect(`
+        |   ║   :                               :   |
+        |   ║   :               :               :   |
+        |   ║   :       :       :       :       :   |
+        |   ║ - : - : - : - : - : - : - : - : - : - |
+        |===:===:===:===:===:===:===:===:===:===:===|
+        | - ║ A : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 |
+        | - ║ 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 |
+      `).toBeMatchToSelectionPattern();
     });
 
-    it('should add selection borders in the expected positions, when selecting multi-columned headers', function() {
+    it('should add selection borders in the expected positions, when selecting multi-columned headers', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(4, 10),
+        data: createSpreadsheetData(4, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A', { label: 'B', colspan: 8 }, 'C'],
@@ -981,29 +966,29 @@ describe('NestedHeaders', () => {
         .simulate('mouseup');
 
       const $headerLvl3 = getTopClone().find('thead tr:eq(2) th:eq(1)');
-      const $firstRow = this.$container.find('.ht_master tbody tr:eq(0)');
-      const $lastRow = this.$container.find('.ht_master tbody tr:eq(3)');
-      const $tbody = this.$container.find('.ht_master tbody');
+      const $firstRow = spec().$container.find('.ht_master tbody tr:eq(0)');
+      const $lastRow = spec().$container.find('.ht_master tbody tr:eq(3)');
+      const $tbody = spec().$container.find('.ht_master tbody');
 
-      const $topBorder = this.$container.find('.wtBorder.area').eq(0);
-      const $bottomBorder = this.$container.find('.wtBorder.area').eq(2);
-      const $leftBorder = this.$container.find('.wtBorder.area').eq(1);
-      const $rightBorder = this.$container.find('.wtBorder.area').eq(3);
+      const $topBorder = spec().$container.find('.wtBorder.area').eq(0);
+      const $bottomBorder = spec().$container.find('.wtBorder.area').eq(2);
+      const $leftBorder = spec().$container.find('.wtBorder.area').eq(1);
+      const $rightBorder = spec().$container.find('.wtBorder.area').eq(3);
 
       expect($topBorder.offset().top).toEqual($firstRow.offset().top);
       expect($bottomBorder.offset().top).toEqual($lastRow.offset().top + $lastRow.height() - 1);
-      expect($topBorder.width()).toEqual($headerLvl3.width() + 1);
-      expect($bottomBorder.width()).toEqual($headerLvl3.width() + 1);
+      expect($topBorder.width()).toEqual($headerLvl3.width() + 2);
+      expect($bottomBorder.width()).toEqual($headerLvl3.width() + 2);
 
       expect($leftBorder.offset().left).toEqual($headerLvl3.offset().left - 1);
       expect($rightBorder.offset().left).toEqual($headerLvl3.offset().left + $headerLvl3.width());
-      expect($leftBorder.height()).toEqual($tbody.height() - 1);
+      expect($leftBorder.height()).toEqual($tbody.height());
       expect($rightBorder.height()).toEqual($tbody.height());
     });
 
-    it('should not change the header selection when the header within selection range is clicked using RMB', () => {
+    it('should not change the header selection when the header within selection range is clicked using RMB', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(10, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A', { label: 'B', colspan: 8 }, 'C'],
@@ -1020,14 +1005,14 @@ describe('NestedHeaders', () => {
         .simulate('mouseover')
         .simulate('mouseup');
 
-      simulateClick(getCell(-1, 5), 'RMB'); // Header "K"
+      await simulateClick(getCell(-1, 5), 'RMB'); // Header "K"
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 6]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 9,6']);
     });
 
-    it('should be possible to select the column header with RMB when no column is selected', () => {
+    it('should be possible to select the column header with RMB when no column is selected', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 10),
+        data: createSpreadsheetData(10, 10),
         colHeaders: true,
         nestedHeaders: [
           ['A', { label: 'B', colspan: 8 }, 'C'],
@@ -1037,14 +1022,230 @@ describe('NestedHeaders', () => {
         ]
       });
 
-      simulateClick(getCell(-1, 5), 'RMB'); // Header "K"
+      await simulateClick(getCell(-1, 5), 'RMB'); // Header "K"
 
-      expect(getSelected()).toEqual([[-1, 5, 9, 6]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,5 from: -1,5 to: 9,6']);
     });
 
-    it('should be possible to back to the single column selection, when it was modified by the SHIFT key', () => {
+    it('should scroll the viewport to the left edge of the clicked nested header when its right index extends beyond ' +
+       'the table\'s viewport and is wider than table width', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 13),
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await simulateClick(getCell(-3, 2), 'LMB'); // Header "B"
+
+      // Scroll position should place the left edge of header "B" (col 1) at the viewport start.
+      expect(inlineStartOverlay().getScrollPosition()).toBe(hot().getColWidth(0));
+    });
+
+    it('should scroll the viewport to the right edge of the clicked nested header when its left index extends beyond ' +
+       'the table\'s viewport and is wider than table width', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await scrollViewportTo(0, 9);
+      await simulateClick(getCell(-3, 7), 'LMB'); // Header "B"
+
+      // Scroll position should place the right edge of header "B" (through col 8) at the viewport end.
+      const holder = spec().$container[0].querySelector('.wtHolder');
+      let headerRightEdge = 0;
+
+      for (let col = 0; col <= 8; col++) {
+        headerRightEdge += hot().getColWidth(col);
+      }
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(
+        headerRightEdge - holder.clientWidth);
+    });
+
+    it('should scroll the viewport to the right edge of the clicked nested header when its right index extends beyond ' +
+        'the table\'s viewport and is narrower than the table width', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await simulateClick(getCell(-1, 3), 'LMB'); // Header "J"
+
+      // Scroll position should place the right edge of header "J" (cols 3-4) at the viewport end.
+      const holder = spec().$container[0].querySelector('.wtHolder');
+      let headerRightEdge = 0;
+
+      for (let col = 0; col <= 4; col++) {
+        headerRightEdge += hot().getColWidth(col);
+      }
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(
+        headerRightEdge - holder.clientWidth);
+    });
+
+    it('should scroll the viewport to the left edge of the clicked nested header when its left index extends beyond ' +
+        'the table\'s viewport and is narrower than the table width', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await scrollViewportTo(0, 9);
+      await simulateClick(getCell(-1, 6), 'LMB'); // Header "K"
+
+      // Scroll position should place the left edge of header "K" (col 5) at the viewport start.
+      let headerLeftEdge = 0;
+
+      for (let col = 0; col < 5; col++) {
+        headerLeftEdge += hot().getColWidth(col);
+      }
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(headerLeftEdge);
+    });
+
+    it('should scroll the viewport to the left edge of the clicked nested header when its right index extends beyond ' +
+       'the table\'s viewport and is wider than table width (navigableHeaders: true)', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await simulateClick(getCell(-3, 2), 'LMB'); // Header "B"
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(hot().getColWidth(0));
+    });
+
+    it('should scroll the viewport to the right edge of the clicked nested header when its left index extends beyond ' +
+       'the table\'s viewport and is wider than table width (navigableHeaders: true)', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await scrollViewportTo(0, 9);
+      await simulateClick(getCell(-3, 7), 'LMB'); // Header "B"
+
+      const holder = spec().$container[0].querySelector('.wtHolder');
+      let headerRightEdge = 0;
+
+      for (let col = 0; col <= 8; col++) {
+        headerRightEdge += hot().getColWidth(col);
+      }
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(
+        headerRightEdge - holder.clientWidth);
+    });
+
+    it('should scroll the viewport to the right edge of the clicked nested header when its right index extends beyond ' +
+        'the table\'s viewport and is narrower than the table width (navigableHeaders: true)', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await simulateClick(getCell(-1, 3), 'LMB'); // Header "J"
+
+      const holder = spec().$container[0].querySelector('.wtHolder');
+      let headerRightEdge = 0;
+
+      for (let col = 0; col <= 4; col++) {
+        headerRightEdge += hot().getColWidth(col);
+      }
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(
+        headerRightEdge - holder.clientWidth);
+    });
+
+    it('should scroll the viewport to the left edge of the clicked nested header when its left index extends beyond ' +
+        'the table\'s viewport and is narrower than the table width (navigableHeaders: true)', async() => {
+      handsontable({
+        data: createSpreadsheetData(10, 10),
+        width: 200,
+        height: 200,
+        colHeaders: true,
+        navigableHeaders: true,
+        nestedHeaders: [
+          ['A', { label: 'B', colspan: 8 }, 'C'],
+          ['D', { label: 'E', colspan: 4 }, { label: 'F', colspan: 4 }, 'G'],
+          ['H', { label: 'I', colspan: 2 }, { label: 'J', colspan: 2 }, { label: 'K', colspan: 2 },
+            { label: 'L', colspan: 2 }, 'M'],
+        ]
+      });
+
+      await scrollViewportTo(0, 9);
+      await simulateClick(getCell(-1, 6), 'LMB'); // Header "K"
+
+      let headerLeftEdge = 0;
+
+      for (let col = 0; col < 5; col++) {
+        headerLeftEdge += hot().getColWidth(col);
+      }
+
+      expect(inlineStartOverlay().getScrollPosition()).toBe(headerLeftEdge);
+    });
+
+    it('should be possible to back to the single column selection, when it was modified by the SHIFT key', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 13),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 8 }, 'J1', { label: 'K1', colspan: 3 }],
@@ -1055,88 +1256,44 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)')); // select column B4
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(11)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)')); // select column B4
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(11)'), 'LMB', {
         shiftKey: true
       }); // select column L4
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 12]]);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 2,12']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * : * : *   *   * |
+        |   : *   *   *   *   *   *   *   * : * : *   *   * |
+        |   : *   *   *   * : *   *   *   * : * : *   *   * |
+        |   : *   * : *   * : *   * : *   * : * : * : *   * |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)'), 'LMB', {
         shiftKey: true
       }); // Back to column B4
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 2]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">J4</th>
-            <th class="">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 2,2']);
+      expect(`
+        |   :                               :   :           |
+        |   :                               :   :           |
+        |   :               :               :   :           |
+        |   : *   * :       :       :       :   :   :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 :   :   :   :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   :   :   :   |
+        |   : 0 : 0 :   :   :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
     });
 
     it('should select every column header under the nested headers, when changing the selection using the SHIFT key ' +
-       '(expanding the column selection from the left to the right)', () => {
+       '(expanding the column selection from the left to the right)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 13),
+        data: createSpreadsheetData(3, 13),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 8 }, 'J1', { label: 'K1', colspan: 3 }],
@@ -1147,292 +1304,76 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)')); // select column B4
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(3)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)')); // select column B4
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(3)'), 'LMB', {
         shiftKey: true
       }); // select column D4
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 4]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">J4</th>
-            <th class="">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 2,4']);
+      expect(`
+        |   :                               :   :           |
+        |   :                               :   :           |
+        |   : *   *   *   * :               :   :           |
+        |   : *   * : *   * :       :       :   :   :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 :   :   :   :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 :   :   :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(5)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(5)'), 'LMB', {
         shiftKey: true
       }); // select column F4
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 6]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">J4</th>
-            <th class="">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 2,6']);
+      expect(`
+        |   :                               :   :           |
+        |   :                               :   :           |
+        |   : *   *   *   * :               :   :           |
+        |   : *   * : *   * : *   * :       :   :   :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 : 0 : 0 :   :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 :   :   :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 :   :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(7)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(7)'), 'LMB', {
         shiftKey: true
       }); // select column H4
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 8]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="ht__active_highlight" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="ht__active_highlight" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="">J4</th>
-            <th class="">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 2,8']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * :   :           |
+        |   : *   *   *   *   *   *   *   * :   :           |
+        |   : *   *   *   * : *   *   *   * :   :           |
+        |   : *   * : *   * : *   * : *   * :   :   :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(10)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(10)'), 'LMB', {
         shiftKey: true
       }); // select column K4
 
-      expect(getSelected()).toEqual([[-1, 1, 9, 10]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="ht__active_highlight" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="ht__active_highlight" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight">J4</th>
-            <th class="ht__highlight ht__active_highlight">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,1 from: -1,1 to: 2,10']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * : * :           |
+        |   : *   *   *   *   *   *   *   * : * :           |
+        |   : *   *   *   * : *   *   *   * : * :           |
+        |   : *   * : *   * : *   * : *   * : * : * :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : A : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+      `).toBeMatchToSelectionPattern();
     });
 
     it('should select every column header under the nested headers, when changing the selection using the SHIFT key ' +
-       '(expanding the column selection from the right to the left)', () => {
+       '(expanding the column selection from the right to the left)', async() => {
       handsontable({
-        data: Handsontable.helper.createSpreadsheetData(10, 13),
+        data: createSpreadsheetData(3, 13),
         colHeaders: true,
         nestedHeaders: [
           ['A1', { label: 'B1', colspan: 8 }, 'J1', { label: 'K1', colspan: 3 }],
@@ -1443,356 +1384,268 @@ describe('NestedHeaders', () => {
         ],
       });
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(10)')); // select column K4
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(9)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(10)')); // select column K4
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(9)'), 'LMB', {
         shiftKey: true
       }); // select column J4
 
-      expect(getSelected()).toEqual([[-1, 10, 9, 9]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight">J4</th>
-            <th class="ht__highlight ht__active_highlight">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,10 from: -1,10 to: 2,9']);
+      expect(`
+        |   :                               : * :           |
+        |   :                               : * :           |
+        |   :               :               : * :           |
+        |   :       :       :       :       : * : * :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   :   :   : 0 : A :   :   |
+        |   :   :   :   :   :   :   :   :   : 0 : 0 :   :   |
+        |   :   :   :   :   :   :   :   :   : 0 : 0 :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(7)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(7)'), 'LMB', {
         shiftKey: true
       }); // select column H4
 
-      expect(getSelected()).toEqual([[-1, 10, 9, 7]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight">J4</th>
-            <th class="ht__highlight ht__active_highlight">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,10 from: -1,10 to: 2,7']);
+      expect(`
+        |   :                               : * :           |
+        |   :                               : * :           |
+        |   :               :               : * :           |
+        |   :       :       :       : *   * : * : * :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   :   :   : 0 : 0 : 0 : A :   :   |
+        |   :   :   :   :   :   :   : 0 : 0 : 0 : 0 :   :   |
+        |   :   :   :   :   :   :   : 0 : 0 : 0 : 0 :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(5)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(5)'), 'LMB', {
         shiftKey: true
       }); // select column F4
 
-      expect(getSelected()).toEqual([[-1, 10, 9, 5]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight">J4</th>
-            <th class="ht__highlight ht__active_highlight">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,10 from: -1,10 to: 2,5']);
+      expect(`
+        |   :                               : * :           |
+        |   :                               : * :           |
+        |   :               : *   *   *   * : * :           |
+        |   :       :       : *   * : *   * : * : * :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   :   :   :   :   : 0 : 0 : 0 : 0 : 0 : A :   :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+        |   :   :   :   :   : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(3)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(3)'), 'LMB', {
         shiftKey: true
       }); // select column D4
 
-      expect(getSelected()).toEqual([[-1, 10, 9, 3]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight">J4</th>
-            <th class="ht__highlight ht__active_highlight">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,10 from: -1,10 to: 2,3']);
+      expect(`
+        |   :                               : * :           |
+        |   :                               : * :           |
+        |   :               : *   *   *   * : * :           |
+        |   :       : *   * : *   * : *   * : * : * :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   :   :   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : A :   :   |
+        |   :   :   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+        |   :   :   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+      `).toBeMatchToSelectionPattern();
 
-      simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)'), 'LMB', {
+      await simulateClick(getTopClone().find('thead tr:eq(3) th:eq(1)'), 'LMB', {
         shiftKey: true
       }); // select column B4
 
-      expect(getSelected()).toEqual([[-1, 10, 9, 1]]);
-      expect(extractDOMStructure(getTopClone())).toMatchHTML(`
-        <thead>
-          <tr>
-            <th class="">A1</th>
-            <th class="ht__active_highlight" colspan="8">B1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J1</th>
-            <th class="" colspan="3">K1</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A2</th>
-            <th class="ht__active_highlight" colspan="8">B2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J2</th>
-            <th class="" colspan="3">K2</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A3</th>
-            <th class="ht__active_highlight" colspan="4">B3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight" colspan="4">F3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__active_highlight">J3</th>
-            <th class="" colspan="3">K3</th>
-            <th class="hiddenHeader"></th>
-            <th class="hiddenHeader"></th>
-          </tr>
-          <tr>
-            <th class="">A4</th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">B4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">D4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">F4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight" colspan="2">H4</th>
-            <th class="hiddenHeader"></th>
-            <th class="ht__highlight ht__active_highlight">J4</th>
-            <th class="ht__highlight ht__active_highlight">K4</th>
-            <th class="" colspan="2">L4</th>
-            <th class="hiddenHeader"></th>
-          </tr>
-        </thead>
-        `);
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,10 from: -1,10 to: 2,1']);
+      expect(`
+        |   : *   *   *   *   *   *   *   * : * :           |
+        |   : *   *   *   *   *   *   *   * : * :           |
+        |   : *   *   *   * : *   *   *   * : * :           |
+        |   : *   * : *   * : *   * : *   * : * : * :       |
+        |===:===:===:===:===:===:===:===:===:===:===:===:===|
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : A :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+        |   : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 : 0 :   :   |
+      `).toBeMatchToSelectionPattern();
+    });
+
+    it('should highlight the whole column when the API is called with indexes that points to the columns ' +
+        'in-between the nested header', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
+        colHeaders: true,
+        nestedHeaders: [
+          ['A1', { label: 'B1', colspan: 5 }, 'G1', 'H1', 'I1', 'J1'],
+          ['A2', { label: 'B2', colspan: 4 }, 'F2', 'G2', 'H2', 'I2', 'J2'],
+          ['A3', 'B3', { label: 'C3', colspan: 3 }, 'F3', 'G3', 'H3', 'I3', 'J3'],
+        ],
+      });
+
+      await selectColumns(2);
+
+      expect(`
+        |   :                   :   :   :   :   |
+        |   :               :   :   :   :   :   |
+        |   :   : *   *   * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   : A : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,2 from: -1,2 to: 2,4']);
+
+      await selectColumns(3);
+
+      expect(`
+        |   :                   :   :   :   :   |
+        |   :               :   :   :   :   :   |
+        |   :   : *   *   * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   : 0 : A : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,3 from: -1,2 to: 2,4']);
+
+      await selectColumns(4);
+
+      expect(`
+        |   :                   :   :   :   :   |
+        |   :               :   :   :   :   :   |
+        |   :   : *   *   * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   : 0 : 0 : A :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 0,4 from: -1,2 to: 2,4']);
+    });
+
+    it('should highlight the whole nested column when "Ctrl" + "Space" keyboard shortcuts are pressed', async() => {
+      handsontable({
+        data: createSpreadsheetData(3, 10),
+        colHeaders: true,
+        nestedHeaders: [
+          ['A1', { label: 'B1', colspan: 5 }, 'G1', 'H1', 'I1', 'J1'],
+          ['A2', { label: 'B2', colspan: 4 }, 'F2', 'G2', 'H2', 'I2', 'J2'],
+          ['A3', 'B3', { label: 'C3', colspan: 3 }, 'F3', 'G3', 'H3', 'I3', 'J3'],
+        ],
+      });
+
+      await selectCell(2, 2);
+      await keyDownUp(['control', 'space']);
+
+      expect(`
+        |   :                   :   :   :   :   |
+        |   :               :   :   :   :   :   |
+        |   :   : *   *   * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : A : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,2 from: -1,2 to: 2,4']);
+
+      await selectCell(1, 3);
+      await keyDownUp(['control', 'space']);
+
+      expect(`
+        |   :                   :   :   :   :   |
+        |   :               :   :   :   :   :   |
+        |   :   : *   *   * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : A : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 1,3 from: -1,2 to: 2,4']);
+
+      await selectCell(2, 4);
+      await keyDownUp(['control', 'space']);
+
+      expect(`
+        |   :                   :   :   :   :   |
+        |   :               :   :   :   :   :   |
+        |   :   : *   *   * :   :   :   :   :   |
+        |===:===:===:===:===:===:===:===:===:===|
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : 0 :   :   :   :   :   |
+        |   :   : 0 : 0 : A :   :   :   :   :   |
+      `).toBeMatchToSelectionPattern();
+      expect(getSelectedRange()).toEqualCellRange(['highlight: 2,4 from: -1,2 to: 2,4']);
+    });
+  });
+
+  describe('blocking the selection through the mouse event hooks (#6026)', () => {
+    it('should not initiate a column selection when `beforeOnCellMouseDown` stops the event on a nested header', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 10),
+        colHeaders: true,
+        rowHeaders: true,
+        nestedHeaders: [
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ],
+        beforeOnCellMouseDown(event, coords) {
+          if (coords.row < 0) {
+            event.stopImmediatePropagation();
+          }
+        },
+      });
+
+      getTopClone().find('thead tr:eq(0) th:eq(2)') // "O"
+        .simulate('mousedown')
+        .simulate('mouseup');
+
+      expect(getSelected()).toBeUndefined();
+    });
+
+    it('should not modify the selection while dragging over nested headers when both `beforeOnCellMouseDown` ' +
+       'and `beforeOnCellMouseOver` stop the event', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 10),
+        colHeaders: true,
+        rowHeaders: true,
+        nestedHeaders: [
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ],
+        beforeOnCellMouseDown(event, coords) {
+          if (coords.row < 0) {
+            event.stopImmediatePropagation();
+          }
+        },
+        beforeOnCellMouseOver(event, coords) {
+          if (coords.row < 0) {
+            event.stopImmediatePropagation();
+          }
+        },
+      });
+
+      await selectCell(2, 4);
+
+      // Drag across the column headers, which both hooks block.
+      getTopClone().find('thead tr:eq(0) th:eq(1)').simulate('mousedown'); // "N"
+      getTopClone().find('thead tr:eq(0) th:eq(2)').simulate('mouseover'); // "O"
+      getTopClone().find('thead tr:eq(0) th:eq(3)').simulate('mouseover'); // "P"
+      getTopClone().find('thead tr:eq(0) th:eq(3)').simulate('mouseup');
+
+      // The selection stays where it was - the header drag is fully blocked, matching the behavior
+      // of regular (non-nested) column headers.
+      expect(getSelected()).toEqual([[2, 4, 2, 4]]);
+    });
+
+    it('should still allow drag-selecting columns over nested headers when the event is not blocked', async() => {
+      handsontable({
+        data: createSpreadsheetData(5, 10),
+        colHeaders: true,
+        rowHeaders: true,
+        nestedHeaders: [
+          ['N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W']
+        ],
+      });
+
+      getTopClone().find('thead tr:eq(0) th:eq(1)').simulate('mousedown'); // "N"
+      getTopClone().find('thead tr:eq(0) th:eq(2)').simulate('mouseover'); // "O"
+      getTopClone().find('thead tr:eq(0) th:eq(3)').simulate('mouseover'); // "P"
+      getTopClone().find('thead tr:eq(0) th:eq(3)').simulate('mouseup');
+
+      expect(getSelected()).toEqual([[-1, 0, countRows() - 1, 2]]);
     });
   });
 });

@@ -1,0 +1,98 @@
+/* file: app.component.ts */
+import { AfterViewInit, Component, OnInit } from '@angular/core';
+import {GridSettings, HotTableModule} from '@handsontable/angular-wrapper';
+import Handsontable from 'handsontable/base';
+
+const coverRenderer = (_instance: Handsontable, td: HTMLTableCellElement, _row: number, _col: number, _prop: string | number, value: string) => {
+  const img = document.createElement('img');
+
+  img.src = value;
+  img.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+  });
+  td.innerText = '';
+  td.appendChild(img);
+
+  return td;
+};
+
+
+@Component({
+  selector: 'app-example4',
+  template: `
+    @if (hotSettings) {
+      <hot-table [settings]="hotSettings!" [data]="hotData"></hot-table>
+    }
+  `,
+  standalone: true,
+  imports: [HotTableModule],
+})
+export class AppComponent implements OnInit, AfterViewInit {
+
+  readonly hotData = [
+    {
+      title:
+        '<a href="https://www.amazon.com/Professional-JavaScript-Developers-Nicholas-Zakas/dp/1118026691">Professional JavaScript for Web Developers</a>',
+      description:
+        'This <a href="https://www.amazon.com/Professional-JavaScript-Developers-Nicholas-Zakas/dp/1118026691">book</a> provides a developer-level introduction along with more advanced and useful features of <b>JavaScript</b>.',
+      cover:
+        '/docs/img/examples/professional-javascript-developers-nicholas-zakas.jpg',
+    },
+    {
+      title:
+        '<a href="https://shop.oreilly.com/product/9780596517748.do">JavaScript: The Good Parts</a>',
+      description:
+        'This book provides a developer-level introduction along with <b>more advanced</b> and useful features of JavaScript.',
+      cover: '/docs/img/examples/javascript-the-good-parts.jpg',
+    },
+    {
+      title:
+        '<a href="https://shop.oreilly.com/product/9780596805531.do">JavaScript: The Definitive Guide</a>',
+      description:
+        '<em>JavaScript: The Definitive Guide</em> provides a thorough description of the core <b>JavaScript</b> language and both the legacy and standard DOMs implemented in web browsers.',
+      cover: '/docs/img/examples/javascript-the-definitive-guide.jpg',
+    },
+  ];
+
+  hotSettings!: GridSettings;
+
+  ngOnInit() {
+  }
+
+  ngAfterViewInit() {
+    this.hotSettings = {
+      colWidths: [200, 400, 80],
+      colHeaders: ['Title', 'Description', 'Cover'],
+      height: 'auto',
+      columns: [
+        { data: 'title', renderer: 'html' },
+        { data: 'description', renderer: 'html' },
+        { data: 'cover', renderer: coverRenderer },
+      ],
+      autoWrapRow: true,
+      autoWrapCol: true,
+    };
+  }
+}
+/* end-file */
+
+
+
+/* file: app.config.ts */
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { registerAllModules } from 'handsontable/registry';
+import { HOT_GLOBAL_CONFIG, HotGlobalConfig, NON_COMMERCIAL_LICENSE } from '@handsontable/angular-wrapper';
+
+// register Handsontable's modules
+registerAllModules();
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    {
+      provide: HOT_GLOBAL_CONFIG,
+      useValue: { license: NON_COMMERCIAL_LICENSE } as HotGlobalConfig,
+    },
+  ],
+};
+/* end-file */

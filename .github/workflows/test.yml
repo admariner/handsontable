@@ -1,5 +1,18 @@
 name: Tests
 
+# ── PR pipeline ORCHESTRATOR ────────────────────────────────────────────────
+# This file is the DAG only: it wires the module reusable workflows (one per
+# domain — Checks, Lint, Code Quality, Unit, Types, Build, E2E, Walkontable,
+# Integration, Emitted Types, Visual, Docs, Performance) via `needs` (tiers +
+# artifact ordering) and `if` (scope gating from the Checks router's outputs).
+# The jobs/steps live in the module files, so each is small and reviewable.
+#
+# The filename and the `workflow_call` `test-all` input are a stable contract:
+# publish.yml (rc/stable/release) calls this workflow with `test-all: true`, and
+# a master push runs it with run-all — both get the SAME jobs (nested one level
+# deeper) with only display names changed. develop is NOT handled here anymore:
+# it has its own orchestrator (develop.yml — the same modules plus the trunk-only
+# stages, ending in the experimental npm publish).
 on:
   pull_request:
     types:
@@ -9,335 +22,230 @@ on:
   push:
     branches:
       - 'master'
-      - 'develop'
-      - 'release/**'
   workflow_dispatch:
+    inputs:
+      test-all:
+        description: 'Test all?'
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      test-all:
+        description: 'Test all?'
+        type: boolean
+        default: true
 
-env:
-  NODE_VERSION: 16.x
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  check-scope:
-    runs-on: ubuntu-latest
-    outputs:
-      run-all: ${{
-          endsWith(github.ref, '/master') ||
-          endsWith(github.ref, '/develop') ||
-          contains(github.ref, '/release/')
-        }}
-      build-handsontable-es-cjs: ${{ steps.path-filter.outputs.build-handsontable-es-cjs }}
-      build-handsontable-umd: ${{ steps.path-filter.outputs.build-handsontable-umd }}
-      test-handsontable-unit: ${{ steps.path-filter.outputs.test-handsontable-unit }}
-      test-handsontable-types: ${{ steps.path-filter.outputs.test-handsontable-types }}
-      test-handsontable-walkontable: ${{ steps.path-filter.outputs.test-handsontable-walkontable }}
-      test-handsontable-e2e: ${{ steps.path-filter.outputs.test-handsontable-e2e }}
-      test-handsontable-e2e-min: ${{ steps.path-filter.outputs.test-handsontable-e2e-min }}
-      test-angular: ${{ steps.path-filter.outputs.test-angular }}
-      test-react: ${{ steps.path-filter.outputs.test-react }}
-      test-vue: ${{ steps.path-filter.outputs.test-vue }}
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
-      - uses: dorny/paths-filter@b2feaf19c27470162a626bd6fa8438ae5b263721 # https://github.com/dorny/paths-filter/releases/tag/v2.10.2
-        id: path-filter
-        with:
-          filters: |
-            config-files: &config-files
-              - './handsontable/.config/**'
-              - './handsontable/package.json'
-              - './package-lock.json'
-              - './handsontable/hot.config.js'
-              - './handsontable/babel.config.js'
-            hot-definition-files: &hot-definition-files
-              - './handsontable/base.d.ts'
-              - './handsontable/handsontable.d.ts'
-            hot-source-and-scripts: &hot-source-and-scripts
-              - './handsontable/src/**'
-              - './handsontable/scripts/**'
-            hot-shared: &hot-shared
-              - *config-files
-              - *hot-source-and-scripts
-            hot-e2e-test-shared: &hot-e2e-test-shared
-              - './handsontable/test/e2e/**'
-              - './handsontable/test/scripts/**'
+  # ── Tier 0: the gatekeepers. Scope routing + the gates that STOP the pipeline
+  # when red (presence warn, changelog block). Everything downstream needs this.
+  checks:
+    name: Checks
+    uses: ./.github/workflows/checks.yml
+    with:
+      test-all: ${{ inputs.test-all || false }}
+    secrets: inherit
 
-            build-handsontable-umd:
-              - *hot-shared
-              - './handsontable/test/e2e/**'
-              - './handsontable/test/scripts/**'
-            build-handsontable-es-cjs:
-              - *hot-shared
-              - 'wrappers/**'
-            test-handsontable-unit:
-              - *hot-shared
-              - './handsontable/test/unit/**'
-            test-handsontable-types:
-              - *hot-shared
-              - *hot-definition-files
-              - './handsontable/test/types/**'
-            test-handsontable-walkontable:
-              - './handsontable/.config/**'
-              - './handsontable/test/scripts/**'
-              - './handsontable/src/3rdparty/walkontable/**'
-            test-handsontable-e2e:
-              - *hot-shared
-              - *hot-e2e-test-shared
-            test-handsontable-e2e-min:
-              - *hot-shared
-              - *hot-e2e-test-shared
-            test-angular:
-              - *hot-shared
-              - 'wrappers/angular/**'
-            test-react:
-              - *hot-shared
-              - 'wrappers/react/**'
-            test-vue:
-              - *hot-shared
-              - 'wrappers/vue/**'
+  # Independent merge gate — depends on nothing, so its red blocks the merge
+  # (branch protection, later), never the build/test DAG.
+  manual-qa:
+    name: Manual QA
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/manual-qa.yml
+    secrets: inherit
 
-  build-handsontable-umd:
-    name: "[BUILD] Handsontable: UMD"
-    runs-on: ubuntu-latest
-    needs: [ check-scope ]
+  # ── Tier 1: no-build checks. Fast build-validity gates (Lint/Unit/Types) that
+  # the build depends on, plus parallel merge gates (Code Quality) that never
+  # block a build. PR-only where a merged PR already proved them.
+  lint:
+    name: Lint
+    needs: [ checks ]
+    # Skip on a pipeline-only PR (only .github/** changed) — there is no library
+    # source to lint. `outside-ci` is false in that case; run-all keeps trunk/full runs.
+    if: ${{ !failure() && !cancelled() && github.event_name == 'pull_request' && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.outside-ci == 'true') }}
+    uses: ./.github/workflows/lint.yml
+    with:
+      run-visual: ${{ needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-visual == 'true' }}
+    secrets: inherit
+
+  code-quality:
+    name: Code Quality
+    needs: [ checks ]
+    # Skip the scans (Sonar/CodeQL/FOSSA/audit) on a pipeline-only PR — nothing in
+    # the library changed to scan. See `outside-ci` in checks.yml. NOTE: this also
+    # skips CodeQL's Actions-workflow analysis on a workflow-only PR; the nightly
+    # baseline scan still covers trunk. Carve CodeQL out at the job level if PR-time
+    # workflow-injection scanning is wanted.
+    if: ${{ !failure() && !cancelled() && github.event_name == 'pull_request' && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.outside-ci == 'true') }}
+    uses: ./.github/workflows/code-quality.yml
+    secrets: inherit
+
+  unit:
+    name: Unit
+    needs: [ checks ]
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-handsontable-unit == 'true') }}
+    uses: ./.github/workflows/unit.yml
+    with:
+      is-pr: ${{ github.event_name == 'pull_request' }}
+    secrets: inherit
+
+  types:
+    name: Types
+    needs: [ checks ]
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-handsontable-types == 'true') }}
+    uses: ./.github/workflows/types.yml
+    secrets: inherit
+
+  # ── Build stage: gated on the fast build-validity checks (CORE_GATE = tier 0 +
+  # Lint + Unit + Types). Skipped/PR-only gates don't block (status functions).
+  build:
+    name: Build
+    needs: [ checks, lint, unit, types ]
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.build-handsontable-umd == 'true' || needs.checks.outputs.build-handsontable-es-cjs == 'true') }}
+    uses: ./.github/workflows/build.yml
+    with:
+      run-all: ${{ needs.checks.outputs.run-all == 'true' }}
+      run-umd: ${{ needs.checks.outputs.build-handsontable-umd == 'true' }}
+      run-es-cjs: ${{ needs.checks.outputs.build-handsontable-es-cjs == 'true' }}
+    secrets: inherit
+
+  # Walkontable builds its own engine, so it is gated like the build stage.
+  walkontable:
+    name: Walkontable
+    needs: [ checks, lint, unit, types ]
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-handsontable-walkontable == 'true') }}
+    uses: ./.github/workflows/walkontable.yml
+    secrets: inherit
+
+  # ── Test stage: consumes the shared build artifacts.
+  e2e:
+    name: E2E
+    needs: [ checks, build ]
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-handsontable-e2e == 'true' || needs.checks.outputs.test-handsontable-e2e-min == 'true' || needs.checks.outputs.build-handsontable-umd == 'true') }}
+    uses: ./.github/workflows/e2e.yml
+    with:
+      run-all: ${{ needs.checks.outputs.run-all == 'true' }}
+      run-e2e: ${{ needs.checks.outputs.test-handsontable-e2e == 'true' }}
+      run-e2e-min: ${{ needs.checks.outputs.test-handsontable-e2e-min == 'true' }}
+      run-playwright: ${{ needs.checks.outputs.build-handsontable-umd == 'true' }}
+    secrets: inherit
+
+  integration:
+    name: Integration
+    needs: [ checks, build ]
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-angular-wrapper == 'true' || needs.checks.outputs.test-react-wrapper == 'true' || needs.checks.outputs.test-vue3 == 'true' || needs.checks.outputs.pkg-preview == 'true') }}
+    uses: ./.github/workflows/integration.yml
+    with:
+      run-all: ${{ needs.checks.outputs.run-all == 'true' }}
+      run-pkg-preview: ${{ needs.checks.outputs.pkg-preview == 'true' }}
+      # preview packages compose tmp/ + dist/ + styles/, so BOTH bundles must
+      # have been built for the prebuilt path (else it full-builds locally).
+      hot-prebuilt: ${{ needs.build.outputs.umd-built == 'true' && needs.build.outputs.es-cjs-built == 'true' }}
+      # Wrapper list precomputed by the Checks scope job (no setup-job stage).
+      wrapper-matrix: ${{ needs.checks.outputs.wrapper-matrix }}
+    secrets: inherit
+
+  emitted-types:
+    name: Emitted Types
+    needs: [ checks, build ]
+    # Runs on PRs (verify-types scope) AND on trunk push / release run-all — the old
+    # verify-emitted-types.yml ran on develop/master push too, so gating on the event
+    # would silently drop the check on trunk and the publish.yml release path. Gate on
+    # scope only, never on github.event_name.
+    if: ${{ !failure() && !cancelled() && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.verify-types == 'true') }}
+    uses: ./.github/workflows/emitted-types.yml
+    with:
+      # publint checks the composed package (tmp/ + dist/ + styles/) → needs both.
+      hot-prebuilt: ${{ needs.build.outputs.umd-built == 'true' && needs.build.outputs.es-cjs-built == 'true' }}
+    secrets: inherit
+
+  performance:
+    name: Performance
+    needs: [ checks, build ]
+    # PR-only: the trunk golden baseline runs on performance-tests.yml's own push.
+    if: ${{ !failure() && !cancelled() && github.event_name == 'pull_request' && (needs.checks.outputs.run-all == 'true' || needs.checks.outputs.test-performance == 'true') }}
+    uses: ./.github/workflows/performance.yml
+    with:
+      # Performance consumes the UMD dist only.
+      hot-prebuilt: ${{ needs.build.outputs.umd-built == 'true' }}
+    secrets: inherit
+
+  # ── Post-test: the visual budgeting gate — runs only after the functional
+  # tests pass (browser minutes spent on an already-green build).
+  visual:
+    name: Visual
+    needs: [ checks, build, e2e, integration ]
+    # Gated on the ES+CJS build (the visual examples consume it) OR the visual
+    # scope — NOT on the build module merely succeeding. A tests/**-only PR
+    # builds UMD (for Playwright) but not ES+CJS, and must not pay for the full
+    # visual suite (matches the pre-split behaviour).
+    if: ${{ !failure() && !cancelled() && (needs.build.outputs.es-cjs-built == 'true' || needs.checks.outputs.test-visual == 'true') }}
+    uses: ./.github/workflows/visual.yml
+    secrets: inherit
+
+  # ── Docs: its own internal DAG (lint/plugins/angular → preview → visual).
+  docs:
+    name: Docs
+    needs: [ checks ]
     if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.build-handsontable-umd == 'true'
+      !failure() && !cancelled() &&
+      (github.event_name == 'pull_request' || github.event_name == 'push') && (
+        (needs.checks.outputs.run-all == 'true' && github.event_name == 'pull_request') ||
+        needs.checks.outputs.docs == 'true'
+      )
+    uses: ./.github/workflows/docs.yml
+    with:
+      run-all: ${{ needs.checks.outputs.run-all == 'true' }}
+      run-angular: ${{ needs.checks.outputs.docs-angular == 'true' }}
+      is-pr: ${{ github.event_name == 'pull_request' }}
+    secrets: inherit
+
+  # ── Single merge gate ──────────────────────────────────────────────────────
+  # THE one status check to pin in branch protection. Every other job here is
+  # conditional (scope-gated) or matrix-expanded, so pinning individual names is
+  # fragile: a scope-skipped matrix job never emits its per-leg check runs, which
+  # then sit as "Expected — waiting for status to be reported" and block the PR
+  # forever. This job instead ALWAYS runs (so it always reports one stable name)
+  # and derives a single verdict from every other job's result: it fails if any
+  # job that actually ran failed or was cancelled, and passes when everything
+  # else succeeded or was legitimately scope-skipped. Branch protection should
+  # require ONLY "CI Gate" and unpin every individual/matrix check name.
+  ci-gate:
+    name: CI Gate
+    if: ${{ always() }}
+    needs:
+      - checks
+      - manual-qa
+      - lint
+      - code-quality
+      - unit
+      - types
+      - build
+      - walkontable
+      - e2e
+      - integration
+      - emitted-types
+      - performance
+      - visual
+      - docs
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Build
+      - name: Verify every pipeline job passed or was scope-skipped
         run: |
-          cd handsontable
-          npm run build:umd && npm run build:languages
-          npm run build:umd.min && npm run build:languages.min
-      - run: tar -zcf dist.tar.gz ./handsontable/dist
-      - name: Upload the Handsontable UMD build artifact.
-        uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074 # https://github.com/actions/upload-artifact/releases/tag/v2.2.4
-        with:
-          name: handsontable-build-umd
-          path: |
-            dist.tar.gz
-
-  build-handsontable-es-cjs:
-    name: "[BUILD] Handsontable: ES + CJS"
-    runs-on: ubuntu-latest
-    needs: [ check-scope ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.build-handsontable-es-cjs == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Build
-        run: |
-          cd handsontable
-          npm run build:es && npm run build:languages.es
-          npm run build:commonjs
-          npm run postbuild
-      - run: tar -zcf tmp.tar.gz ./handsontable/tmp
-      - name: Upload the Handsontable ES + CJS build artifact.
-        uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074 # https://github.com/actions/upload-artifact/releases/tag/v2.2.4
-        with:
-          name: handsontable-build-es-cjs
-          path: |
-            tmp.tar.gz
-
-  test-handsontable-unit:
-    name: "[TEST] Handsontable: Unit"
-    runs-on: ubuntu-latest
-    needs: [ check-scope ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-handsontable-unit == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Test
-        run: |
-          cd handsontable
-          npm run test:unit
-
-  test-handsontable-types:
-    name: "[TEST] Handsontable: Types"
-    runs-on: ubuntu-latest
-    needs: [ check-scope ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-handsontable-types == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Test
-        run: |
-          cd handsontable
-          npm run test:types
-
-  test-handsontable-walkontable:
-    name: "[TEST] Walkontable"
-    runs-on: ubuntu-latest
-    needs: [ check-scope ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-handsontable-walkontable == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Test
-        run: |
-          cd handsontable
-          npm run test:walkontable
-
-  test-handsontable-e2e:
-    name: "[TEST] Handsontable: UMD"
-    runs-on: ubuntu-latest
-    needs: [ build-handsontable-umd ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-handsontable-e2e == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Download the Handsontable build artifact
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60 # https://github.com/actions/download-artifact/releases/tag/v2.0.10
-        with:
-          name: handsontable-build-umd
-          path: ./
-      - run: tar -zxf dist.tar.gz ./handsontable/dist && rm dist.tar.gz
-      - name: Test
-        run: |
-          cd handsontable
-          npm run test:e2e.dump && npm run test:e2e.puppeteer
-
-  test-handsontable-e2e-min:
-    name: "[TEST] Handsontable: UMD.min"
-    runs-on: ubuntu-latest
-    needs: [ build-handsontable-umd ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-handsontable-e2e-min == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Download the Handsontable build artifact
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60 # https://github.com/actions/download-artifact/releases/tag/v2.0.10
-        with:
-          name: handsontable-build-umd
-          path: ./
-      - run: tar -zxf dist.tar.gz ./handsontable/dist && rm dist.tar.gz
-      - name: Test
-        run: |
-          cd handsontable
-          npm run test:production.dump && npm run test:e2e.puppeteer
-
-  test-angular:
-    name: "[TEST] Wrapper: Angular"
-    runs-on: ubuntu-latest
-    needs: [ check-scope, build-handsontable-es-cjs ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-angular == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Download the Handsontable build artifact
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60 # https://github.com/actions/download-artifact/releases/tag/v2.0.10
-        with:
-          name: handsontable-build-es-cjs
-          path: ./
-      - run: tar -zxf tmp.tar.gz ./handsontable/tmp && rm tmp.tar.gz
-      - run: cd handsontable
-      - run: npm run swap-package-links
-      - run: npm run in angular build
-      - run: npm run in angular test:ci
-
-  test-react:
-    name: "[TEST] Wrapper: React"
-    runs-on: ubuntu-latest
-    needs: [ check-scope, build-handsontable-es-cjs ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-react == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Download the Handsontable build artifact
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60 # https://github.com/actions/download-artifact/releases/tag/v2.0.10
-        with:
-          name: handsontable-build-es-cjs
-          path: ./
-      - run: tar -zxf tmp.tar.gz ./handsontable/tmp && rm tmp.tar.gz
-      - run: cd handsontable
-      - run: npm run swap-package-links
-      - run: npm run in react build
-      - run: npm run in react test
-
-  test-vue:
-    name: "[TEST] Wrapper: Vue"
-    runs-on: ubuntu-latest
-    needs: [ check-scope, build-handsontable-es-cjs ]
-    if: |
-      needs.check-scope.outputs.run-all == 'true' ||
-      needs.check-scope.outputs.test-vue == 'true'
-    steps:
-      - uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # https://github.com/actions/checkout/releases/tag/v2.3.4
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@25316bbc1f10ac9d8798711f44914b1cf3c4e954 # https://github.com/actions/setup-node/releases/tag/v2.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      - run: npm ci --no-audit
-      - name: Download the Handsontable build artifact
-        uses: actions/download-artifact@3be87be14a055c47b01d3bd88f8fe02320a9bb60 # https://github.com/actions/download-artifact/releases/tag/v2.0.10
-        with:
-          name: handsontable-build-es-cjs
-          path: ./
-      - run: tar -zxf tmp.tar.gz ./handsontable/tmp && rm tmp.tar.gz
-      - run: cd handsontable
-      - run: npm run swap-package-links
-      - run: npm run in vue build
-      - run: npm run in vue test
+          results="${{ join(needs.*.result, ',') }}"
+          echo "Upstream job results: $results"
+          failed=0
+          IFS=',' read -ra arr <<< "$results"
+          for r in "${arr[@]}"; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::Pipeline job result '$r' — merge blocked."; failed=1 ;;
+            esac
+          done
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "All pipeline jobs passed or were legitimately scope-skipped."

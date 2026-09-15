@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Handsontable shadow DOM e2e fixture</title>
+  <script>
+    // Theme and bundle come from the ?theme=/?bundle= query params set by the
+    // Playwright projects, mapped through fixed allowlists to LITERALS so a
+    // crafted param can never be reflected into the document — no XSS. An
+    // ABSENT param keeps the default (main / plain UMD) so the fixture stays
+    // browsable by hand; an unknown value THROWS instead of falling back — a
+    // typo in the project config must be one red leg, never a silently
+    // mislabeled green one (nothing else asserts which file actually loaded).
+    const htParams = new URLSearchParams(location.search);
+
+    window.htTheme = ({ main: 'main', horizon: 'horizon', classic: 'classic' })[htParams.get('theme') ?? 'main'];
+    if (!window.htTheme) {
+      throw new Error('Unknown ?theme= value: ' + JSON.stringify(htParams.get('theme')));
+    }
+    window.htBundle = ({ umd: 'handsontable.js', 'full-min': 'handsontable.full.min.js' })[htParams.get('bundle') ?? 'umd'];
+    if (!window.htBundle) {
+      throw new Error('Unknown ?bundle= value: ' + JSON.stringify(htParams.get('bundle')));
+    }
+
+    // How a clipboard event reaches the grid. `lws-shape` stands in for the two things
+    // Salesforce Lightning Web Security does that matter here (DEV-2795) — see the block that
+    // installs it below. Same fail-loud allowlist as the two params above.
+    window.htDelivery = ({ normal: 'normal', 'lws-shape': 'lws-shape' })[htParams.get('delivery') ?? 'normal'];
+    if (!window.htDelivery) {
+      throw new Error('Unknown ?delivery= value: ' + JSON.stringify(htParams.get('delivery')));
+    }
+  </script>
+  <style> body { font-family: sans-serif; margin: 1rem; } #outside-area { margin-top: .8rem; } </style>
+</head>
+<body>
+  <!--
+    Shadow DOM fixture (DEV-1619). The grid is mounted inside a native open
+    shadow root, the way web-component hosts (Salesforce LWC, Lit, Stencil)
+    embed Handsontable. The stylesheets are linked INSIDE the shadow root —
+    document-level styles do not cross the boundary. The textarea below stays
+    in the light DOM so outside-click behavior can be asserted across the
+    shadow boundary. Cells are stamped with data-testid via a renderer;
+    Playwright locators pierce open shadow roots transparently.
+  -->
+  <div id="shadow-host" data-testid="shadow-host"></div>
+  <div id="outside-area">
+    <textarea data-testid="outside-textarea" rows="3" cols="40"></textarea>
+    <input data-testid="outside-input" type="text">
+    <button data-testid="focus-mover" type="button">Move focus to the input</button>
+  </div>
+
+  <script>
+    // The bundle under test, selected above from the sanitized allowlist. The
+    // closing tag is split so the HTML parser does not end THIS script block.
+    document.write('<scr' + 'ipt src="/handsontable/dist/' + window.htBundle + '"></scr' + 'ipt>');
+  </script>
+  <script>
+    const shadowRoot = document.querySelector('[data-testid="shadow-host"]').attachShadow({ mode: 'open' });
+
+    const baseCss = document.createElement('link');
+    baseCss.rel = 'stylesheet';
+    baseCss.href = '/handsontable/styles/handsontable.min.css';
+    shadowRoot.appendChild(baseCss);
+
+    const themeCss = document.createElement('link');
+    themeCss.rel = 'stylesheet';
+    themeCss.href = `/handsontable/styles/ht-theme-${window.htTheme}.min.css`;
+    shadowRoot.appendChild(themeCss);
+
+    const container = document.createElement('div');
+    container.className = `ht-theme-${window.htTheme}`;
+    container.setAttribute('data-testid', 'grid');
+    shadowRoot.appendChild(container);
+
+    // Every clipboard event that makes it out to the document, recorded. In the default
+    // delivery mode this fills up; under `container-only` it must stay empty, which is what
+    // proves the grid was driven by a listener the event reached before the document.
+    window.__clipboardAtDocument = [];
+    ['copy', 'cut', 'paste'].forEach((eventName) => {
+      document.addEventListener(eventName, () => window.__clipboardAtDocument.push(eventName));
+    });
+
+    // Salesforce Lightning Web Security (DEV-2795, #13388) changes two things about a clipboard
+    // event, and the grid needs both to be true at once before it looks like a real org.
+    //
+    // 1. Delivery. LWS hands the event only to listeners bound at or below the grid's own
+    //    container — the ones CopyPaste binds on the shadow root and on the document never run.
+    //    `stopPropagation` on the container has exactly that reach: every listener ON the
+    //    container still fires (only `stopImmediatePropagation` would cut those off, whatever
+    //    the registration order), while the shadow root and the document above it stop seeing
+    //    the event. Bound in the bubble phase, and installed before the grid exists, so it
+    //    cannot depend on the plugin's own listener order.
+    //
+    // 2. `composedPath()`. LWS collapses it to the shadow host chain, so the grid internals are
+    //    gone from it. That is what sends `#resolveClipboardEventTarget` down its second branch,
+    //    onto the retargeted `event.target` — the branch that actually carries the paste in an
+    //    org. Without this the path stays intact, the first branch answers, and the LWS half of
+    //    that method is never exercised. Applied in the CAPTURE phase on the container so it is
+    //    in place before any bubble listener reads the path.
+    //
+    // Together these reproduce the SHAPE of LWS, not LWS: a real org also runs the grid behind a
+    // membrane that proxies the DOM itself. Only an org can confirm the whole picture.
+    if (window.htDelivery === 'lws-shape') {
+      const hostChain = [
+        document.querySelector('[data-testid="shadow-host"]'),
+        document.body,
+        document.documentElement,
+        document,
+        window,
+      ];
+
+      ['copy', 'cut', 'paste'].forEach((eventName) => {
+        container.addEventListener(eventName, (event) => {
+          event.composedPath = () => hostChain;
+        }, true);
+        container.addEventListener(eventName, (event) => event.stopPropagation());
+      });
+    }
+
+    const shadowSibling = document.createElement('div');
+    shadowSibling.setAttribute('data-testid', 'shadow-sibling');
+    shadowSibling.style.cssText = 'padding: 16px; margin-top: 8px; background: #eee;';
+    shadowSibling.textContent = 'Non-focusable sibling inside the same shadow root';
+    shadowSibling.addEventListener('mousedown', (event) => event.preventDefault());
+    shadowRoot.appendChild(shadowSibling);
+
+    const testIdRenderer = function(instance, td, row, col, prop, value, cellProperties) {
+      Handsontable.renderers.TextRenderer.apply(this, arguments);
+      td.setAttribute('data-testid', `cell-${row}-${col}`);
+    };
+
+    const hot = new Handsontable(container, {
+      data: [
+        ['A1', 'B1', 'C1'],
+        ['A2', 'B2', 'C2'],
+        ['A3', 'B3', 'C3'],
+        ['A4', 'B4', 'C4'],
+        ['A5', 'B5', 'C5'],
+      ],
+      colHeaders: true,
+      rowHeaders: true,
+      contextMenu: true,
+      renderer: testIdRenderer,
+      licenseKey: 'non-commercial-and-evaluation',
+    });
+
+    // How many times the plugin ran a paste to completion. Every grid now has more than one
+    // clipboard listener bound, so a single Ctrl+V reaches the plugin several times and only
+    // the event registry keeps the handler running once. Counting the hook is what would catch
+    // that registry failing: under the default `overwrite` paste mode, writing the same values
+    // twice looks identical to writing them once, so no value assertion can see it.
+    window.__pasteHookCalls = 0;
+    hot.addHook('afterPaste', () => {
+      window.__pasteHookCalls += 1;
+    });
+
+    document.querySelector('[data-testid="focus-mover"]').addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      document.querySelector('[data-testid="outside-input"]').focus();
+    });
+
+    window.__hotProbe = {
+      isListening: () => hot.isListening(),
+      selected: () => hot.getSelected() ?? null,
+      valueAt: (row, col) => hot.getDataAtCell(row, col),
+      armOutsideClickRecorder: () => {
+        const targets = [];
+
+        hot.updateSettings({
+          outsideClickDeselects: (target) => {
+            targets.push(target.getAttribute('data-testid') || target.tagName.toLowerCase());
+
+            return target.getAttribute('data-testid') !== 'focus-mover';
+          },
+        });
+
+        window.__outsideClickTargets = targets;
+      },
+      outsideClickTargets: () => window.__outsideClickTargets,
+      clipboardEventsSeenAtDocument: () => window.__clipboardAtDocument,
+      pasteHookCalls: () => window.__pasteHookCalls,
+    };
+  </script>
+</body>
+</html>
